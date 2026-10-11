@@ -1,0 +1,17 @@
+{
+  "name": "bsa-sentry",
+  "private": true,
+  "packageManager": "pnpm@10.29.1",
+  "scripts": {
+    "test": "pnpm -r test",
+    "keys": "tsx scripts/gen-keys.ts",
+    "balances": "tsx scripts/balances.ts"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3",
+    "viem": "^2.22.0",
+    "dotenv": "^16.4.7"
+  },
+  "type": "module"
+}
