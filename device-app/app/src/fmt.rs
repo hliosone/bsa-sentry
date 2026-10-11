@@ -36,6 +36,15 @@ pub fn amount_u256(be: &[u8; 32]) -> String {
     }
 }
 
+/// The network name for a chain id. The policy is pinned to Arc testnet; anything else is
+/// shown as a bare id so it can never pass for Arc.
+pub fn chain_name(chain_id: u64) -> String {
+    match chain_id {
+        5_042_002 => String::from("Arc testnet"),
+        id => format!("chaine {id}"),
+    }
+}
+
 /// The FULL address, never truncated: a shortened address is exactly what an attacker
 /// substituting a lookalike payee relies on.
 pub fn address(addr: &[u8; 20]) -> String {

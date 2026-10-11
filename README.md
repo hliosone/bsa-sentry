@@ -58,7 +58,7 @@ specification: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 | **Custom Flex app** (`ledger_device_sdk`, Rust) | 11 APDUs; the spending policy in NVM; EIP-712 digests computed on-device; the 3-choice orange screen with a 60 s deny-by-default on the NBGL C layout API |
 | **Ledger signer over the DMK** (WebHID) | the browser bridge: one in-flight APDU, 120 s timeouts, click-free reconnect |
 | **Ledger Key Ring** (LKRP) | the rules and the 18+ badge backed up encrypted under the user's seed; a wiped Flex is restored with one review |
-| **Speculos** | 57 device integration tests and every e2e run, with simulated taps |
+| **Speculos** | 73 device integration tests and every e2e run, with simulated taps |
 
 What it was like to build on them, bluntly: [`docs/DX_NOTES.md`](docs/DX_NOTES.md).
 
@@ -110,7 +110,7 @@ your PIN, accept the "non-genuine" warning (normal for a sideloaded app).
 ```sh
 pnpm test                 # 500+ TypeScript tests (contracts, signer, bridge, server, merchants, web logic)
 make test                 # + 88 Rust tests of the device logic, on the host
-pnpm test:speculos        # 57 device integration tests (Speculos must be running)
+pnpm test:speculos        # 73 device integration tests (Speculos must be running)
 pnpm test:web             # Playwright against the real server, with a software Flex
 E2E=1 pnpm e2e            # the full demo, twice, on Speculos + the real Arc testnet
 ```

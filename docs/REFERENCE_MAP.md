@@ -51,7 +51,8 @@ Paths below are relative to `agentguard-feasibility-tests/` unless stated.
   PID presentations. Never read them into docs, never copy them, never paste their contents into
   tests.** All EUDIW test fixtures in this repo are hand-made, with no real personal data.
 - The feasibility device app contains `E0 0F` **`SIGN_3009_SILENT`**, which signs with **no policy
-  and no tap**. It must **not** exist in BSA Sentry. Loading BSA Sentry on the real Flex in Phase C
-  replaces that test app.
+  and no tap**. It must **not** exist in BSA Sentry. Installing BSA Sentry does **not** remove it:
+  the feasibility app is installed under another name ("Rust Boilerplate"), so Phase C step 1
+  deletes it explicitly (`make remove-feasibility-app`).
 - Hardcoded addresses in the reference (`0x1c9940ef…` device, `0xCA4330C2…` submitter) are from the
   old test wallets. This repo derives everything from `.env`; never copy an address across.

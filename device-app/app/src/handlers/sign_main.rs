@@ -88,6 +88,7 @@ pub fn handler_sign_login<'a, const N: usize>(
     // Copy out of the command buffer before it is turned back into a Comm.
     let origin_shown = fmt::untrusted_text(origin.as_bytes());
     let expiry = fmt::date_utc(expires_at);
+    let chain = fmt::chain_name(chain_id);
 
     let comm = command.into_comm();
     let approved = NbglReview::new()
@@ -98,6 +99,7 @@ pub fn handler_sign_login<'a, const N: usize>(
             &[
                 Field { name: "Site", value: &origin_shown },
                 Field { name: "Compte", value: "Votre compte principal" },
+                Field { name: "Reseau", value: &chain },
                 Field { name: "Valable jusqu'au", value: &expiry },
             ],
         );
@@ -129,6 +131,7 @@ pub fn handler_sign_bind<'a, const N: usize>(
     let verifier_shown = fmt::untrusted_text(verifier.as_bytes());
     let session_shown = format!("0x{}", hex_of(&session[..8]));
     let expiry = fmt::date_utc(expires_at);
+    let chain = fmt::chain_name(chain_id);
 
     let comm = command.into_comm();
     let approved = NbglReview::new()
@@ -139,6 +142,7 @@ pub fn handler_sign_bind<'a, const N: usize>(
             &[
                 Field { name: "Verificateur", value: &verifier_shown },
                 Field { name: "Session", value: &session_shown },
+                Field { name: "Reseau", value: &chain },
                 Field { name: "Valable jusqu'au", value: &expiry },
                 Field { name: "Donnees partagees", value: "Aucune donnee personnelle" },
             ],
@@ -221,6 +225,7 @@ pub fn handler_sign_delegation<'a, const N: usize>(
         acc
     };
     let expiry = fmt::date_utc(expires_at);
+    let chain = fmt::chain_name(chain_id);
 
     let comm = command.into_comm();
     let approved = NbglReview::new()
@@ -232,6 +237,7 @@ pub fn handler_sign_delegation<'a, const N: usize>(
                 Field { name: "Agent", value: &name_shown },
                 Field { name: "Adresse de l'agent", value: &agent_shown },
                 Field { name: "Peut prouver", value: &claims_shown },
+                Field { name: "Reseau", value: &chain },
                 Field { name: "Jusqu'au", value: &expiry },
             ],
         );

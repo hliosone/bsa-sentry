@@ -8,9 +8,6 @@
 #![no_std]
 #![no_main]
 
-mod app_ui {
-    pub mod menu;
-}
 mod handlers {
     pub mod credentials;
     pub mod get_version;
@@ -21,11 +18,10 @@ mod handlers {
 mod fmt;
 mod orange;
 mod crypto;
+mod home;
 mod keccak;
-mod settings;
 mod store;
 
-use app_ui::menu::ui_menu_main;
 use bsa_sentry_core::wire::{encode_state, DeviceState};
 use bsa_sentry_core::RefusalReason;
 use crypto::Account;
@@ -35,7 +31,7 @@ use handlers::policy::{handler_clear_policy, handler_set_policy};
 use handlers::credentials::{handler_get_credentials, handler_restore, handler_store_credentials};
 use handlers::sign_main::{handler_sign_bind, handler_sign_delegation, handler_sign_login};
 use ledger_device_sdk::io::{self, init_comm, ApduHeader, Command, Reply};
-use ledger_device_sdk::nbgl::NbglHomeAndSettings;
+use ledger_device_sdk::nbgl::{NbglAddressReview, NbglGlyph};
 
 ledger_device_sdk::set_panic!(ledger_device_sdk::exiting_panic);
 
@@ -163,14 +159,9 @@ impl TryFrom<ApduHeader> for Instruction {
     }
 }
 
-/// Home screen handle, so handlers can return to it after a review.
-static mut HOME: *mut NbglHomeAndSettings = core::ptr::null_mut();
-
+/// Redraws the home from the current state, so the budget on screen is never stale.
 pub fn show_home() {
-    let home = unsafe { HOME };
-    if !home.is_null() {
-        unsafe { (*home).show_and_return() };
-    }
+    home::show(home::HOME);
 }
 
 #[no_mangle]
@@ -180,13 +171,7 @@ extern "C" fn sample_main(_arg0: u32) {
     let comm = init_comm(&COMM);
     comm.set_expected_cla(0xe0);
 
-    // A restart always disarms the agent: the session is never meant to survive it.
-    store::disarm_session();
-
-    let mut home = ui_menu_main(comm);
-    home.show_and_return();
-    // `home` lives for the whole loop below, so this pointer stays valid.
-    unsafe { HOME = &mut home };
+    show_home();
 
     let runtime = unsafe { &mut *(&raw mut RUNTIME) };
 
@@ -198,7 +183,22 @@ extern "C" fn sample_main(_arg0: u32) {
             continue;
         };
 
-        match handle_apdu(command, &ins, runtime) {
+        let result = handle_apdu(command, &ins, runtime);
+        // Commands that change what the home shows redraw it once their write is done (a review
+        // returns to the home before the write, and a silent AUTO payment draws nothing).
+        // Read-only commands do not, so the website polling GET_STATE never kicks the user out
+        // of the menu.
+        if matches!(
+            ins,
+            Instruction::SetPolicy { .. }
+                | Instruction::ClearPolicy
+                | Instruction::Pay
+                | Instruction::StoreCredentials { .. }
+                | Instruction::Restore { .. }
+        ) {
+            show_home();
+        }
+        match result {
             Ok(reply) => {
                 let _ = reply.send(AppSW::Ok);
             }
@@ -243,15 +243,33 @@ fn handle_apdu<'a, const N: usize>(
     }
 }
 
+#[cfg(any(target_os = "stax", target_os = "flex"))]
+const ICON: NbglGlyph = NbglGlyph::from_include(ledger_device_sdk::include_gif!("glyphs/crab_64x64.gif", NBGL));
+#[cfg(target_os = "apex_p")]
+const ICON: NbglGlyph = NbglGlyph::from_include(ledger_device_sdk::include_gif!("glyphs/crab_48x48.png", NBGL));
+#[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
+const ICON: NbglGlyph = NbglGlyph::from_include(ledger_device_sdk::include_gif!("glyphs/home_nano_nbgl.png", NBGL));
+
 /// GET_ADDRESS: the 20-byte EVM address of 0xMAIN (P1 0) or 0xAGENT (P1 1).
+/// With P2 1 the address is shown first, so the user can check the one the website displays
+/// (to fund 0xMAIN, say) against the one their Flex holds.
 fn handler_get_address<const N: usize>(
     command: Command<'_, N>,
     account_agent: bool,
-    _display: bool,
+    display: bool,
 ) -> Result<io::CommandResponse<'_, N>, AppError> {
     let account = if account_agent { Account::Agent } else { Account::Main };
     let addr = crypto::address(account)?;
-    let mut response = command.into_response();
+    let comm = command.into_comm();
+    if display {
+        let title = if account_agent { "Adresse de l'agent" } else { "Votre adresse principale" };
+        let approved = NbglAddressReview::new().glyph(&ICON).review_title(title).show(comm, &fmt::address(&addr));
+        show_home();
+        if !approved {
+            return Err(AppError::Refused(RefusalReason::UserRejected));
+        }
+    }
+    let mut response = comm.begin_response();
     response.append(&addr)?;
     Ok(response)
 }

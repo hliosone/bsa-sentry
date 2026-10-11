@@ -17,11 +17,12 @@ twice). Phase C proves the same on the real Flex, in Chrome, with claude.ai.
 
 | | |
 |---|---|
-| **You do** | On the Flex: **Settings → Security → Auto-lock → Off**. Close Ledger Live and any tab or script using the Flex. Flex unlocked, **on the dashboard**. Then `make device` (if not built) and `make load`; enter your PIN on the Flex when asked. |
-| **You see** | An install confirmation, then **BSA Sentry** in the app list. Opening it shows a **"non-genuine app"** warning: normal for a sideloaded app. Home screen as in `docs/screens/speculos/01-home-no-policy.png`. |
+| **You do** | On the Flex: **Settings → Security → Auto-lock → Off**. Close Ledger Live and any tab or script using the Flex. Flex unlocked, **on the dashboard**. **First remove the feasibility app**: `make remove-feasibility-app` (approve on the Flex). Then `make device` (if not built) and `make load`; enter your PIN on the Flex when asked. |
+| **You see** | The app list no longer shows **Rust Boilerplate**. An install confirmation, then **BSA Sentry** in the app list. Opening it shows a **"non-genuine app"** warning: normal for a sideloaded app. |
+| **You confirm** | Scroll the app list on the Flex: **no "Rust Boilerplate"**, only BSA Sentry (and Ledger's official apps, incl. Ledger Sync). |
 | **Claude checks** | `lsusb` shows `2c97:7000 Ledger Flex`; `stat -c %a /dev/hidraw*` → 666 on the Ledger nodes; after install, `GET_APP_NAME` = `BSA Sentry` and two different addresses for 0xMAIN / 0xAGENT. |
 | **Fallback** | `0x6d00` during install: the Flex was not on the dashboard. No device: replug, other cable/port, `sudo udevadm control --reload-rules && sudo udevadm trigger`. |
-| **Why first** | Auto-lock makes the Flex answer `0x5515` after ~2 min, which looks like a code bug. And this install **replaces the old feasibility app**, which still had a command that signed with no policy and no tap. |
+| **Why first** | Auto-lock makes the Flex answer `0x5515` after ~2 min, which looks like a code bug. And the feasibility app is installed under **another name**, so installing BSA Sentry does **not** remove it: it still contains `SIGN_3009_SILENT`, which signs with no policy and no tap while it is open. It must be deleted explicitly. If `make remove-feasibility-app` fails, delete it from Ledger Wallet (My Ledger) or on the device. |
 
 ## 2. Hardware smoke test (≈5 min)
 
@@ -31,7 +32,8 @@ twice). Phase C proves the same on the real Flex, in Chrome, with claude.ai.
 | **You see** | Rules review (swipe, hold) like `docs/screens/speculos/` reviews; the coffee is signed with **nothing on screen**; orange screens like `05-orange-unknown-payee.png` and `06-orange-over-auto-max.png`. |
 | **Claude checks** | All 8 checks PASS: the signature recovers to your 0xAGENT, counters move, "Une fois" adds no payee, "Faire confiance" does, 400 USDC is OVER_HARD_MAX. |
 | **The 60 s test, done right** | While the orange screen counts down, **keep touching the screen** (not the buttons). It must still refuse at ~60 s: our timeout counts raw ticker events, which a finger cannot pause (the NBGL ticker can — DX_NOTES §2.2). |
-| **Photos** | One photo per distinct screen into `docs/screens/` (home, rules review, orange unknown merchant, orange over limit). For the submission. |
+| **Restart + menu** | **Quit app**, reopen BSA Sentry. The home must still show the budget (the rules survive in NVM — Speculos cannot test this, DX_NOTES §4.3) and **session off**. Tap the gear and swipe: session switch · rules · trusted merchants · **+20 USDC** / **Bloquer l'agent**. Remove a merchant once (the confirm shows its full address). |
+| **Photos** | One photo per distinct screen into `docs/screens/` (home, menu, rules review, orange unknown merchant, orange over limit). For the submission. |
 | **Fallback** | `0x5515`: auto-lock (step 1). `0x6d02`: the app is not open. |
 
 ## 3. The things that could not be tested without hardware (≈15 min)

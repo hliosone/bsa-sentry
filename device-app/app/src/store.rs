@@ -47,20 +47,16 @@ impl Runtime {
     }
 }
 
-/// Settings switch 0 on the home screen: "Session agent".
-///
-/// The switch state lives in the settings NVM slot because that is how the SDK's home
-/// screen drives switches, but [`disarm_session`] is called at every app start, so the
-/// session is effectively RAM-only: relaunching the app always disarms the agent.
-pub const SESSION_SWITCH: usize = 0;
+/// The agent session: armed from the device menu, never stored. A restart, a crash or an
+/// app switch always disarms the agent, because RAM does not survive any of them.
+static mut SESSION_ARMED: bool = false;
 
 pub fn session() -> Session {
-    Session { armed: crate::settings::Settings.get_element(SESSION_SWITCH) == 1 }
+    Session { armed: unsafe { SESSION_ARMED } }
 }
 
-/// Called once at startup, so a restart never leaves the agent armed.
-pub fn disarm_session() {
-    crate::settings::Settings.set_element(SESSION_SWITCH, 0);
+pub fn set_session(armed: bool) {
+    unsafe { SESSION_ARMED = armed };
 }
 
 pub fn reassembler() -> &'static mut Reassembler {

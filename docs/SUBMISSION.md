@@ -34,7 +34,7 @@ inside the secure element of a Ledger Flex.
 
 **Ledger tools used** — Custom Ledger Flex app (Rust `ledger_device_sdk`, NBGL); Ledger signer
 through the Device Management Kit over WebHID; Ledger Key Ring (LKRP) for the encrypted backup;
-Speculos for 57 device tests and every end-to-end run.
+Speculos for 73 device tests and every end-to-end run.
 
 **Why it matters for Ledger** — Agents will hold spending power. Today that power lives in a hot
 key or a server policy that a prompt injection or a server bug can bypass. BSA Sentry moves the
@@ -109,7 +109,7 @@ Five things we would change first:
 5. **No pattern for remote agents.** Hosted assistants talk to a server, not to the user's machine;
    the human-approval step has to live in a browser next to the device. That is most of what we built.
 
-What worked well: Speculos (57 device tests with the Flex unplugged), on-device EIP-712 matching
+What worked well: Speculos (73 device tests with the Flex unplugged), on-device EIP-712 matching
 viem and the chain on the first try, silent signing, and the DMK in Vite with no polyfills.
 
 ---

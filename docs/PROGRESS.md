@@ -6,7 +6,7 @@ Follow from anywhere: this file is pushed to GitHub after every milestone.
 |---|---|
 | Started | Sun 11 Oct 2026, 14:46 CEST |
 | Deadline | Tue 13 Oct 2026, 23:59 CEST (Phase B cut-off: Tue 10:00) |
-| Phase | **B done — READY FOR PHASE C** (Mon 12 Oct 2026, ~00:10 CEST) |
+| Phase | **B — finishing (device home screen + menu)** |
 
 ## Milestones
 
@@ -17,7 +17,7 @@ Follow from anywhere: this file is pushed to GitHub after every milestone.
 - [x] **M4** Auth, OAuth, MCP → Claude buys a coffee — **passes locally and through a public tunnel**
 - [x] **M5** Website complete — **Playwright onboarding against the real server**
 - [x] **M6** 18+ identity (EUDIW) — **wine paid with 18+ verified on Arc**
-- [x] **M7** Key Ring backup/restore — **wipe and one-tap restore proven on Speculos + Arc** (device menu: cut-order item 2, see Decisions)
+- [x] **M7** Key Ring backup/restore — **wipe and one-tap restore proven on Speculos + Arc**
 - [x] **M8** Deploy, docs, demo — **the full demo passes twice in a row on Speculos + Arc**; deploy scripted (no host credentials → Phase C step 9)
 
 ## Done
@@ -96,7 +96,7 @@ Follow from anywhere: this file is pushed to GitHub after every milestone.
   0xMAIN (Login/Bind/Delegation).
 - 11 screenshots in `docs/screens/speculos/`.
 
-### M2 — done (Sun 11 Oct 2026, 18:25 CEST)
+### M2 — done (Sun 11 Oct 2026, 18:09 CEST)
 - `packages/sentry-signer` (30 tests on a fake transport): every command, chunking, status
   word -> typed error (`DeviceRefusedError` with reason, `DeviceLockedError`, `AppClosedError`,
   `TransportError`), single in-flight queue, 125 s timeout, `probe()` for the status bar.
@@ -113,7 +113,7 @@ Follow from anywhere: this file is pushed to GitHub after every milestone.
   occupies in the bundle (`splitCredentials` / `joinCredentials`); the facilitator supplies
   the chain id.
 
-### M3 — done (Sun 11 Oct 2026, 20:05 CEST) · first coffee settled on Arc
+### M3 — done (Sun 11 Oct 2026, 19:53 CEST) · first coffee settled on Arc
 - **`E2E=1 pnpm e2e:cafe` passes on the real Arc testnet**: agent API -> relay -> bridge harness
   -> Speculos signs with no tap -> x402 merchant -> our facilitator -> `transferWithAuthorization`
   mined in 4.9 s. Exactly one USDC Transfer of 3 USDC from 0xAGENT to the café, balance checked
@@ -125,7 +125,7 @@ Follow from anywhere: this file is pushed to GitHub after every milestone.
 - `pnpm recycle` swept the café's 2.95 USDC back to the treasury.
 - `Dockerfile` + `docker-compose.yml` (server healthcheck gates the merchants).
 
-### M4 — done (Mon 12 Oct 2026, ~00:00 CEST) · "Claude" buys a coffee through MCP
+### M4 — done (Sun 11 Oct 2026, 23:12 CEST) · "Claude" buys a coffee through MCP
 - **`E2E=1 pnpm e2e:mcp` passes locally AND through a public cloudflared tunnel** (19 checks).
   It plays claude.ai with the official MCP TS SDK client, which does the whole OAuth 2.1 flow
   itself (discovery, DCR, PKCE S256, token); the consent step is done headlessly behind a
@@ -136,7 +136,7 @@ Follow from anywhere: this file is pushed to GitHub after every milestone.
   e2e runs exactly it.
 - `pnpm tunnel [port]` prints the public MCP URL for claude.ai (http2 + IPv4).
 
-### M5 — done (Sun 11 Oct 2026, ~23:30 CEST)
+### M5 — done (Sun 11 Oct 2026, 23:25 CEST)
 - React + Vite site, French UI, same origin as the server (Vite proxies in dev; the server
   serves `apps/web/dist` in prod): Connect + "Se connecter avec Ledger", Rules (pre-filled demo
   merchants, every device limit checked first), Session (only the device arms the agent),
@@ -152,7 +152,7 @@ Follow from anywhere: this file is pushed to GitHub after every milestone.
   that wrapped over four lines).
 - Logic tests: onboarding 5, rules 9, feed 6, status 3; bridge 23 (refresh/exclusive added).
 
-### M6 — done (Mon 12 Oct 2026, ~00:30 CEST) · 18+ verified on chain
+### M6 — done (Sun 11 Oct 2026, 23:38 CEST) · 18+ verified on chain
 - **`E2E=1 pnpm e2e:age` passes on Arc** (mock EUDIW): Bind on the Flex (tap) -> AgeAttestation
   from our issuer -> AgentDelegation on the Flex (tap) -> STORE_CREDENTIALS -> `/cave` paid with
   18+ verified by our facilitator. A wiped Flex then gets AGE_PROOF_REQUIRED, nothing settles.
@@ -166,7 +166,7 @@ Follow from anywhere: this file is pushed to GitHub after every milestone.
 - `EUDIW_MODE=live` builds the real request and QR (tested against hand-made fixtures); the real
   Procivis scan is Phase C step M6-C.
 
-### M7 — done (Mon 12 Oct 2026, ~00:50 CEST) · a wiped Flex restored with one tap
+### M7 — done (Sun 11 Oct 2026, 23:47 CEST) · a wiped Flex restored with one tap
 - **`E2E=1 pnpm e2e:restore` passes** (Speculos + real Arc): rules + a merchant trusted on the
   device + the 18+ badge -> Key Ring backup (fake Key Ring: real AES-GCM) -> vault holds no
   readable rules -> Flex wiped (fresh NVM, same seed) -> restore, reviewed and approved on the
@@ -176,7 +176,7 @@ Follow from anywhere: this file is pushed to GitHub after every milestone.
 - Real Ledger Key Ring (LKRP 0.24.0, app id 17) wired as in the feasibility test; DMK
   open-app tried first, manual prompt as fallback. Hardware verification: Phase C M7-C.
 
-### M8 — done (Mon 12 Oct 2026, ~00:10 CEST)
+### M8 — done (Sun 11 Oct 2026, 23:51 CEST; device home and menu added afterwards)
 - **`E2E=1 pnpm e2e` passes: the full demo, twice in a row, each from a clean reset** (wiped Flex,
   recycled funds), on Speculos + the real Arc testnet: café silent · bakery "Faire confiance" · wine
   with the 18+ badge verified · resto "Une fois" (no trust option) · the prompt-injected 400 USDC
@@ -186,6 +186,18 @@ Follow from anywhere: this file is pushed to GitHub after every milestone.
   over SSH. Verified locally (site, SPA routes, API). No host credentials were given → Phase C step 9.
 - Docs: `README.md`, `docs/DEMO.md`, `docs/SUBMISSION.md` (form, post, video script, DX summary,
   disclosure, pitch), `docs/DX_NOTES.md` (20 entries), `docs/PHASE_C_GUIDE.md` (final, 10 steps).
+
+### Device home + menu — done (Mon 12 Oct 2026, 00:28 CEST) · 73 Speculos tests
+- The Flex's own home screen shows the agent's name, `Budget 17.00 / 20.00 USDC`, the last payment
+  and `Arc testnet . session on/off` ("Aucune regle" when there is none), redrawn after every
+  command that changes it — never after a read, so the website polling GET_STATE does not kick
+  the user out of the menu.
+- The menu, with no website: agent session switch · my rules · trusted merchants (tap → confirm
+  showing the full address → removed) · **+20 USDC** (spent and count back to 0) · **Bloquer
+  l'agent** (rules and merchants wiped). Every change goes through a confirmation screen.
+- The session is now a RAM static (no settings NVM slot at all). GET_ADDRESS with P2=1 shows the
+  address and answers only after "Confirm". Login/Bind/Delegation reviews show the network.
+- 11 new Speculos tests; full suite 73/73; `E2E=1 pnpm e2e` passed again twice in a row.
 
 ## Blocked
 _Nothing is blocked._ Hardware-only items (real Flex sideload, taps, the 60 s timeout under touch,
@@ -217,13 +229,12 @@ Speculos/fakes, and listed in `docs/PHASE_C_GUIDE.md`.
 - **M1: `scripts/device-smoke.ts` moved to M2.** It must run against both Speculos and a real
   Flex with the transport chosen by env, which is exactly what `packages/sentry-signer` is for.
   Writing a second node-hid transport in M1 would be duplicate code thrown away a milestone later.
-- **M1: the agent session is a settings switch on the home screen**, forced off at every app
-  start. The spec asks for a RAM-only session armed from the device menu; the SDK's home screen
-  drives switches from an NVM slot, so the slot is zeroed on boot to get the same semantics. A
-  test walks the whole instruction set and proves no APDU can arm it.
-- **M1: the rest of the device menu (My rules / Trusted merchants / +20 USDC) is deferred**,
-  cut-order item 2. The kill switch is **not** cut: `CLEAR_POLICY` (0x0D) wipes the rules after
-  an on-device review, and the website exposes it.
+- **The device home and menu use the NBGL C API directly** (`nbgl_useCaseHomeAndSettings` with
+  generic contents), because the SDK's safe wrapper only takes a page of switches. Menu taps draw
+  a non-blocking `nbgl_useCaseChoice`; its callback writes NVM and redraws the home. This replaced
+  the M1 interim (session as an SDK settings switch zeroed at boot, rest of the menu deferred).
+- **That the rules survive an app restart is checked on hardware only**: Speculos does not
+  implement NVM save/load for Rust apps (DX_NOTES 4.4). Phase C step 2 covers it.
 - **M1: the device proves a delegation is its own by re-signing and comparing**, rather than
   recovering a public key. ECDSA here is deterministic (RFC 6979), so only our own 0xMAIN can
   produce those exact 65 bytes - strictly stronger than a verify, and no DER plumbing on device.
@@ -245,9 +256,7 @@ Speculos/fakes, and listed in `docs/PHASE_C_GUIDE.md`.
 - **Agent name "Claude", device + website UI in French**, code and docs in English.
 
 ## Cut (cut order)
-- **Device menu beyond the session switch** (My rules / Trusted merchants / +20 USDC) — cut-order
-  item 2. The kill switch is **not** cut: CLEAR_POLICY with an on-device review, from the website.
-  Rules and trusted merchants are visible on the website and in every review screen.
+_Nothing cut._ (The device menu, deferred in M1, was built afterwards.)
 
 ## Known issues
 - A merchant trusted via "Faire confiance" gets the agent's hint as its label, clipped to the
@@ -280,3 +289,4 @@ Speculos/fakes, and listed in `docs/PHASE_C_GUIDE.md`.
 | M7 | Playwright | 4 |
 | M7 | e2e wipe + restore on Arc (`E2E=1 pnpm e2e:restore`) | 13 checks |
 | M8 | full demo twice from a clean reset (`E2E=1 pnpm e2e`) | 2 × 14 checks |
+| B | Speculos total, with the device home + menu | 73 |

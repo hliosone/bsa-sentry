@@ -10,7 +10,9 @@ the Cargo manifest shape, `build.rs` glyph pipeline, `src/app_ui/`, `src/setting
 `src/swap.rs`, `src/utils.rs`, `src/handlers/get_public_key.rs`, `get_version.rs`, `sign_tx.rs`,
 the `.github/`, `tools/`, `tests/` scaffolding and the icons/glyphs.
 Written by Ledger, not by us. Our additions are the BSA Sentry handlers, `device-app/core/`, the
-NBGL screens and the manifest changes.
+NBGL screens and the manifest changes. Of the upstream files, only the manifest shape, `build.rs`,
+`get_version.rs`, the glyphs and the top-level config files (`ledger_app.toml`, `rust-toolchain.toml`, lint configs, `LICENSE.md`) remain; the rest (including `app_ui/` and `settings.rs`) has since
+been removed.
 
 ## 2. Our own feasibility code (Oct 10–11, 2026 — before the build)
 
@@ -31,7 +33,8 @@ Reused here, **re-introduced under tests** (test written first, then the code po
   `keyring-web/web/main.ts` — WebHID + DMK in Chrome, WS relay, remote MCP + OAuth, Ledger Key Ring.
 
 Not reused: the hardcoded test addresses, and `SIGN_3009_SILENT` (`E0 0F`), a debug command that
-signs with no policy and no tap. **It does not exist in BSA Sentry.**
+signs with no policy and no tap. **It does not exist in BSA Sentry**, and the feasibility app that
+contains it ("Rust Boilerplate") is deleted from the Flex in Phase C step 1.
 
 ## 3. The team's EUDIW verifier integration (may predate Oct 7, 2026)
 

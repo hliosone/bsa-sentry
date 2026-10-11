@@ -141,10 +141,25 @@ blocking, retry" rather than the generic `CmdNotAccepted`.
 **What happened.** Our "agent session" toggle must be **RAM-only**: restarting the app has to disarm
 the agent. `NbglHomeAndSettings::settings()` drives switches straight from an NVM slot, and there is
 no hook to observe a toggle.
-**Fix.** Zero the slot at every app start, and read it on demand.
+**Fix.** First, zero the slot at every app start. In the end we dropped the wrapper (§2.7) and
+keep the session in a RAM static toggled by our own callback.
 **Suggestion.** Let `settings()` take an in-memory backing store, and expose an
 `on_setting_changed(token, value)` callback. Right now a setting can only be a persisted boolean,
 which rules out anything session-scoped.
+
+### 2.7 A real app menu means leaving the safe API
+
+**What happened.** We wanted the obvious menu: my rules (read-only list), trusted merchants (tap
+to remove, with a confirmation), "+20 USDC", "Block agent". `NbglHomeAndSettings` only accepts a
+page of switches, and its tagline is fixed at construction, so the home cannot show a live budget
+without being rebuilt.
+**Fix.** Call `nbgl_useCaseHomeAndSettings` directly with generic contents (switches, tag/value
+list, bars), keep every C string and struct in a `static MaybeUninit` because NBGL holds the
+pointers after the call returns, and confirm each action with a non-blocking `nbgl_useCaseChoice`
+whose callback writes NVM and redraws. About 300 lines, most of it `unsafe` pointer fix-ups.
+**Suggestion.** Expose `nbgl_genericContents_t` in the safe home builder (tag/value pages, bar
+lists with a per-bar callback) plus a `refresh_tagline()`. Every app with state worth showing
+needs this; the C SDK already has it.
 
 ---
 
@@ -195,9 +210,19 @@ this to write CI tests.
 
 ### 4.2 Please keep `--display headless` + the REST API exactly as they are
 
-Being able to drive the device from `fetch` with no GUI is what made 57 automated device tests
-possible. Locating tap targets from `/events` coordinates (instead of hardcoded pixels) means a
+Being able to drive the device from `fetch` with no GUI is what made our automated device tests
+possible (73 now). Locating tap targets from `/events` coordinates (instead of hardcoded pixels) means a
 layout change fails loudly. This is the piece we would most hate to lose.
+
+### 4.3 NVM persistence across a restart is not implemented for Rust apps
+
+**What happened.** To test that the rules survive an app restart (and the session does not), we
+ran Speculos with `--load-nvram --save-nvram`. It exits at start: *"NVRAM data save and load
+functionality is not yet implemented for Rust apps."* Restarting Speculos always starts from
+blank NVM.
+**Impact.** "The rules survive a restart" can only be checked on a real device, by hand.
+**Suggestion.** Support it for Rust apps (the `.nvm_data` section is there), or document the
+limitation next to the flags.
 
 ---
 

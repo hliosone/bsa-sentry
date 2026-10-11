@@ -3,7 +3,7 @@ SHELL := /bin/bash
 DEVICE_IMAGE := ghcr.io/ledgerhq/ledger-app-builder/ledger-app-dev-tools:latest
 APP := device-app/app
 
-.PHONY: help test device speculos load clean-device
+.PHONY: help test device speculos load remove-feasibility-app clean-device
 
 help:
 	@grep -E '^[a-z-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*?## "}{printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -22,6 +22,9 @@ load: ## Sideload on the REAL Flex. Phase C only: PIN on the device, dashboard, 
 	~/.venvs/ledger/bin/python -m ledgerblue.runScript \
 		--elfFile $(APP)/target/flex/release/bsa-sentry \
 		--fileName $(APP)/target/flex/release/bsa-sentry.apdu --apdu --scp
+
+remove-feasibility-app: ## Phase C: delete the old feasibility app ("Rust Boilerplate", it can sign with no policy)
+	~/.venvs/ledger/bin/python -m ledgerblue.deleteApp --targetId 0x33300004 --appName "Rust Boilerplate"
 
 clean-device: ## Drop the device build cache
 	rm -rf $(APP)/target
