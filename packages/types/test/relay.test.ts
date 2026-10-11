@@ -100,6 +100,13 @@ describe('get_state', () => {
   });
 });
 
+describe('start_restore', () => {
+  it('parses, and carries nothing but an id', () => {
+    expect(parseServerToTab({ id: 'r', type: 'start_restore' }).type).toBe('start_restore');
+    expect(() => parseServerToTab({ id: 'r', type: 'start_restore', policy: {} })).toThrow();
+  });
+});
+
 describe('tab -> server responses', () => {
   const sig = { v: 27, r: `0x${'11'.repeat(32)}`, s: `0x${'22'.repeat(32)}` };
 

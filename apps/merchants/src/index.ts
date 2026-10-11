@@ -18,6 +18,7 @@ const app = await createMerchantsApp({
     cave: need('MERCHANT_CAVE_ADDRESS'),
     resto: need('MERCHANT_RESTO_ADDRESS'),
     evil: need('MERCHANT_EVIL_ADDRESS'),
+    boulangerie: need('MERCHANT_BOULANGERIE_ADDRESS'),
   },
   publicUrl: process.env.MERCHANT_URL ?? `http://localhost:${port}`,
 });

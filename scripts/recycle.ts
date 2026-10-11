@@ -12,7 +12,7 @@ const MIN_SWEEP = usdc('0.1');
 const treasury = process.env.TREASURY_ADDRESS as Hex;
 if (!treasury) throw new Error('TREASURY_ADDRESS missing from .env');
 
-const merchants = (['CAFE', 'CAVE', 'RESTO', 'EVIL'] as const)
+const merchants = (['CAFE', 'CAVE', 'RESTO', 'EVIL', 'BOULANGERIE'] as const)
   .map((m) => ({ name: m.toLowerCase(), key: process.env[`MERCHANT_${m}_PRIVATE_KEY`] as Hex, address: process.env[`MERCHANT_${m}_ADDRESS`] as Hex }))
   .filter((m) => m.key && m.address);
 

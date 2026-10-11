@@ -13,7 +13,9 @@
     "test:speculos": "vitest run --config vitest.speculos.config.ts",
     "smoke": "tsx scripts/device-smoke.ts",
     "harness": "tsx scripts/bridge-harness.ts",
-    "e2e:cafe": "tsx scripts/e2e-cafe.ts"
+    "e2e:cafe": "tsx scripts/e2e-cafe.ts",
+    "e2e:mcp": "tsx scripts/e2e-mcp.ts",
+    "tunnel": "tsx scripts/tunnel.ts"
   },
   "devDependencies": {
     "@bsa-sentry/sentry-signer": "workspace:*",

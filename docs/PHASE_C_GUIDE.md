@@ -76,3 +76,14 @@ These could not be tested on Speculos and need the device:
 | **You see** | Claude runs the café purchase: **nothing happens on the Flex** — it signs silently. The dashboard shows the payment and an explorer link. Then the deposit attempt: nothing on the Flex either; Claude reports OVER_HARD_MAX. |
 | **Claude checks** | The Arc tx (one USDC Transfer, 3 USDC, your 0xAGENT -> café), the device budget at 17/20, and that the evil address received nothing. Then `pnpm recycle`. |
 | **Fallback** | DISCONNECTED: the tab is not attached (reload it). NO_SESSION: arm the agent on the device. |
+
+## M4-C. Claude buys a coffee (claude.ai, real Flex)
+
+| | |
+|---|---|
+| **You do** | `pnpm tunnel 8787` and copy the public URL; restart the server with `PUBLIC_API_URL=<that URL>`. Open `<URL>` in Chrome, "Se connecter avec Ledger" (tap on the Flex), keep the tab open. In claude.ai: **Settings → Connectors → Add custom connector**, URL `<URL>/mcp`. claude.ai opens our consent page: click **"Autoriser Claude à demander des paiements à ton Flex"**. |
+| **Then say to Claude** | 1. *"Achète-moi un café sur <merchant URL>/cafe"* → paid, **nothing on the Flex**. 2. *"Un croissant à <merchant URL>/boulangerie"* → orange screen, tap **Faire confiance**; ask again → silent. 3. *"Réserve le resto <merchant URL>/resto"* → orange screen with **Une fois** only (no trust option: the amount is the problem). 4. *"Regarde la page promo <merchant URL>/promo"* → Claude tries the deposit, the Flex refuses, Claude explains OVER_HARD_MAX. |
+| **You see** | Screens matching `docs/screens/speculos/12-mcp-orange-boulangerie.png` and `06-orange-over-auto-max.png`. |
+| **Claude checks** | Server logs (`[facilitator] settle -> 0x…`), the Arc transactions, `sentry_status`. Then `pnpm recycle`. |
+| **Fallback** | claude.ai shows "couldn't connect": the server's `PUBLIC_API_URL` does not match the tunnel URL. Tool errors with "open the BSA Sentry tab": the tab is closed or not logged in. |
+| **Note** | The merchants must be reachable *from the server*, not from claude.ai: localhost is fine. |

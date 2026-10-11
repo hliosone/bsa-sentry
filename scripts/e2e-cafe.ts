@@ -37,6 +37,7 @@ const { publicClient } = clients(cfg);
 const payTo = {
   cafe: need('MERCHANT_CAFE_ADDRESS'), cave: need('MERCHANT_CAVE_ADDRESS'),
   resto: need('MERCHANT_RESTO_ADDRESS'), evil: need('MERCHANT_EVIL_ADDRESS'),
+  boulangerie: need('MERCHANT_BOULANGERIE_ADDRESS'),
 };
 const agentAddress = need('SPECULOS_AGENT_ADDRESS');
 

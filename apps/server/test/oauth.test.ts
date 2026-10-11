@@ -67,7 +67,7 @@ async function fullFlow(app: express.Express) {
   const client = await register(app);
   const { verifier, challenge } = pkce();
   const redirect = await consent(app, client.client_id, challenge);
-  const code = new URL(redirect.headers.location).searchParams.get('code')!;
+  const code = new URL(redirect.headers.location!).searchParams.get('code')!;
   const token = await request(app).post('/oauth/token').type('form').send({
     grant_type: 'authorization_code', code, redirect_uri: CLAUDE_REDIRECT, code_verifier: verifier,
     client_id: client.client_id, client_secret: client.client_secret,
@@ -161,7 +161,7 @@ describe('authorize', () => {
     const c = await register(app);
     const res = await consent(app, c.client_id, pkce().challenge);
     expect(res.status).toBe(302);
-    const loc = new URL(res.headers.location);
+    const loc = new URL(res.headers.location!);
     expect(`${loc.origin}${loc.pathname}`).toBe(CLAUDE_REDIRECT);
     expect(loc.searchParams.get('code')).toMatch(/.{20,}/);
     expect(loc.searchParams.get('state')).toBe('st-123');
@@ -171,8 +171,8 @@ describe('authorize', () => {
     const { app } = setup();
     const c = await register(app);
     const res = await consent(app, c.client_id, pkce().challenge, 'deny');
-    expect(new URL(res.headers.location).searchParams.get('error')).toBe('access_denied');
-    expect(new URL(res.headers.location).searchParams.get('code')).toBeNull();
+    expect(new URL(res.headers.location!).searchParams.get('error')).toBe('access_denied');
+    expect(new URL(res.headers.location!).searchParams.get('code')).toBeNull();
   });
 
   it('refuses a consent POST without the CSRF token from the page', async () => {
@@ -245,7 +245,7 @@ describe('token', () => {
     const { app } = setup();
     const client = await register(app);
     const { challenge } = pkce();
-    const code = new URL((await consent(app, client.client_id, challenge)).headers.location).searchParams.get('code');
+    const code = new URL((await consent(app, client.client_id, challenge)).headers.location!).searchParams.get('code');
     const res = await request(app).post('/oauth/token').type('form').send({
       grant_type: 'authorization_code', code, redirect_uri: CLAUDE_REDIRECT, code_verifier: pkce().verifier,
       client_id: client.client_id, client_secret: client.client_secret,
@@ -258,7 +258,7 @@ describe('token', () => {
     const { app } = setup();
     const client = await register(app);
     const { verifier, challenge } = pkce();
-    const code = new URL((await consent(app, client.client_id, challenge)).headers.location).searchParams.get('code');
+    const code = new URL((await consent(app, client.client_id, challenge)).headers.location!).searchParams.get('code');
     const res = await request(app).post('/oauth/token').type('form').send({
       grant_type: 'authorization_code', code, redirect_uri: CLAUDE_REDIRECT, code_verifier: verifier,
       client_id: client.client_id, client_secret: 'wrong',
@@ -282,7 +282,7 @@ describe('token', () => {
     const { app, clock } = setup();
     const client = await register(app);
     const { verifier, challenge } = pkce();
-    const code = new URL((await consent(app, client.client_id, challenge)).headers.location).searchParams.get('code');
+    const code = new URL((await consent(app, client.client_id, challenge)).headers.location!).searchParams.get('code');
     clock.t += 601;
     const res = await request(app).post('/oauth/token').type('form').send({
       grant_type: 'authorization_code', code, redirect_uri: CLAUDE_REDIRECT, code_verifier: verifier,
@@ -321,7 +321,7 @@ describe('token', () => {
     const { app } = setup();
     const client = await register(app);
     const { verifier, challenge } = pkce();
-    const code = new URL((await consent(app, client.client_id, challenge)).headers.location).searchParams.get('code');
+    const code = new URL((await consent(app, client.client_id, challenge)).headers.location!).searchParams.get('code');
     const res = await request(app).post('/oauth/token').send({
       grant_type: 'authorization_code', code, redirect_uri: CLAUDE_REDIRECT, code_verifier: verifier,
       client_id: client.client_id, client_secret: client.client_secret,

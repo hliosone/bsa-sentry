@@ -16,6 +16,7 @@ const payTo = {
   cave: '0x0b34839c51d7d6932a9cf00d63b15d58a29265ac',
   resto: '0xd4e15888844c2df59cf371917c11a99267917af5',
   evil: '0xdd70bd3cde251346c0ddfc7a4db3056bb26f1e50',
+  boulangerie: '0x1111111111111111111111111111111111111b0b',
 } as const;
 
 let facilitator: Server;
@@ -70,8 +71,14 @@ describe('prices and payees', () => {
     expect(r.accepts[0].payTo.toLowerCase()).toBe(payTo.evil);
   });
 
+  it('the bakery is 2 USDC: under the auto limit, for the "Faire confiance" demo', async () => {
+    const r = await required('/boulangerie');
+    expect(r.accepts[0]).toMatchObject({ amount: '2000000' });
+    expect(r.accepts[0].payTo.toLowerCase()).toBe(payTo.boulangerie);
+  });
+
   it('every merchant pays to a distinct address', () => {
-    expect(new Set(Object.values(payTo)).size).toBe(4);
+    expect(new Set(Object.values(payTo)).size).toBe(5);
   });
 
   it('describes each resource, which becomes the device hint', async () => {
@@ -82,7 +89,7 @@ describe('prices and payees', () => {
   });
 
   it('only the wine cellar asks for 18+', async () => {
-    for (const path of ['/cafe', '/resto', '/evil/deposit']) {
+    for (const path of ['/cafe', '/resto', '/evil/deposit', '/boulangerie']) {
       const r = await required(path);
       expect(r.accepts[0].extra?.requires, path).toBeUndefined();
     }
@@ -108,7 +115,7 @@ describe('the promo page (the prompt injection)', () => {
 describe('the catalogue', () => {
   it('lists every merchant with its price, for the website and the demo script', () => {
     expect(MERCHANTS.map((m) => [m.path, m.price])).toEqual([
-      ['/cafe', '$3'], ['/cave', '$4.5'], ['/resto', '$20'], ['/evil/deposit', '$400'],
+      ['/cafe', '$3'], ['/cave', '$4.5'], ['/resto', '$20'], ['/evil/deposit', '$400'], ['/boulangerie', '$2'],
     ]);
   });
 

@@ -8,13 +8,16 @@ import { paymentMiddleware, x402ResourceServer } from '@x402/express';
 import { ExactEvmScheme } from '@x402/evm/exact/server';
 import { HTTPFacilitatorClient } from '@x402/core/server';
 
-export type MerchantKey = 'cafe' | 'cave' | 'resto' | 'evil';
+export type MerchantKey = 'cafe' | 'cave' | 'resto' | 'evil' | 'boulangerie';
 
 export const MERCHANTS = [
   { key: 'cafe', path: '/cafe', price: '$3', description: 'Cafe Sat - un espresso' },
   { key: 'cave', path: '/cave', price: '$4.5', description: 'Cave du Coin - bouteille', requires: ['age_over_18'] },
   { key: 'resto', path: '/resto', price: '$20', description: 'Resto - reservation' },
   { key: 'evil', path: '/evil/deposit', price: '$400', description: 'Depot de garantie' },
+  // Not in the default rules and under the auto limit: the unknown payee is the ONLY problem,
+  // so the Flex offers "Faire confiance" - and pays it silently afterwards.
+  { key: 'boulangerie', path: '/boulangerie', price: '$2', description: 'Boulangerie - croissant' },
 ] as const satisfies readonly { key: MerchantKey; path: string; price: string; description: string; requires?: readonly string[] }[];
 
 export type MerchantsConfig = {
@@ -30,6 +33,7 @@ const CONTENT: Record<MerchantKey, unknown> = {
   cave: { merchant: 'Cave du Coin', item: 'Chasselas 2023, 75 cl', message: 'Bouteille reservee, a retirer en boutique.' },
   resto: { merchant: 'Resto', item: 'table pour 2, ce soir 20h', message: 'Reservation confirmee.' },
   evil: { merchant: 'Depot', message: 'Merci.' },
+  boulangerie: { merchant: 'Boulangerie', item: 'croissant', message: 'Croissant tout chaud.' },
 };
 
 export async function createMerchantsApp(cfg: MerchantsConfig): Promise<express.Express> {

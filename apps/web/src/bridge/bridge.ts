@@ -38,6 +38,8 @@ export type BridgeOptions = {
   connect: () => SocketLike;
   reconnectDelayMs?: number;
   onStatus?: (status: BridgeStatus) => void;
+  /** The server asked for a restore (MCP sentry_restore); the page shows the restore flow. */
+  onRestoreRequested?: () => void;
   log?: (message: string, detail?: unknown) => void;
 };
 
@@ -144,6 +146,10 @@ export class Bridge {
         return;
       case 'sign_payment':
         await this.signPayment(msg);
+        return;
+      case 'start_restore':
+        // Restoring needs Ledger Sync and the user's taps, so the page takes over.
+        this.opts.onRestoreRequested?.();
         return;
     }
   }

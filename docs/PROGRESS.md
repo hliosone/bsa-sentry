@@ -14,7 +14,7 @@ Follow from anywhere: this file is pushed to GitHub after every milestone.
 - [x] **M1** Device app core + app + Speculos tests — **88 Rust + 57 Speculos**
 - [x] **M2** sentry-signer + bridge + harness — **30 + 17 TS, 5 Speculos**
 - [x] **M3** Server core + merchants → first coffee on Arc — **real tx on Arc**
-- [ ] **M4** Auth, OAuth, MCP → Claude buys a coffee
+- [x] **M4** Auth, OAuth, MCP → Claude buys a coffee — **passes locally and through a public tunnel**
 - [ ] **M5** Website complete
 - [ ] **M6** 18+ identity (EUDIW)
 - [ ] **M7** Key Ring backup/restore + device menu
@@ -125,10 +125,29 @@ Follow from anywhere: this file is pushed to GitHub after every milestone.
 - `pnpm recycle` swept the café's 2.95 USDC back to the treasury.
 - `Dockerfile` + `docker-compose.yml` (server healthcheck gates the merchants).
 
+### M4 — done (Mon 12 Oct 2026, ~00:00 CEST) · "Claude" buys a coffee through MCP
+- **`E2E=1 pnpm e2e:mcp` passes locally AND through a public cloudflared tunnel** (19 checks).
+  It plays claude.ai with the official MCP TS SDK client, which does the whole OAuth 2.1 flow
+  itself (discovery, DCR, PKCE S256, token); the consent step is done headlessly behind a
+  Ledger session the Flex (Speculos) signed after a tap. Then: café silent · bakery orange ->
+  "Faire confiance" -> silent the second time · resto orange **without** the trust option ->
+  "Une fois" · /promo -> 400 USDC deposit refused OVER_HARD_MAX · sentry_status. All on Arc.
+- Login 12 tests · OAuth 28 · MCP 14. `apps/server/src/main.ts` is the production wiring; the
+  e2e runs exactly it.
+- `pnpm tunnel [port]` prints the public MCP URL for claude.ai (http2 + IPv4).
+
 ## Blocked
 _nothing yet_
 
 ## Decisions
+- **M4: the spec's "réserve le resto -> Faire confiance" contradicts its own §5.2.** "Faire
+  confiance" is only offered when the unknown payee is the *only* problem; the resto is a
+  known payee 15 USDC over the auto limit, so trusting it would change nothing. The security
+  rule wins: the resto shows the orange screen with "Une fois" only. To still demo "trust once,
+  silent after", a 5th merchant `/boulangerie` (2 USDC, not in the default rules) was added;
+  its key is in `.env` (`MERCHANT_BOULANGERIE_*`).
+- **M4: no `ANTHROPIC_API_KEY`, so no automated real-Claude run.** The e2e drives the real MCP
+  SDK client through the real public tunnel instead; the claude.ai run is Phase C step M4-C.
 - **M3: the e2e runs the real stack in-process**, with the relay socket authenticated as a fixed
   account. Production authenticates it with the Ledger login session (M4); there is no insecure
   dev flag in the server code. `docker compose up` is verified in M4, once `src/index.ts` wires
@@ -185,3 +204,5 @@ _nothing yet_
 | M3 | `apps/server` (facilitator, relay, agent) | 68 |
 | M3 | `apps/merchants` | 11 |
 | M3 | e2e on real Arc (`E2E=1 pnpm e2e:cafe`) | 15 checks |
+| M4 | `apps/server` total (auth, OAuth, MCP added) | 124 |
+| M4 | e2e MCP, local + tunnel (`E2E=1 [TUNNEL=1] pnpm e2e:mcp`) | 19 checks |

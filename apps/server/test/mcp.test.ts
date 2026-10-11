@@ -7,8 +7,8 @@ import { encodeState, type DeviceState } from '@bsa-sentry/types';
 import { buildMcpServer, type McpDeps } from '../src/mcp.js';
 import type { X402Result } from '../src/agent/x402-client.js';
 
-const CAFE = '0x5069ee8f83b7181f031518d1375eae270f884175';
-const TX = `0x${'cd'.repeat(32)}`;
+const CAFE = '0x5069ee8f83b7181f031518d1375eae270f884175' as const;
+const TX = `0x${'cd'.repeat(32)}` as `0x${string}`;
 
 const state = (): DeviceState => ({
   sessionArmed: true, hasCredentials: true, spent: 3_000_000n, count: 1,

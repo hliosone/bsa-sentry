@@ -54,7 +54,13 @@ export const GetStateRequest = z.object({
   type: z.literal('get_state'),
 }).strict();
 
-export const ServerToTab = z.discriminatedUnion('type', [SignPaymentRequest, GetStateRequest]);
+/** Asks the tab to start the Key Ring restore flow (MCP `sentry_restore`). The user drives it. */
+export const StartRestoreRequest = z.object({
+  id: z.string().min(1),
+  type: z.literal('start_restore'),
+}).strict();
+
+export const ServerToTab = z.discriminatedUnion('type', [SignPaymentRequest, GetStateRequest, StartRestoreRequest]);
 export type ServerToTab = z.infer<typeof ServerToTab>;
 
 const Signature = z.object({

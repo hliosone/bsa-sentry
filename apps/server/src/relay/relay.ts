@@ -99,6 +99,14 @@ export class Relay {
     });
   }
 
+  /** Asks the tab to start the restore flow. Fire and forget: the user drives it on the device. */
+  requestRestore(account: string): boolean {
+    const a = this.accounts.get(account);
+    if (!a?.tab) return false;
+    a.tab.send(toWire({ id: randomUUID(), type: 'start_restore' }));
+    return true;
+  }
+
   /** Asks the tab for a fresh status; resolves once it has been sent (the status arrives as an event). */
   refreshState(account: string): boolean {
     const a = this.accounts.get(account);

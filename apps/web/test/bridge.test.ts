@@ -276,6 +276,20 @@ describe('get_state', () => {
   });
 });
 
+describe('start_restore', () => {
+  it('hands the request to the page without touching the device', async () => {
+    const signer = fakeSigner();
+    const onRestoreRequested = vi.fn();
+    const sockets: FakeSocket[] = [];
+    const bridge = new Bridge({ signer: signer as any, connect: () => { const s = new FakeSocket(); sockets.push(s); return s; }, onRestoreRequested });
+    bridge.start();
+    sockets[0]!.open();
+    sockets[0]!.deliver({ id: 'r1', type: 'start_restore' });
+    await vi.waitFor(() => expect(onRestoreRequested).toHaveBeenCalledTimes(1));
+    expect(signer.pay).not.toHaveBeenCalled();
+  });
+});
+
 describe('reconnection', () => {
   it('opens a new socket after the old one closes', async () => {
     const { sockets, socket } = start(fakeSigner());

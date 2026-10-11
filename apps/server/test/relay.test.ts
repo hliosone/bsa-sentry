@@ -211,6 +211,20 @@ describe('disconnects', () => {
   });
 });
 
+describe('restore', () => {
+  it('sends start_restore to the attached tab', () => {
+    const relay = new Relay();
+    const tab = new FakeTab();
+    relay.attach('alice', tab);
+    expect(relay.requestRestore('alice')).toBe(true);
+    expect(tab.sent.at(-1)).toMatchObject({ type: 'start_restore' });
+  });
+
+  it('reports false when no tab is attached', () => {
+    expect(new Relay().requestRestore('alice')).toBe(false);
+  });
+});
+
 describe('status', () => {
   it('tracks the Flex state from the tab\'s status messages', () => {
     const relay = new Relay();
