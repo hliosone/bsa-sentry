@@ -10,7 +10,7 @@ Follow from anywhere: this file is pushed to GitHub after every milestone.
 
 ## Milestones
 
-- [ ] **M0** Setup + contracts (`packages/types`, fixtures, docs)
+- [x] **M0** Setup + contracts (`packages/types`, fixtures, docs) — **207 tests**
 - [ ] **M1** Device app core + app + Speculos tests
 - [ ] **M2** sentry-signer + bridge + harness
 - [ ] **M3** Server core + merchants → first coffee on Arc
@@ -48,6 +48,37 @@ Follow from anywhere: this file is pushed to GitHub after every milestone.
 - Human answers: defaults accepted for all Phase A questions (see "Decisions").
 - Human has left; laptop locked, on AC, `systemd-inhibit` blocking sleep/idle/lid.
 
+### M0 — done (Sun 11 Oct 2026, 16:15 CEST) · 207 tests green
+- `CLAUDE.md` (RUN MODE + §0/2/3/5 of the spec, survives a context reset), `docs/ARCHITECTURE.md`
+  (full spec), `docs/REFERENCE_MAP.md`, `docs/PREEXISTING.md`, `docs/DX_NOTES.md` (9 entries),
+  `docs/PHASE_C_GUIDE.md` skeleton, `Makefile`.
+- Reference exports compared with `diff -rq`: **the code is byte-identical** in
+  `AgentGuard-feasibility/` and `agentguard-feasibility-tests/`. The latter is canonical
+  (consolidated patch + `.env.example`); the former keeps the browser/MCP/tunnel run logs.
+- `packages/types`, test-first:
+  - **EIP-712** (36 tests): 5 struct types + 3 domains. Every digest is reproduced twice —
+    by `viem.hashTypedData` and by an independent hand-rolled keccak encoder (the algorithm
+    `device-app/core` will implement) — and frozen in `fixtures/eip712.json`.
+    `scripts/check-domain.ts` proves the payment fixture's `domainSeparator` equals the **live
+    on-chain** Arc USDC `DOMAIN_SEPARATOR` (`0x361191…c6b0`), so the vectors are not self-referential.
+  - **Policy / state codec** (34 tests): offsets pinned, 57–353 bytes. The decoder rejects
+    trailing bytes, bad UTF-8 labels, >8 payees, >16-byte labels, unknown flags/versions,
+    duplicate payees and `autoMax > hardMax`.
+  - **APDU chunking** (32 tests): boundaries 0/250/251/1024, and a `Reassembler` mirroring the
+    device incl. `0xB004` / `0xB00B`. It **drops the partial buffer on overflow**, so a host
+    cannot keep pushing after an error.
+  - **Credentials codec** (20 tests): max bundle 483 B. With the max policy (353 B) that is
+    836 B, under the 1024-byte buffer → **RESTORE stays a single command** (decided by test,
+    as the spec asked).
+  - **Relay schemas** (29 tests): zod, every object `.strict()`; u64/u256 travel as decimal
+    strings so JSON cannot lose precision; hint capped at 24 UTF-8 bytes.
+  - **Error codes** (12 tests): status words + the 7 refusal reasons (0 reserved) + the 4 orange
+    reasons + the 10 bridge reasons.
+  - **Fixture freeze** (44 tests): `fixtures/wire.json` holds golden bytes for every codec, the
+    chunking vectors and 16 blobs that must be rejected. Rust reads the same file in M1.
+  - The INS table asserts the feasibility app's `PING` (0x07), `SIGN_3009` (0x09) and
+    `SIGN_3009_SILENT` (0x0F, no policy, no tap) **do not exist** here.
+
 ## Blocked
 _nothing yet_
 
@@ -63,4 +94,10 @@ _nothing yet_
 - **Agent name "Claude", device + website UI in French**, code and docs in English.
 
 ## Known issues
-_nothing yet_
+- `scripts/setup-machine.sh` prints "Node v18.19.1" in its summary: it runs `su - $SUDO_USER`,
+  which does not load nvm. The real toolchain in an interactive shell is Node 22.22.0. Cosmetic.
+
+## Test counts
+| Milestone | Suite | Tests |
+|---|---|---|
+| M0 | `packages/types` (vitest) | 207 |

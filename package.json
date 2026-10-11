@@ -8,7 +8,8 @@
     "balances": "tsx scripts/balances.ts",
     "fund": "tsx scripts/fund.ts",
     "recycle": "tsx scripts/recycle.ts",
-    "check:domain": "tsx scripts/check-domain.ts"
+    "check:domain": "tsx scripts/check-domain.ts",
+    "typecheck": "pnpm -r exec tsc --noEmit"
   },
   "devDependencies": {
     "dotenv": "^16.4.7",

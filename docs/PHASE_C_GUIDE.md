@@ -21,3 +21,12 @@ first, run the test suites, then walk the human through from step 1. A bug found
 | **Why** | Without this, the device returns `0x5515` after ~2 minutes and every later step fails for a reason that looks like a code bug. |
 
 <!-- Phase B appends milestone steps below this line -->
+
+## M0-C. Confirm the contracts against the real device's world
+
+| | |
+|---|---|
+| **You do** | Nothing — this one is Claude's, but it must run with the Flex plugged and network up. |
+| **Claude checks** | `pnpm check:domain` → the frozen `fixtures/eip712.json` payment `domainSeparator` still equals the live Arc USDC `DOMAIN_SEPARATOR`, and `name=USDC version=2 decimals=6`. |
+| **Fallback** | If Arc has redeployed USDC, regenerate with `pnpm --filter @bsa-sentry/types fixtures` and rerun the Rust + TS suites in the same commit (contracts change on both sides at once). |
+| **Why** | Everything the device signs hangs off this one hash. It is the cheapest possible check that the golden vectors still describe reality. |
