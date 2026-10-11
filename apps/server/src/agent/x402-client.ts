@@ -199,8 +199,18 @@ export async function x402Fetch(
     return { kind: 'error', message: `the payment was signed but ${url.host} could not be reached: ${(e as Error).message}`, ...signed };
   }
   if (paid.status === 402 || paid.status >= 400) {
-    const why = await readContent(paid);
-    return { kind: 'error', message: `${url.host} rejected the signed payment (HTTP ${paid.status})${why ? `: ${why.slice(0, 300)}` : ''}`, ...signed };
+    // x402 puts the facilitator's verdict in a fresh PAYMENT-REQUIRED header (`error`), not the body.
+    let reason: string | undefined;
+    try {
+      const again = paid.headers.get('PAYMENT-REQUIRED');
+      if (again) reason = (decodePaymentRequiredHeader(again) as { error?: string }).error;
+    } catch { /* fall back to the body */ }
+    const why = reason ?? (await readContent(paid)).slice(0, 300);
+    return {
+      kind: 'error',
+      message: `${url.host} rejected the signed payment (HTTP ${paid.status})${why && why !== '{}' ? `: ${why}` : ''}${hintForReason(reason)}`,
+      ...signed,
+    };
   }
 
   let txHash: Hex | undefined;
@@ -216,6 +226,16 @@ export async function x402Fetch(
     content: await readContent(paid),
     receipt: { decision: 'approved', amount: usdcAmount(value), payee, ...(txHash ? { txHash } : {}), network },
   };
+}
+
+/** A next step the agent can pass on, for the facilitator reasons a user can act on. */
+function hintForReason(reason: string | undefined): string {
+  if (!reason) return '';
+  if (reason === 'AGE_PROOF_REQUIRED' || reason.startsWith('DELEGATION_') || reason.startsWith('ATTESTATION_') || reason === 'SUBJECT_MISMATCH') {
+    return '. This merchant requires the 18+ badge: the user can add it on the BSA Sentry website (Badge 18+, then Délégation).';
+  }
+  if (reason === 'insufficient_funds') return '. The agent account has not enough USDC on Arc testnet.';
+  return '';
 }
 
 async function readContent(res: Response): Promise<string> {

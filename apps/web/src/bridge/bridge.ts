@@ -185,20 +185,18 @@ export class Bridge {
   }
 
   /**
-   * Credentials are read from the Flex once and kept **in memory only** — never in
-   * localStorage, never on disk. A reload re-reads them from the device.
+   * Credentials are read from the Flex each time a merchant asks for them (three quick
+   * APDUs, no tap) and never kept beyond the request: not in localStorage, not on disk, not
+   * even in a cache that could go stale after the user adds, removes or restores a badge.
    */
   private async readCredentials(): Promise<CredentialsWire | null> {
-    if (this.credentialsRead) return this.credentials;
     try {
       const read = this.opts.signer.getCredentialsWire;
-      this.credentials = read ? await read.call(this.opts.signer) : null;
+      return read ? await read.call(this.opts.signer) : null;
     } catch (e) {
       this.opts.log?.('could not read credentials', e);
-      this.credentials = null;
+      return null;
     }
-    this.credentialsRead = true;
-    return this.credentials;
   }
 
   private async reportStatus(): Promise<void> {

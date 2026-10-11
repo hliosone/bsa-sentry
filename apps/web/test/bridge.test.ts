@@ -235,7 +235,7 @@ describe('sign_payment', () => {
 });
 
 describe('credentials', () => {
-  it('are read once on connect and attached only when the server asks', async () => {
+  it('are attached only when the server asks', async () => {
     const credentials = {
       attestation: `0x${'aa'.repeat(120)}`, attestationSig: `0x${'bb'.repeat(65)}`,
       delegation: `0x${'cc'.repeat(140)}`, delegationSig: `0x${'dd'.repeat(65)}`,
@@ -251,6 +251,30 @@ describe('credentials', () => {
     h.socket().deliver(signPayment({ id: 'creds', wantCredentials: true }));
     await vi.waitFor(() => expect(h.socket().replies).toHaveLength(2));
     expect(h.socket().replies[1]).toMatchObject({ id: 'creds', ok: true, credentials });
+  });
+
+  it('attaches credentials stored on the Flex AFTER an earlier request (no stale cache)', async () => {
+    const credentials = {
+      attestation: `0x${'aa'.repeat(120)}`, attestationSig: `0x${'bb'.repeat(65)}`,
+      delegation: `0x${'cc'.repeat(140)}`, delegationSig: `0x${'dd'.repeat(65)}`,
+    };
+    let stored: typeof credentials | null = null;
+    const signer = fakeSigner({ getCredentialsWire: vi.fn(async () => stored) });
+    const h = start(signer as any);
+    h.socket().open();
+    h.socket().deliver(signPayment({ id: 'before', wantCredentials: true }));
+    await vi.waitFor(() => expect(h.socket().replies).toHaveLength(1));
+    expect(h.socket().replies[0]).not.toHaveProperty('credentials');
+
+    stored = credentials; // the user just did the 18+ flow on the website
+    h.socket().deliver(signPayment({ id: 'after', wantCredentials: true }));
+    await vi.waitFor(() => expect(h.socket().replies).toHaveLength(2));
+    expect(h.socket().replies[1]).toMatchObject({ id: 'after', credentials });
+
+    stored = null; // and wiped them (or the Flex was reset)
+    h.socket().deliver(signPayment({ id: 'wiped', wantCredentials: true }));
+    await vi.waitFor(() => expect(h.socket().replies).toHaveLength(3));
+    expect(h.socket().replies[2]).not.toHaveProperty('credentials');
   });
 
   it('still signs when the device holds no credentials', async () => {

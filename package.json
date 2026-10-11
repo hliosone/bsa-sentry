@@ -16,7 +16,8 @@
     "e2e:cafe": "tsx scripts/e2e-cafe.ts",
     "e2e:mcp": "tsx scripts/e2e-mcp.ts",
     "tunnel": "tsx scripts/tunnel.ts",
-    "test:web": "pnpm --filter @bsa-sentry/web exec playwright test"
+    "test:web": "pnpm --filter @bsa-sentry/web exec playwright test",
+    "e2e:age": "tsx scripts/e2e-age.ts"
   },
   "devDependencies": {
     "@bsa-sentry/sentry-signer": "workspace:*",

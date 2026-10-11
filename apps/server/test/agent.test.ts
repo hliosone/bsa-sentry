@@ -29,7 +29,7 @@ const paymentRequired = (accepts = [requirement()], description = 'Un cafe chez 
 });
 
 /** A merchant that answers 402 first, then 200 once paid. Records what it was sent. */
-function merchant(opts: { required?: ReturnType<typeof paymentRequired>; paidStatus?: number; free?: boolean } = {}) {
+function merchant(opts: { required?: ReturnType<typeof paymentRequired>; paidStatus?: number; free?: boolean; rejectReason?: string } = {}) {
   const calls: { url: string; init?: RequestInit }[] = [];
   const fetchImpl = vi.fn(async (url: string | URL, init?: RequestInit) => {
     calls.push({ url: String(url), init });
@@ -39,6 +39,14 @@ function merchant(opts: { required?: ReturnType<typeof paymentRequired>; paidSta
       return new Response(JSON.stringify({}), {
         status: 402,
         headers: { 'PAYMENT-REQUIRED': encodePaymentRequiredHeader((opts.required ?? paymentRequired()) as any) },
+      });
+    }
+    if (opts.rejectReason) {
+      // What @x402/express 2.28 does when the facilitator says no: a fresh 402 whose
+      // PAYMENT-REQUIRED header carries the facilitator's reason in `error`; the body is empty.
+      return new Response('{}', {
+        status: 402,
+        headers: { 'PAYMENT-REQUIRED': encodePaymentRequiredHeader({ ...(opts.required ?? paymentRequired()), error: opts.rejectReason } as any) },
       });
     }
     return new Response(JSON.stringify({ coffee: 'espresso' }), {
@@ -215,6 +223,14 @@ describe('refusals and failures, in words the agent can repeat', () => {
     const r = await x402Fetch('alice', { url: 'http://merchants/cafe' }, deps({}, merchant({ paidStatus: 402 })));
     // The dashboard needs the amount and payee to mark the signed request as failed.
     expect(r).toMatchObject({ kind: 'error', amount: '3', payee: CAFE });
+  });
+
+  it('reports the facilitator\'s reason when the merchant rejects the signed payment', async () => {
+    const r = await x402Fetch('alice', { url: 'http://merchants/cave' }, deps({}, merchant({ rejectReason: 'AGE_PROOF_REQUIRED' })));
+    expect(r).toMatchObject({ kind: 'error', amount: '3', payee: CAFE });
+    expect(r.kind === 'error' && r.message).toMatch(/AGE_PROOF_REQUIRED/);
+    // And it tells the agent what to do about it.
+    expect(r.kind === 'error' && r.message).toMatch(/18\+|badge/i);
   });
 
   it('reports an unreachable merchant', async () => {
