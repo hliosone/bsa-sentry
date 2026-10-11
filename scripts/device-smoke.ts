@@ -110,9 +110,11 @@ async function main() {
   });
 
   await check('the agent session is armed from the device', async () => {
-    await act('open the settings and turn on "Agent session"', () =>
+    await act('tap the gear (top right), turn on "Agent session", then tap the back arrow', () =>
       ui.setSessionVia(async () => (await signer.getState()).sessionArmed, true));
-    if (!(await signer.getState()).sessionArmed) throw new Error('the session is not armed');
+    // No device call is pending for a switch, so on hardware wait for the user to flip it.
+    for (let i = 0; i < 60 && !(await signer.getState()).sessionArmed; i++) await new Promise((r) => setTimeout(r, 1000));
+    if (!(await signer.getState()).sessionArmed) throw new Error('the session is not armed (waited 60 s)');
   });
 
   // ---------------------------------------------------------------- the four behaviours
