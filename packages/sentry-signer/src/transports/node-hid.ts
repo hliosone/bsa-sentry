@@ -27,7 +27,10 @@ export class NodeHidTransport implements Transport {
     const TransportNodeHid = mod.default?.default ?? mod.default ?? mod;
     const list = await TransportNodeHid.list();
     if (list.length === 0) throw new Error('no Ledger device found on USB (is it plugged in and unlocked?)');
-    return new NodeHidTransport(await TransportNodeHid.open(list[0]));
+    const inner = await TransportNodeHid.open(list[0]);
+    // An orange screen waits up to 60 s for a tap; never let the transport give up first.
+    inner.setExchangeTimeout?.(125_000);
+    return new NodeHidTransport(inner);
   }
 
   async send(apdu: Uint8Array): Promise<Uint8Array> {

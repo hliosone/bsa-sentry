@@ -1,3 +1,7 @@
 packages:
   - "packages/*"
   - "apps/*"
+# Native USB access for the hardware smoke test (@ledgerhq/hw-transport-node-hid).
+onlyBuiltDependencies:
+  - node-hid
+  - usb

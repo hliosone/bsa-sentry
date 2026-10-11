@@ -262,6 +262,17 @@ Long runs started failing mid-way with `0x5515`: the Flex had auto-locked after 
 status word to look up. We ended up writing that mapping ourselves for every status word we care
 about, which is the kind of thing a transport library should own.
 
+### 5.5 The Node HID transport breaks silently under pnpm 10
+
+**What happened.** For the hardware smoke test we use `@ledgerhq/hw-transport-node-hid` (the DMK
+does not run in Node, §5.1). It depends on `node-hid` 2.1.2, whose native binary is downloaded by
+an install script. pnpm 10 skips install scripts by default, prints one line about it, and the
+failure only appears at runtime as a list of ten missing `HID.node` paths.
+**Fix.** `onlyBuiltDependencies: [node-hid, usb]` in `pnpm-workspace.yaml`, then
+`pnpm rebuild -r`. After that, a real Flex answered over USB on the first try.
+**Suggestion.** Ship prebuilt binaries inside the package (as `usb` already does), or say so in
+the README.
+
 ---
 
 ## 6. Key Ring (LKRP)
@@ -286,8 +297,9 @@ Wired as in our feasibility test: `@ledgerhq/ledger-key-ring-protocol` 0.24.0 +
   `CloseAppCommand`, but nothing explains that `OpenApp` only works from the dashboard (so you must
   close the current app first), whether the device asks the user to confirm, or what happens to
   the DMK session when the app changes underneath it. We try it and fall back to telling the user
-  which app to open. **Suggestion:** one worked example, "switch from your app to Ledger Sync and
-  back", in the DMK docs.
+  which app to open. It cost us a real bug: our restore kept writing through the session object
+  from before the switch. **Suggestion:** one worked example, "switch from your app to Ledger Sync
+  and back", in the DMK docs, saying which objects survive the switch.
 - **No way to test it in CI.** Ledger Sync does not run in Speculos, so every Key Ring path is
   untestable without hardware. We put the Key Ring behind an interface and test our flows with a
   fake that does real AES-GCM — but the LKRP integration itself only gets exercised on a real Flex.

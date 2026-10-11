@@ -28,7 +28,7 @@ twice). Phase C proves the same on the real Flex, in Chrome, with claude.ai.
 
 | | |
 |---|---|
-| **You do** | `pnpm --filter @bsa-sentry/sentry-signer add -D @ledgerhq/hw-transport-node-hid` (once), BSA Sentry open on the Flex, then `SMOKE_TRANSPORT=hid pnpm smoke`. Do what the script tells you on the Flex. Add `SMOKE_TIMEOUT=1` once to test the 60 s refusal. |
+| **You do** | BSA Sentry open on the Flex, then `SMOKE_TRANSPORT=hid pnpm smoke` (the USB transport is installed and was checked against your Flex in Phase B; if it ever fails to load, `pnpm rebuild -r`). Do what the script tells you on the Flex. Add `SMOKE_TIMEOUT=1` once to test the 60 s refusal. |
 | **You see** | Rules review (swipe, hold) like `docs/screens/speculos/` reviews; the coffee is signed with **nothing on screen**; orange screens like `05-orange-unknown-payee.png` and `06-orange-over-auto-max.png`. |
 | **Claude checks** | All 8 checks PASS: the signature recovers to your 0xAGENT, counters move, "Une fois" adds no payee, "Faire confiance" does, 400 USDC is OVER_HARD_MAX. |
 | **The 60 s test, done right** | While the orange screen counts down, **keep touching the screen** (not the buttons). It must still refuse at ~60 s: our timeout counts raw ticker events, which a finger cannot pause (the NBGL ticker can — DX_NOTES §2.2). |
