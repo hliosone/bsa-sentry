@@ -17,7 +17,7 @@ Follow from anywhere: this file is pushed to GitHub after every milestone.
 - [x] **M4** Auth, OAuth, MCP → Claude buys a coffee — **passes locally and through a public tunnel**
 - [x] **M5** Website complete — **Playwright onboarding against the real server**
 - [x] **M6** 18+ identity (EUDIW) — **wine paid with 18+ verified on Arc**
-- [ ] **M7** Key Ring backup/restore + device menu
+- [x] **M7** Key Ring backup/restore — **wipe and one-tap restore proven on Speculos + Arc** (device menu: cut-order item 2, see Decisions)
 - [ ] **M8** Deploy, docs, demo
 
 ## Done
@@ -166,6 +166,16 @@ Follow from anywhere: this file is pushed to GitHub after every milestone.
 - `EUDIW_MODE=live` builds the real request and QR (tested against hand-made fixtures); the real
   Procivis scan is Phase C step M6-C.
 
+### M7 — done (Mon 12 Oct 2026, ~00:50 CEST) · a wiped Flex restored with one tap
+- **`E2E=1 pnpm e2e:restore` passes** (Speculos + real Arc): rules + a merchant trusted on the
+  device + the 18+ badge -> Key Ring backup (fake Key Ring: real AES-GCM) -> vault holds no
+  readable rules -> Flex wiped (fresh NVM, same seed) -> restore, reviewed and approved on the
+  device -> 4 merchants and the badge back (the device re-checked the badge is its own), fresh
+  budget, café paid on Arc, the trusted bakery pays with no tap.
+- Backup codec 7 tests · vault 10 · Key Ring + flows 13 · Playwright backup/wipe/restore 1.
+- Real Ledger Key Ring (LKRP 0.24.0, app id 17) wired as in the feasibility test; DMK
+  open-app tried first, manual prompt as fallback. Hardware verification: Phase C M7-C.
+
 ## Blocked
 _nothing yet_
 
@@ -243,3 +253,6 @@ _nothing yet_
 | M5 | Playwright (`pnpm test:web`) | 3 |
 | M6 | `apps/server` total (18+ added) | 175 |
 | M6 | e2e 18+ on Arc (`E2E=1 pnpm e2e:age`) | 9 checks |
+| M7 | `apps/web` unit (+ Key Ring flows) | 57 |
+| M7 | Playwright | 4 |
+| M7 | e2e wipe + restore on Arc (`E2E=1 pnpm e2e:restore`) | 13 checks |

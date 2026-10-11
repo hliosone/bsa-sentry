@@ -106,3 +106,13 @@ These could not be tested on Speculos and need the device:
 | **Negative check** | Block the agent + reinstall the app (or `RESTORE` without credentials), set the rules again, ask for the wine again → Claude reports **AGE_PROOF_REQUIRED** and suggests the badge. |
 | **Claude checks** | `/age` session goes pending → verified (never stores the birthdate: `SELECT * FROM age_sessions` shows only status + evidence hash), the Arc tx for the wine. |
 | **Fallback** | QR not recognised: switch `EUDIW_QR_SCHEME` to `haip-vp`. Status `rejected` with `IssuerCertificateIsNotTrusted`: the EUDI test CAs could not be fetched; check network. If the live verifier is down, demo with `EUDIW_MODE=mock` and say so (cut-order item 3). |
+
+## M7-C. Key Ring backup, reinstall, restore
+
+| | |
+|---|---|
+| **You do** | Website → **Sauvegarde Key Ring → Sauvegarder maintenant**. The Flex should switch to **Ledger Sync** by itself; if it does not, the page asks you to open it. First time: confirm on the Flex (create/join your Key Ring). Then back to BSA Sentry. Then **reinstall the app** (`make load` again: this wipes its storage), log in, **Restaurer un Flex**: Ledger Sync again (decrypt), back to BSA Sentry, then **review every restored rule and address on the Flex** and hold to approve. |
+| **You see** | Restore review screen like `docs/screens/speculos/14-restore-review.png`. |
+| **Claude checks** | The vault row is ciphertext only; after restore, GET_STATE shows the same merchants (incl. any trusted with "Faire confiance") and the badge; a café payment works again. |
+| **What this verifies for the first time** | (1) DMK `OpenAppCommand` switching between BSA Sentry and Ledger Sync, (2) the DMK and the Key Ring transport taking turns on the device in one tab, (3) LKRP decrypting on a reinstalled app (same seed). |
+| **Fallback** | Automatic switch fails: switch by hand when the page asks (expected on some firmware). LKRP errors: note the exact message for DX_NOTES; the backup format and vault are independent of it (cut-order item 1: keep the backup, restore can be demoed on Speculos). |
