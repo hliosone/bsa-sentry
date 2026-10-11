@@ -213,11 +213,20 @@ export function useBsa() {
         await kr.close().catch(() => undefined);
       }
     } finally {
-      await ask("Sur ton Flex, quitte Ledger Sync et rouvre l'app BSA Sentry.", 'BSA Sentry est rouvert');
-      // The browser already allowed this Flex: reconnect without the picker.
-      await new Promise<void>((resolve) => {
-        const stop = reconnectFlex((nc) => { watch(nc); void adopt(nc.signer as unknown as AppSigner).then(() => { stop(); resolve(); }); });
-      });
+      // The browser already allowed this Flex: reconnect without the picker. If BSA Sentry is not
+      // open yet, its first command fails: ask again rather than hang.
+      for (let back = false; !back; ) {
+        await ask("Sur ton Flex, quitte Ledger Sync et rouvre l'app BSA Sentry.", 'BSA Sentry est rouvert');
+        back = await new Promise<boolean>((resolve) => {
+          const stop = reconnectFlex((nc) => {
+            stop();
+            adopt(nc.signer as unknown as AppSigner).then(
+              () => { watch(nc); resolve(true); },
+              () => { void nc.disconnect().catch(() => undefined).then(() => resolve(false)); },
+            );
+          });
+        });
+      }
       keyRingActive.current = false;
     }
   }, [addresses.main, adopt, watch]);

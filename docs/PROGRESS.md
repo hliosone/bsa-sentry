@@ -204,9 +204,13 @@ Follow from anywhere: this file is pushed to GitHub after every milestone.
   always uses the latest session, and losing the device during the Key Ring is ignored
   (`withKeyRing` owns the reconnect). Web 58 unit + 4 Playwright green.
 - USB transport for the hardware smoke test installed (`node-hid` needed an allowed build under
-  pnpm 10, DX_NOTES 5.5) and checked against the plugged-in Flex with a read-only APDU.
-- Final sweep: TS 248 + 32 + 185 + 58 + 12, Rust 88, Speculos 73, Playwright 4, typecheck clean,
-  Docker image builds.
+  pnpm 10, DX_NOTES §5.5) and checked against the plugged-in Flex with a read-only APDU. It is
+  root dev tooling; the Docker image installs with `--ignore-scripts`, so no native build ships.
+- Hardening after review: the device removes a merchant by the address it showed (not by list
+  position); after the Key Ring, a "BSA Sentry est rouvert" clicked too early asks again instead
+  of hanging.
+- Final sweep on the final firmware: TS 248 + 32 + 185 + 58 + 12, Rust 88, Speculos 73,
+  Playwright 4, typecheck clean, `docker compose up` serves the site and API.
 
 ## Blocked
 _Nothing is blocked._ Hardware-only items (real Flex sideload, taps, the 60 s timeout under touch,
@@ -243,13 +247,13 @@ Speculos/fakes, and listed in `docs/PHASE_C_GUIDE.md`.
   a non-blocking `nbgl_useCaseChoice`; its callback writes NVM and redraws the home. This replaced
   the M1 interim (session as an SDK settings switch zeroed at boot, rest of the menu deferred).
 - **That the rules survive an app restart is checked on hardware only**: Speculos does not
-  implement NVM save/load for Rust apps (DX_NOTES 4.4). Phase C step 2 covers it.
+  implement NVM save/load for Rust apps (DX_NOTES §4.3). Phase C step 2 covers it.
 - **M1: the device proves a delegation is its own by re-signing and comparing**, rather than
   recovering a public key. ECDSA here is deterministic (RFC 6979), so only our own 0xMAIN can
   produce those exact 65 bytes - strictly stronger than a verify, and no DER plumbing on device.
 - **M1: a sixth line on the orange screen is drawn *under* the buttons by NBGL.** It hid the
   "(non verifie)" caveat. Every variable-length string is now clipped so the screen can never
-  exceed five lines, and the token and chain ride in the title. See DX_NOTES 10.
+  exceed five lines, and the token and chain ride in the title. See DX_NOTES §2.3.
 - **Contract additions during M1** (fixtures + both sides updated together): `chainId` leads the
   Login/Bind/Delegation payloads and the credentials bundle (it is part of the EIP-712 domain and
   Login is signed before any policy exists); `AppSW::WrongApduLength` pinned to the ISO 0x6700;

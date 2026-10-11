@@ -70,7 +70,8 @@ static mut PENDING: Pending = Pending::None;
 #[derive(Clone, Copy)]
 enum Pending {
     None,
-    RemoveMerchant(u8),
+    /// By address, the one the confirmation shows: never by position in the list.
+    RemoveMerchant([u8; 20]),
     ResetBudget,
     Block,
 }
@@ -248,7 +249,7 @@ unsafe extern "C" fn on_menu(token: c_int, _index: u8, page: c_int) {
         let policy = store::policy();
         if let Some(p) = policy.payees().get(i as usize) {
             confirm(
-                Pending::RemoveMerchant(i),
+                Pending::RemoveMerchant(p.addr),
                 &format!("Retirer {} ?", fmt::untrusted_text(p.label())),
                 &fmt::address(&p.addr),
                 "Oui, retirer",
@@ -281,10 +282,9 @@ unsafe extern "C" fn on_confirm(yes: bool) {
     PENDING = Pending::None;
     if yes {
         match action {
-            Pending::RemoveMerchant(i) => {
+            Pending::RemoveMerchant(addr) => {
                 let mut policy = store::policy();
-                if let Some(addr) = policy.payees().get(i as usize).map(|p| p.addr) {
-                    policy.remove_payee(&addr);
+                if policy.remove_payee(&addr) {
                     let _ = store::save_policy(&policy);
                 }
             }
