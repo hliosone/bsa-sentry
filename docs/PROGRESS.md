@@ -6,7 +6,7 @@ Follow from anywhere: this file is pushed to GitHub after every milestone.
 |---|---|
 | Started | Sun 11 Oct 2026, 14:46 CEST |
 | Deadline | Tue 13 Oct 2026, 23:59 CEST (Phase B cut-off: Tue 10:00) |
-| Phase | **B complete — ready for Phase C** (`docs/PHASE_C_GUIDE.md`) |
+| Phase | **C — guided acceptance on the real Flex** (`docs/PHASE_C_GUIDE.md`) |
 
 ## Milestones
 
@@ -211,6 +211,11 @@ Follow from anywhere: this file is pushed to GitHub after every milestone.
   of hanging.
 - Final sweep on the final firmware: TS 248 + 32 + 185 + 58 + 12, Rust 88, Speculos 73,
   Playwright 4, typecheck clean, `docker compose up` serves the site and API.
+
+### Phase C
+- **Step 1 — done (Mon 12 Oct 2026, 01:11 CEST).** Feasibility app ("Rust Boilerplate") deleted from the Flex; BSA
+  Sentry 0.1.0 sideloaded. Over USB: GET_APP_NAME `BSA Sentry`, two distinct addresses from the
+  real seed, blank state (no rules, session off). 0xAGENT holds 2 USDC on Arc (top-up: step 4).
 
 ## Blocked
 _Nothing is blocked._ Hardware-only items (real Flex sideload, taps, the 60 s timeout under touch,
