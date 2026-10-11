@@ -1,11 +1,13 @@
 // All of the page's state in one hook: the Flex connection, the login, the bridge, the device
 // state mirror and the live feed. Pages only render it and call its actions.
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
-import { decodeState, type DeviceState, type Policy } from '@bsa-sentry/types';
+import { decodeState, type Credentials, type DeviceState, type Policy } from '@bsa-sentry/types';
 import { Bridge, type BridgeStatus } from './bridge/bridge.js';
 import { api, relayUrl, type Config } from './api.js';
 import { feedReducer, initialFeed, type FeedEvent } from './state/feed.js';
-import { connectFlex, reconnectFlex } from './device/flex.js';
+import { connectFlex, reconnectFlex, type FlexConnection } from './device/flex.js';
+import type { FlowDeps } from './keyring/flows.js';
+import type { KeyRing } from './keyring/keyring.js';
 
 /** The slice of sentry-signer the website uses; the dev-only fake device implements it too. */
 export type AppSigner = {
@@ -33,6 +35,11 @@ export function useBsa() {
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const bridge = useRef<Bridge | null>(null);
+  const conn = useRef<FlexConnection | null>(null);
+  const [hasBackup, setHasBackup] = useState(false);
+  /** A step only the user can do on the device, with the button that confirms it. */
+  const [prompt, setPrompt] = useState<{ text: string; button: string; resolve: () => void } | null>(null);
+  const ask = (text: string, button: string) => new Promise<void>((resolve) => setPrompt({ text, button, resolve: () => { setPrompt(null); resolve(); } }));
 
   useEffect(() => {
     void api.config().then(setConfig).catch((e) => setError(String(e)));
@@ -70,6 +77,7 @@ export function useBsa() {
       return;
     }
     const c = await connectFlex();
+    conn.current = c;
     c.onLost(() => { setSigner(null); setBridgeStatus((b) => ({ ...b, flex: 'disconnected' })); });
     await adopt(c.signer as unknown as AppSigner);
   }), [run, adopt]);
@@ -78,6 +86,7 @@ export function useBsa() {
   useEffect(() => {
     if (signer) return;
     return reconnectFlex((c) => {
+      conn.current = c;
       c.onLost(() => setSigner(null));
       void adopt(c.signer as unknown as AppSigner);
     });
@@ -147,9 +156,68 @@ export function useBsa() {
 
   const logout = useCallback(async () => { await api.logout(); setAccount(null); }, []);
 
+  // ---------------------------------------------------------------- Key Ring backup / restore
+
+  const vaultUrl = () => `/vault/${addresses.main}`;
+  useEffect(() => {
+    if (!account || !addresses.main) return;
+    void fetch(`/vault/${addresses.main}`, { credentials: 'same-origin' }).then((r) => setHasBackup(r.ok));
+  }, [account, addresses.main]);
+
+  /**
+   * The Key Ring needs the Ledger Sync app, and its transport must not share the device with
+   * the DMK. So: switch apps (automatically if the device lets the DMK do it, otherwise ask),
+   * release the DMK, run the Key Ring, then come back to BSA Sentry and reconnect.
+   */
+  const withKeyRing = useCallback(async <T,>(fn: (kr: KeyRing) => Promise<T>): Promise<T> => {
+    if (import.meta.env.DEV && (window as any).__bsaFake) {
+      const { FakeKeyRing } = await import('./keyring/fake.js');
+      return fn(new FakeKeyRing(addresses.main ?? 'dev'));
+    }
+    const c = conn.current;
+    if (!c) throw new Error('Connecte d\'abord ton Flex');
+    if (!(await c.switchApp('Ledger Sync'))) await ask("Sur ton Flex, quitte BSA Sentry et ouvre l'app Ledger Sync.", 'Ledger Sync est ouvert');
+    await c.disconnect();
+    conn.current = null;
+    const { openLedgerKeyRing } = await import('./keyring/ledger.js');
+    const kr = await openLedgerKeyRing((on) => setBusy(on ? 'Confirme sur ton Flex (Ledger Sync)…' : 'Chiffrement…'));
+    try {
+      return await fn(kr);
+    } finally {
+      await kr.close().catch(() => undefined);
+      await ask("Sur ton Flex, quitte Ledger Sync et rouvre l'app BSA Sentry.", 'BSA Sentry est rouvert');
+      // The browser already allowed this Flex: reconnect without the picker.
+      await new Promise<void>((resolve) => {
+        const stop = reconnectFlex((nc) => { conn.current = nc; void adopt(nc.signer as unknown as AppSigner).then(() => { stop(); resolve(); }); });
+      });
+    }
+  }, [addresses.main, adopt]);
+
+  const flowDeps = useCallback((onStage: FlowDeps['onStage']): FlowDeps => ({
+    readDevice: async () => {
+      const st = await onDevice((s) => s.getState());
+      const credentials = (await onDevice((s) => s.getCredentials())) as Credentials | null;
+      return { policy: st.policy.active ? st.policy : null, credentials };
+    },
+    putVault: async (ciphertext) => {
+      const r = await fetch(vaultUrl(), { method: 'PUT', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ciphertext }) });
+      if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error ?? 'sauvegarde refusée');
+      setHasBackup(true);
+    },
+    getVault: async () => {
+      const r = await fetch(vaultUrl(), { credentials: 'same-origin' });
+      if (r.status === 404) return null;
+      if (!r.ok) throw new Error('lecture de la sauvegarde refusée');
+      return (await r.json()).ciphertext;
+    },
+    withKeyRing,
+    restore: (policy, credentials) => onDevice((s) => s.restore(policy, credentials)),
+    onStage,
+  }), [onDevice, withKeyRing, addresses.main]);
+
   return {
-    config, account, signer, addresses, bridgeStatus, device, feed, busy, error,
-    connect, login, setRules, clearRules, refreshDevice, logout, onDevice, run,
+    config, account, signer, addresses, bridgeStatus, device, feed, busy, error, hasBackup, prompt,
+    connect, login, setRules, clearRules, refreshDevice, logout, onDevice, run, flowDeps,
     dismissBanner: () => dispatch({ type: 'dismiss' }),
     clearError: () => setError(null),
   };

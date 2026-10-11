@@ -7,8 +7,8 @@ import { Rules } from './pages/Rules.js';
 import { Session } from './pages/Session.js';
 import { Claude } from './pages/Claude.js';
 import { Dashboard } from './pages/Dashboard.js';
-import { Later } from './pages/Later.js';
 import { Badge } from './pages/Badge.js';
+import { Backup, Restore } from './pages/Backup.js';
 
 type Route = 'connect' | 'rules' | 'session' | 'claude' | 'dashboard' | 'badge' | 'backup' | 'restore';
 const ROUTES: Route[] = ['connect', 'rules', 'session', 'claude', 'dashboard', 'badge', 'backup', 'restore'];
@@ -36,7 +36,7 @@ export function App() {
     policyActive: !!bsa.device?.policy.active,
     sessionArmed: bsa.bridgeStatus.session || !!bsa.device?.sessionArmed,
     hasCredentials: !!bsa.device?.hasCredentials,
-    hasBackup: false,
+    hasBackup: bsa.hasBackup,
     // Claude counts as connected once the user went through the page; grants are listed there.
     claudeConnected: localStorage.getItem('bsa.claudeSeen') === '1',
   });
@@ -69,10 +69,17 @@ export function App() {
             </a>
           ))}
           <a href="#/dashboard" className={current === 'dashboard' ? 'active' : ''}><span className="tick">▸</span> Tableau de bord</a>
+          <a href="#/restore" className={current === 'restore' ? 'active' : ''}><span className="tick">↺</span> Restaurer un Flex</a>
         </nav>
 
         <main>
           {bsa.busy && <div className="device-prompt" data-testid="device-prompt"><span className="pulse" /> {bsa.busy}</div>}
+          {bsa.prompt && (
+            <div className="device-prompt" data-testid="user-step">
+              <span className="pulse" /> {bsa.prompt.text}
+              <button className="primary small" onClick={bsa.prompt.resolve}>{bsa.prompt.button}</button>
+            </div>
+          )}
           {bsa.error && <div className="error" role="alert">{bsa.error} <button className="ghost" onClick={bsa.clearError}>×</button></div>}
           {current === 'connect' && <Connect bsa={bsa} />}
           {current === 'rules' && <Rules bsa={bsa} />}
@@ -80,8 +87,8 @@ export function App() {
           {current === 'claude' && <Claude bsa={bsa} />}
           {current === 'dashboard' && <Dashboard bsa={bsa} />}
           {current === 'badge' && <Badge bsa={bsa} />}
-          {current === 'backup' && <Later title="Sauvegarde Key Ring">Sauvegarde tes règles, chiffrées par ta seed Ledger.</Later>}
-          {current === 'restore' && <Later title="Restauration">Restaure tes règles sur un Flex réinitialisé.</Later>}
+          {current === 'backup' && <Backup bsa={bsa} />}
+          {current === 'restore' && <Restore bsa={bsa} />}
         </main>
       </div>
     </div>

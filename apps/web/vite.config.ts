@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { nodePolyfills } from 'vite-plugin-node-polyfills';
 
 // In dev, Vite serves the site and proxies everything else to the BSA server, so the page,
 // the API, the relay socket and the session cookie all share one origin (as in production,
@@ -7,7 +8,8 @@ import react from '@vitejs/plugin-react';
 const server = process.env.BSA_SERVER ?? 'http://localhost:8787';
 
 export default defineConfig({
-  plugins: [react()],
+  // The Key Ring SDK needs Node built-ins (Buffer, crypto) in the browser; the DMK does not.
+  plugins: [react(), nodePolyfills({ include: ['buffer', 'crypto', 'stream', 'util', 'events', 'process'], globals: { Buffer: true, process: true } })],
   server: {
     port: Number(process.env.WEB_PORT ?? 5173),
     strictPort: true,

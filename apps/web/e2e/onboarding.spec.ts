@@ -169,3 +169,36 @@ test('the 18+ badge: wallet (mock) -> Bind -> delegation -> the facilitator acce
   expect(wine.kind === 'error' && wine.message).toMatch(/insufficient_funds/);
   expect(wine.kind === 'error' && wine.message).not.toMatch(/AGE_PROOF|DELEGATION_|ATTESTATION_|SUBJECT_MISMATCH/);
 });
+
+test('Key Ring backup, a wiped Flex, and a one-tap restore', async ({ page }) => {
+  await page.goto(`${web}/?fakeDevice=1`);
+  await page.getByTestId('connect').click();
+  await page.getByTestId('login').click();
+  await page.getByTestId('send-rules').click();
+  await expect(page.getByRole('link', { name: '✓ Définir les règles' })).toBeVisible();
+
+  await page.goto(`${web}/?fakeDevice=1#/backup`);
+  await page.getByTestId('backup').click();
+  await expect(page.getByTestId('backup-result')).toContainText('Sauvegardé');
+  await expect(page.getByTestId('backup-exists')).toBeVisible();
+  await shot(page, '11-backup');
+
+  // The vault holds ciphertext only: nothing readable about the rules.
+  const main = (await page.evaluate(() => fetch('/auth/me').then((r) => r.json()))).account as string;
+  const vault = await page.evaluate((m) => fetch(`/vault/${m}`).then((r) => r.json()), main);
+  expect(Buffer.from(vault.ciphertext, 'base64').toString('latin1')).not.toMatch(/Cafe Sat|Resto/);
+
+  // Reinstalling the app wipes it.
+  await page.evaluate(() => (window as any).__bsaFake.wipe());
+  await page.goto(`${web}/?fakeDevice=1#/restore`);
+  await page.getByTestId('restore').click();
+  await expect(page.getByTestId('restore-result')).toContainText('Restauré');
+  const restored = await page.evaluate(() => (window as any).__bsaFake.getState());
+  expect(restored.policy.active).toBe(true);
+  expect(restored.policy.payees.map((p: any) => p.label)).toEqual(['Cafe Sat', 'Cave du Coin', 'Resto']);
+  await shot(page, '12-restore');
+
+  // Restoring over live rules is refused rather than silent.
+  await page.getByTestId('restore').click();
+  await expect(page.getByTestId('restore-result')).toContainText('déjà des règles');
+});

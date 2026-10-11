@@ -3,7 +3,7 @@
 // Proven in our feasibility tests: DMK 1.11 + web-hid transport 1.2.4 with plain Vite and no
 // polyfills. The session refresher is DISABLED: it sends its own APDUs in the background,
 // which would interleave with ours on a device that handles one command at a time.
-import { DeviceManagementKitBuilder, type DeviceManagementKit } from '@ledgerhq/device-management-kit';
+import { CloseAppCommand, DeviceManagementKitBuilder, OpenAppCommand, type DeviceManagementKit } from '@ledgerhq/device-management-kit';
 import { webHidTransportFactory } from '@ledgerhq/device-transport-kit-web-hid';
 import { firstValueFrom } from 'rxjs';
 import { SentrySigner } from '@bsa-sentry/sentry-signer';
@@ -12,7 +12,13 @@ import { DmkTransport } from '@bsa-sentry/sentry-signer/transports/dmk';
 let dmk: DeviceManagementKit | null = null;
 const kit = () => (dmk ??= new DeviceManagementKitBuilder().addTransport(webHidTransportFactory).build());
 
-export type FlexConnection = { signer: SentrySigner; disconnect: () => Promise<void>; onLost: (cb: () => void) => void };
+export type FlexConnection = {
+  signer: SentrySigner;
+  disconnect: () => Promise<void>;
+  onLost: (cb: () => void) => void;
+  /** Best effort: close the current app and open another. False if the device would not. */
+  switchApp: (appName: string) => Promise<boolean>;
+};
 
 async function open(device: any): Promise<FlexConnection> {
   const sessionId = await kit().connect({ device, sessionRefresherOptions: { isRefresherDisabled: true } });
@@ -26,6 +32,17 @@ async function open(device: any): Promise<FlexConnection> {
     signer: new SentrySigner(new DmkTransport(kit() as any, sessionId)),
     disconnect: () => kit().disconnect({ sessionId }).catch(() => undefined),
     onLost: (cb) => lost.push(cb),
+    switchApp: async (appName) => {
+      // OpenApp only works from the dashboard, so close whatever is open first. The device may
+      // ask the user to confirm; any failure falls back to guiding the user by hand.
+      try {
+        await kit().sendCommand({ sessionId, command: new CloseAppCommand() } as any);
+        const r: any = await kit().sendCommand({ sessionId, command: new OpenAppCommand({ appName }) } as any);
+        return r?.status === 'SUCCESS';
+      } catch {
+        return false;
+      }
+    },
   };
 }
 

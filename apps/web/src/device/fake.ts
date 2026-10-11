@@ -65,5 +65,8 @@ export function fakeSigner() {
     storeCredentials: async (c: Credentials) => { encodeCredentials(c); creds = c; },
     getCredentials: async () => creds,
     getCredentialsWire: async () => (creds ? splitCredentials(creds) : null),
+    restore: async (p: Policy, c: Credentials | null) => { policy = p; spent = 0n; count = 0; last = null; if (c) creds = c; },
+    /** Test hook: what a reinstall of the app does to the device. */
+    wipe() { policy = { ...policy, active: false, payees: [] }; creds = null; spent = 0n; count = 0; last = null; session = false; },
   };
 }

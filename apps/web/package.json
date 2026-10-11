@@ -13,6 +13,8 @@
     "@bsa-sentry/types": "workspace:*",
     "@ledgerhq/device-management-kit": "1.11.0",
     "@ledgerhq/device-transport-kit-web-hid": "1.2.4",
+    "@ledgerhq/hw-transport-webhid": "6.36.0",
+    "@ledgerhq/ledger-key-ring-protocol": "0.24.0",
     "qrcode": "^1.5.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
@@ -29,6 +31,7 @@
     "dotenv": "^18.0.7",
     "typescript": "^5.7.3",
     "vite": "^5.4.21",
+    "vite-plugin-node-polyfills": "0.28.0",
     "vitest": "^2.1.8"
   },
   "exports": {
