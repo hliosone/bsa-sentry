@@ -22,6 +22,8 @@ export type TabStatus = {
   flex: 'connected' | 'locked' | 'app_closed' | 'disconnected';
   session: boolean;
   state?: `0x${string}`;
+  /** The Flex's 0xAGENT, as reported by its tab. */
+  agent?: `0x${string}`;
   updatedAt?: number;
 };
 
@@ -157,7 +159,10 @@ export class Relay {
     if ('type' in msg && msg.type === 'status') {
       a.status = {
         attached: true, flex: msg.flex, session: msg.session,
-        ...(msg.state ? { state: msg.state } : {}), updatedAt: Date.now(),
+        ...(msg.state ? { state: msg.state } : {}),
+        // Keep a previously reported address if this status omits it.
+        ...(msg.agent ?? a.status.agent ? { agent: msg.agent ?? a.status.agent } : {}),
+        updatedAt: Date.now(),
       };
       this.emitStatus(account);
       return;

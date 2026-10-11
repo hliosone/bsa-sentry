@@ -67,6 +67,7 @@ function fakeSigner(over: Partial<Record<string, any>> = {}) {
     probe: vi.fn(async () => ({ flex: 'connected' as const, session: true, state: state() })),
     pay: vi.fn(async () => ({ v: 27 as const, r: `0x${'aa'.repeat(32)}`, s: `0x${'bb'.repeat(32)}` })),
     getCredentials: vi.fn(async () => null),
+    getAddress: vi.fn(async () => '0xaa6abf8f8c5f003a69d26d12d5a625da77e2d9bf'),
     ...over,
   };
 }
@@ -112,6 +113,17 @@ describe('connecting', () => {
     socket().open();
     await vi.waitFor(() => expect(socket().statuses.length).toBeGreaterThan(0));
     expect(socket().statuses[0]!.state).toBe(`0x${Buffer.from(encodeState(state())).toString('hex')}`);
+  });
+
+  it('reports the 0xAGENT address, read from the device once', async () => {
+    const signer = fakeSigner();
+    const { socket } = start(signer);
+    socket().open();
+    await vi.waitFor(() => expect(socket().statuses.length).toBeGreaterThan(0));
+    expect(socket().statuses[0]).toMatchObject({ agent: '0xaa6abf8f8c5f003a69d26d12d5a625da77e2d9bf' });
+    socket().deliver({ id: 'st', type: 'get_state' });
+    await vi.waitFor(() => expect(socket().statuses.length).toBeGreaterThan(1));
+    expect(signer.getAddress).toHaveBeenCalledTimes(1);
   });
 
   it('reports a locked Flex instead of pretending to be connected', async () => {

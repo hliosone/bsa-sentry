@@ -9,7 +9,7 @@
     "fund": "tsx scripts/fund.ts",
     "recycle": "tsx scripts/recycle.ts",
     "check:domain": "tsx scripts/check-domain.ts",
-    "typecheck": "pnpm -r exec tsc --noEmit",
+    "typecheck": "for p in packages/types packages/sentry-signer apps/server apps/merchants apps/web; do echo \"== $p\"; tsc -p $p/tsconfig.json --noEmit || exit 1; done",
     "test:speculos": "vitest run --config vitest.speculos.config.ts",
     "smoke": "tsx scripts/device-smoke.ts",
     "harness": "tsx scripts/bridge-harness.ts"
@@ -18,6 +18,7 @@
     "@bsa-sentry/sentry-signer": "workspace:*",
     "@bsa-sentry/types": "workspace:*",
     "@bsa-sentry/web": "workspace:*",
+    "@types/node": "^26.6.5",
     "@types/ws": "^8.18.2",
     "dotenv": "^16.4.7",
     "tsx": "^4.19.2",

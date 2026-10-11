@@ -248,7 +248,7 @@ export class SentrySigner {
     return run;
   }
 
-  private command(ins: number, p1 = 0, p2 = 0, data = new Uint8Array()): Promise<Uint8Array> {
+  private command(ins: number, p1 = 0, p2 = 0, data: Uint8Array = new Uint8Array()): Promise<Uint8Array> {
     return this.enqueue(() => this.exchange(Uint8Array.from([CLA, ins, p1, p2, data.length, ...data])));
   }
 
@@ -260,7 +260,7 @@ export class SentrySigner {
     const apdus = encodeChunks(ins, payload);
     if (payload.length > apdus.length * MAX_APDU_DATA) throw new Error('chunking bug');
     return this.enqueue(async () => {
-      let last = new Uint8Array();
+      let last: Uint8Array = new Uint8Array();
       for (const apdu of apdus) last = await this.exchange(apdu);
       return last;
     });

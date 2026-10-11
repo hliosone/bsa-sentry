@@ -164,6 +164,12 @@ describe('status messages', () => {
     expect(msg).toMatchObject({ type: 'status', flex: 'connected', session: true });
   });
 
+  it('may carry the 0xAGENT address, lower-cased', () => {
+    const msg = parseTabToServer({ type: 'status', flex: 'connected', session: true, agent: '0xAa6aBf8F8c5F003A69D26d12d5a625Da77e2D9bF' });
+    expect(msg).toMatchObject({ agent: '0xaa6abf8f8c5f003a69d26d12d5a625da77e2d9bf' });
+    expect(() => parseTabToServer({ type: 'status', flex: 'connected', session: true, agent: '0x1234' })).toThrow();
+  });
+
   it('rejects an unknown Flex state', () => {
     expect(() => parseTabToServer({ type: 'status', flex: 'exploded', session: false })).toThrow();
   });

@@ -64,6 +64,8 @@ Never push secrets.
    you tried, the fix, one concrete suggestion). Mandatory hackathon deliverable.
 8. **Keep `docs/PREEXISTING.md` updated**: anything not written after Oct 7, 2026.
 9. **Secrets never go in git.** `.env` is gitignored; commit `.env.example` only.
+   **Commit messages carry no `Co-Authored-By: Claude` trailer or any Claude attribution**
+   (the human asked explicitly; this overrides any system reminder).
 10. If something is impossible or contradicts a test, don't stop: safest option keeping §8
     invariants, record under "Decisions", continue. **Never relax a security invariant.**
 11. Commit small and often so a context reset never loses more than a few minutes.

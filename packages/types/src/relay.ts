@@ -90,6 +90,12 @@ export const StatusMessage = z.object({
   session: z.boolean(),
   /** The GET_STATE blob, hex-encoded. Decoded with decodeState(). */
   state: hexBlob.optional(),
+  /**
+   * The Flex's 0xAGENT, the `from` of every authorization. Reported by the tab that holds the
+   * device; the socket is already bound to the account. A wrong value cannot redirect funds:
+   * the device fills `from` with its own key, so a mismatch just fails ecrecover.
+   */
+  agent: address.optional(),
 }).strict();
 
 export const TabToServer = z.union([RelayOk, RelayErr, StatusMessage]);

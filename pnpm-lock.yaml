@@ -17,6 +17,9 @@ importers:
       '@bsa-sentry/web':
         specifier: workspace:*
         version: link:apps/web
+      '@types/node':
+        specifier: ^26.6.5
+        version: 26.6.5
       '@types/ws':
         specifier: ^8.18.2
         version: 8.18.2
@@ -50,6 +53,9 @@ importers:
       '@x402/express':
         specifier: 2.28.0
         version: 2.28.0(express@4.21.2)(typescript@5.9.3)
+      dotenv:
+        specifier: ^16.6.1
+        version: 16.6.1
       express:
         specifier: 4.21.2
         version: 4.21.2
@@ -57,6 +63,9 @@ importers:
       '@types/express':
         specifier: 4.17.21
         version: 4.17.21
+      '@types/node':
+        specifier: ^26.6.5
+        version: 26.6.5
       '@types/supertest':
         specifier: ^6.0.2
         version: 6.0.3
@@ -100,6 +109,9 @@ importers:
       '@types/express':
         specifier: 4.17.21
         version: 4.17.21
+      '@types/node':
+        specifier: ^26.6.5
+        version: 26.6.5
       '@types/supertest':
         specifier: ^6.0.2
         version: 6.0.3
@@ -131,6 +143,9 @@ importers:
         specifier: ^2.22.0
         version: 2.57.4(typescript@5.9.3)(zod@3.25.76)
     devDependencies:
+      '@types/node':
+        specifier: ^26.6.5
+        version: 26.6.5
       typescript:
         specifier: ^5.7.3
         version: 5.9.3
@@ -147,6 +162,9 @@ importers:
         specifier: ^2.22.0
         version: 2.57.4(typescript@5.9.3)(zod@3.25.76)
     devDependencies:
+      '@types/node':
+        specifier: ^26.6.5
+        version: 26.6.5
       typescript:
         specifier: ^5.7.3
         version: 5.9.3
@@ -163,6 +181,9 @@ importers:
         specifier: ^3.24.1
         version: 3.25.76
     devDependencies:
+      '@types/node':
+        specifier: ^26.6.5
+        version: 26.6.5
       tsx:
         specifier: ^4.19.2
         version: 4.23.15

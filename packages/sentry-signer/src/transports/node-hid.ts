@@ -13,8 +13,11 @@ export class NodeHidTransport implements Transport {
 
   static async open(): Promise<NodeHidTransport> {
     let mod: any;
+    // A variable specifier keeps bundlers and the type checker from resolving a package
+    // that only the hardware smoke test needs.
+    const specifier = '@ledgerhq/hw-transport-node-hid';
     try {
-      mod = await import('@ledgerhq/hw-transport-node-hid');
+      mod = await import(specifier);
     } catch (e) {
       throw new Error(
         'install @ledgerhq/hw-transport-node-hid to talk to a real Flex from Node ' +

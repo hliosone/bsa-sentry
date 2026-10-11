@@ -75,6 +75,10 @@ describe('orange reasons', () => {
 });
 
 describe('bridge reasons', () => {
+  it('start with every device refusal reason, in byte order', () => {
+    expect(BRIDGE_REASONS.slice(0, 7)).toEqual(Object.keys(REFUSAL_REASON));
+  });
+
   it('are the device reasons plus the three transport ones', () => {
     expect(BRIDGE_REASONS).toEqual([
       'NO_POLICY', 'NO_SESSION', 'WRONG_CHAIN_OR_TOKEN', 'INVALID_AMOUNT', 'OVER_HARD_MAX',

@@ -46,10 +46,14 @@ export const ORANGE_REASON = {
 
 export type OrangeReason = keyof typeof ORANGE_REASON;
 
-/** What the bridge tab may report to the server: the device reasons plus transport failures. */
+/**
+ * What the bridge tab may report to the server: the device reasons plus transport failures.
+ * Spelled out as a literal tuple (not spread from REFUSAL_REASON) so zod and TypeScript see
+ * a fixed, non-empty union; a test checks it stays in step with REFUSAL_REASON.
+ */
 export const BRIDGE_REASONS = [
-  ...(Object.keys(REFUSAL_REASON) as RefusalReason[]),
-  'FLEX_LOCKED', 'APP_CLOSED', 'DISCONNECTED',
+  'NO_POLICY', 'NO_SESSION', 'WRONG_CHAIN_OR_TOKEN', 'INVALID_AMOUNT', 'OVER_HARD_MAX',
+  'USER_REJECTED', 'TIMEOUT', 'FLEX_LOCKED', 'APP_CLOSED', 'DISCONNECTED',
 ] as const;
 
 export type BridgeReason = (typeof BRIDGE_REASONS)[number];

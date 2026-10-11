@@ -56,6 +56,7 @@ export class Bridge {
   /** Serialises device work: the Flex handles one command at a time. */
   private chain: Promise<unknown> = Promise.resolve();
   private credentials: CredentialsWire | null = null;
+  private agentAddress: `0x${string}` | null = null;
   private credentialsRead = false;
   private status: BridgeStatus = { socket: 'closed', flex: 'disconnected', session: false };
 
@@ -181,11 +182,21 @@ export class Bridge {
   private async reportStatus(): Promise<void> {
     const probe = await this.opts.signer.probe();
     this.setStatus({ flex: probe.flex, session: probe.session });
+    // The server needs 0xAGENT as the `from` of every authorization. Read it once from the
+    // device, only while the app answers; it never changes for a given seed.
+    if (!this.agentAddress && probe.flex === 'connected') {
+      try {
+        this.agentAddress = await this.opts.signer.getAddress('agent');
+      } catch (e) {
+        this.opts.log?.('could not read the agent address', e);
+      }
+    }
     this.send({
       type: 'status',
       flex: probe.flex,
       session: probe.session,
       ...(probe.state ? { state: hex(encodeState(probe.state)) } : {}),
+      ...(this.agentAddress ? { agent: this.agentAddress } : {}),
     });
   }
 
