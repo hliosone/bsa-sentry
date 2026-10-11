@@ -31,16 +31,10 @@ pub fn ui_menu_main(_: &mut Comm) -> NbglHomeAndSettings {
     const FERRIS: NbglGlyph =
         NbglGlyph::from_include(include_gif!("glyphs/home_nano_nbgl.png", NBGL));
 
-    let settings_strings = [["Display Memo", "Allow display of transaction memo."]];
+    let settings_strings = [["Agent session", "Allow the agent to request payments."]];
     let mut settings: Settings = Default::default();
 
-    let title = if cfg!(feature = "variant_testnet") {
-        "Testnet Boilerplate"
-    } else if cfg!(feature = "variant_betanet") {
-        "Betanet Boilerplate"
-    } else {
-        "BSA TEST"
-    };
+    let title = "BSA Sentry";
 
     // Display the home screen.
     NbglHomeAndSettings::new()

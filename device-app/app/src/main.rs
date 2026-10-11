@@ -1,84 +1,40 @@
-/*****************************************************************************
- *   Ledger App Boilerplate Rust.
- *   (c) 2023 Ledger SAS.
- *
- *  Licensed under the Apache License, Version 2.0 (the "License");
- *  you may not use this file except in compliance with the License.
- *  You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
- *****************************************************************************/
-
+//! BSA Sentry — the spending rules for an AI agent, enforced inside the secure element.
+//!
+//! Descends from Ledger's `app-boilerplate-rust` (upstream `0f857a7`); see
+//! `docs/PREEXISTING.md`. All of the boilerplate's own signing commands and every test
+//! command from our feasibility work have been removed. In particular there is **no**
+//! "sign this hash" command and no silent-signing command: the only path to a payment
+//! signature is PAY, gated by `bsa_sentry_core::decide`.
 #![no_std]
 #![no_main]
 
-mod utils;
 mod app_ui {
-    pub mod address;
     pub mod menu;
-    pub mod sign;
 }
 mod handlers {
-    pub mod get_public_key;
     pub mod get_version;
-    pub mod long_cmd;
-    pub mod ping;
-    pub mod review3;
-    pub mod sign_tx;
-    pub mod x402;
 }
-
+mod crypto;
+mod keccak;
 mod settings;
-mod swap;
+mod store;
 
 use app_ui::menu::ui_menu_main;
-use handlers::{
-    get_public_key::handler_get_public_key,
-    get_version::handler_get_version,
-    long_cmd::{handler_blob_hash, handler_long_cmd, handler_read_blob, handler_store_blob},
-    ping::handler_ping,
-    review3::handler_review3,
-    sign_tx::{handler_sign_tx, TxContext},
-    x402::{handler_get_address, handler_sign_3009, handler_sign_3009_silent},
-};
-use ledger_device_sdk::io::{self, init_comm, ApduHeader, Comm, Command, Reply, StatusWords};
-use ledger_device_sdk::libcall::swap::CreateTxParams;
+use bsa_sentry_core::wire::{encode_state, DeviceState};
+use bsa_sentry_core::RefusalReason;
+use crypto::Account;
+use handlers::get_version::handler_get_version;
+use ledger_device_sdk::io::{self, init_comm, ApduHeader, Command, Reply, StatusWords};
+use ledger_device_sdk::nbgl::NbglHomeAndSettings;
 
 ledger_device_sdk::set_panic!(ledger_device_sdk::exiting_panic);
 
-// Required for using String, Vec, format!...
+// Required for String / Vec / format! in the UI code.
 extern crate alloc;
-
-use ledger_device_sdk::nbgl::{NbglHomeAndSettings, NbglReviewStatus, StatusType};
-
-/// Home screen re-shown when the non-blocking "Signed silently" status times out.
-static mut HOME: *mut NbglHomeAndSettings = core::ptr::null_mut();
-
-unsafe extern "C" fn silent_status_done() {
-    let home = HOME;
-    if !home.is_null() {
-        (*home).show_and_return();
-    }
-}
 
 ledger_device_sdk::define_comm!(COMM);
 
-// P2 for last APDU to receive.
-const P2_SIGN_TX_LAST: u8 = 0x00;
-// P2 for more APDU to receive.
-const P2_SIGN_TX_MORE: u8 = 0x80;
-// P1 for first APDU number.
-const P1_SIGN_TX_START: u8 = 0x00;
-// P1 for maximum APDU number.
-const P1_SIGN_TX_MAX: u8 = 0x03;
-
-// Application status words.
+/// Application status words.
 #[repr(u16)]
 #[derive(Clone, Copy, PartialEq)]
 pub enum AppSW {
@@ -87,17 +43,18 @@ pub enum AppSW {
     InsNotSupported = 0x6D00,
     ClaNotSupported = 0x6E00,
     CommError = 0x6F00,
-    TxDisplayFail = 0xB001,
-    AddrDisplayFail = 0xB002,
-    TxWrongLength = 0xB004,
+    /// A chunked payload exceeded the reassembly buffer.
+    PayloadTooLarge = 0xB004,
     TxParsingFail = 0xB005,
     TxHashFail = 0xB006,
     TxSignFail = 0xB008,
     KeyDeriveFail = 0xB009,
     VersionParsingFail = 0xB00A,
+    /// A "next" chunk arrived without a "first", or a command came out of order.
     BadState = 0xB00B,
+    /// Writing to NVM failed, or the value was too large for its slot.
+    StorageFail = 0xB00C,
     WrongApduLength = StatusWords::BadLen as u16,
-    SwapFail = 0xC000,
     Ok = 0x9000,
 }
 
@@ -113,156 +70,109 @@ impl From<io::CommError> for AppSW {
     }
 }
 
-/// Possible input commands received through APDUs.
+/// How a handler can fail.
+///
+/// `Refused` is separate because a refusal must carry its reason byte back to the host:
+/// the bridge turns it into "refused by your Flex: OVER_HARD_MAX" for the agent.
+pub enum AppError {
+    Sw(AppSW),
+    Refused(RefusalReason),
+}
+
+impl From<AppSW> for AppError {
+    fn from(sw: AppSW) -> Self {
+        AppError::Sw(sw)
+    }
+}
+
+impl From<io::CommError> for AppError {
+    fn from(_e: io::CommError) -> Self {
+        AppError::Sw(AppSW::CommError)
+    }
+}
+
+/// The BSA Sentry instruction set (CLA 0xE0), frozen in `packages/types/src/apdu.ts`.
 #[derive(Debug)]
 pub enum Instruction {
     GetVersion,
     GetAppName,
-    GetPubkey { display: bool },
-    SignTx { chunk: u8, more: bool },
-    Ping,
-    GetAddress,
-    Sign3009,
-    Sign3009Silent,
-    Review3,
-    LongCmd { first: bool, last: bool },
-    StoreBlob,
-    ReadBlob { chunk: u8 },
-    BlobHash,
+    GetAddress { account_agent: bool, display: bool },
+    SetPolicy { first: bool, last: bool },
+    Pay,
+    GetState,
+    ClearPolicy,
+    SignBind,
+    SignLogin,
+    SignDelegation { first: bool, last: bool },
+    StoreCredentials { first: bool, last: bool },
+    GetCredentials { chunk: u8 },
+    Restore { first: bool, last: bool },
 }
 
 impl TryFrom<ApduHeader> for Instruction {
     type Error = AppSW;
 
-    /// APDU parsing logic.
-    ///
-    /// Parses INS, P1 and P2 bytes to build an [`Instruction`]. P1 and P2 are translated to
-    /// strongly typed variables depending on the APDU instruction code. Invalid INS, P1 or P2
-    /// values result in errors with a status word, which are automatically sent to the host by the
-    /// SDK.
-    ///
-    /// This design allows a clear separation of the APDU parsing logic and commands handling.
-    ///
-    /// Note that CLA is not checked here. Instead the method [`Comm::set_expected_cla`] is used in
-    /// [`sample_main`] to have this verification automatically performed by the SDK.
     fn try_from(value: ApduHeader) -> Result<Self, Self::Error> {
+        // Chunked commands: P1 0x00 first / 0x01 next, P2 0x80 more / 0x00 last.
+        let chunked = |p1: u8, p2: u8| (p1 == 0x00, p2 == 0x00);
         match (value.ins, value.p1, value.p2) {
-            (3, 0, 0) => Ok(Instruction::GetVersion),
-            (4, 0, 0) => Ok(Instruction::GetAppName),
-            (5, 0 | 1, 0) => Ok(Instruction::GetPubkey {
-                display: value.p1 != 0,
+            (0x03, 0, 0) => Ok(Instruction::GetVersion),
+            (0x04, 0, 0) => Ok(Instruction::GetAppName),
+            (0x08, 0 | 1, 0 | 1) => Ok(Instruction::GetAddress {
+                account_agent: value.p1 == 1,
+                display: value.p2 == 1,
             }),
-            (6, P1_SIGN_TX_START, P2_SIGN_TX_MORE)
-            | (6, 1..=P1_SIGN_TX_MAX, P2_SIGN_TX_LAST | P2_SIGN_TX_MORE) => {
-                Ok(Instruction::SignTx {
-                    chunk: value.p1,
-                    more: value.p2 == P2_SIGN_TX_MORE,
-                })
+            (0x0a, 0 | 1, 0 | 0x80) => {
+                let (first, last) = chunked(value.p1, value.p2);
+                Ok(Instruction::SetPolicy { first, last })
             }
-            (7, 0, 0) => Ok(Instruction::Ping),
-            (8, 0, 0) => Ok(Instruction::GetAddress),
-            (9, 0, 0) => Ok(Instruction::Sign3009),
-            (0x0f, 0, 0) => Ok(Instruction::Sign3009Silent),
-            (0x10, 0, 0) => Ok(Instruction::Review3),
-            (0x11, 0 | 1, 0 | 0x80) => Ok(Instruction::LongCmd {
-                first: value.p1 == 0,
-                last: value.p2 == 0,
-            }),
-            (0x12, 0, 0) => Ok(Instruction::StoreBlob),
-            (0x13, chunk, 0) => Ok(Instruction::ReadBlob { chunk }),
-            (0x14, 0, 0) => Ok(Instruction::BlobHash),
-            (3..=9 | 0x0f..=0x14, _, _) => Err(AppSW::WrongP1P2),
+            (0x0b, 0, 0) => Ok(Instruction::Pay),
+            (0x0c, 0, 0) => Ok(Instruction::GetState),
+            (0x0d, 0, 0) => Ok(Instruction::ClearPolicy),
+            (0x0e, 0, 0) => Ok(Instruction::SignBind),
+            (0x0f, 0, 0) => Ok(Instruction::SignLogin),
+            (0x10, 0 | 1, 0 | 0x80) => {
+                let (first, last) = chunked(value.p1, value.p2);
+                Ok(Instruction::SignDelegation { first, last })
+            }
+            (0x11, 0 | 1, 0 | 0x80) => {
+                let (first, last) = chunked(value.p1, value.p2);
+                Ok(Instruction::StoreCredentials { first, last })
+            }
+            (0x12, chunk, 0) => Ok(Instruction::GetCredentials { chunk }),
+            (0x13, 0 | 1, 0 | 0x80) => {
+                let (first, last) = chunked(value.p1, value.p2);
+                Ok(Instruction::Restore { first, last })
+            }
+            (0x03 | 0x04 | 0x08 | 0x0a..=0x13, _, _) => Err(AppSW::WrongP1P2),
             (_, _, _) => Err(AppSW::InsNotSupported),
         }
     }
 }
 
-fn show_status_and_home_if_needed(
-    comm: &mut Comm,
-    ins: &Instruction,
-    tx_ctx: &mut TxContext,
-    status: &AppSW,
-) {
-    if tx_ctx.swap_params.is_some() {
-        return;
-    }
-    // Debug silent signing: non-blocking status, so APDUs sent during its 3s display are
-    // processed instead of being rejected with CmdNotAccepted (0x6901) by a blocking screen.
-    if let (Instruction::Sign3009Silent, AppSW::Ok) = (ins, status) {
-        unsafe {
-            ledger_device_sdk::sys::nbgl_useCaseStatus(
-                b"Signed silently\0".as_ptr() as *const core::ffi::c_char,
-                true,
-                Some(silent_status_done),
-            );
-        }
-        return;
-    }
-    let (show_status, status_type) = match (ins, status) {
-        (Instruction::GetPubkey { display: true }, AppSW::Deny | AppSW::Ok) => {
-            (true, StatusType::Address)
-        }
-        (Instruction::SignTx { .. }, AppSW::Deny | AppSW::Ok) if tx_ctx.finished() => {
-            (true, StatusType::Transaction)
-        }
-        (_, _) => (false, StatusType::Transaction),
-    };
+/// Home screen handle, so handlers can return to it after a review.
+static mut HOME: *mut NbglHomeAndSettings = core::ptr::null_mut();
 
-    if show_status {
-        let success = *status == AppSW::Ok;
-        NbglReviewStatus::new()
-            .status_type(status_type)
-            .show(comm, success);
-
-        // call home.show_and_return() to show home and setting screen
-        tx_ctx.home.show_and_return();
+pub fn show_home() {
+    let home = unsafe { HOME };
+    if !home.is_null() {
+        unsafe { (*home).show_and_return() };
     }
 }
 
-// --8<-- [start:sample_main]
 #[no_mangle]
-extern "C" fn sample_main(arg0: u32) {
-    if arg0 != 0 {
-        // We have been started by the Exchange application through the os_lib_call API
-        // We need to answer the command instead of starting the normal app main loop
-        swap::swap_main(arg0);
-    } else {
-        // Normal app mode, start the main loop listening for APDU commands
-        normal_main(None);
-    }
-}
-// --8<-- [end:sample_main]
-
-/// Main application entry point.
-///
-/// Handles both standard execution (user opens app) and library mode execution
-/// (Exchange app calls this app for swap).
-///
-/// # Arguments
-///
-/// * `swap_params` - Optional swap parameters. If present, the app runs in "swap mode":
-///   - UI is bypassed (no main menu, no transaction review)
-///   - Transaction is validated against swap params
-///   - Returns `true` if signed successfully, `false` otherwise
-pub fn normal_main(swap_params: Option<&CreateTxParams>) -> bool {
-    // Create the communication manager, and configure it to accept only APDU from the 0xe0 class.
-    // If any APDU with a wrong class value is received, comm will respond automatically with
-    // BadCla status word.
+extern "C" fn sample_main(_arg0: u32) {
+    // BSA Sentry is not a swap-capable app: it signs payment authorizations under its own
+    // policy, never a transaction handed to it by Exchange.
     let comm = init_comm(&COMM);
     comm.set_expected_cla(0xe0);
 
-    let mut tx_ctx = if let Some(params) = swap_params {
-        TxContext::new_with_swap(params)
-    } else {
-        TxContext::new()
-    };
+    let mut home = ui_menu_main(comm);
+    home.show_and_return();
+    // `home` lives for the whole loop below, so this pointer stays valid.
+    unsafe { HOME = &mut home };
 
-    if swap_params.is_none() {
-        tx_ctx.home = ui_menu_main(comm);
-        tx_ctx.home.show_and_return();
-        // tx_ctx lives for the whole APDU loop below, so this pointer stays valid.
-        unsafe { HOME = &mut tx_ctx.home };
-    }
+    let runtime = unsafe { &mut *(&raw mut RUNTIME) };
 
     loop {
         let command = comm.next_command();
@@ -272,47 +182,76 @@ pub fn normal_main(swap_params: Option<&CreateTxParams>) -> bool {
             continue;
         };
 
-        let _status = match handle_apdu(command, &ins, &mut tx_ctx) {
+        match handle_apdu(command, &ins, runtime) {
             Ok(reply) => {
                 let _ = reply.send(AppSW::Ok);
-                AppSW::Ok
             }
-            Err(sw) => {
+            Err(AppError::Sw(sw)) => {
                 let _ = comm.send(&[], sw);
-                sw
             }
-        };
-        show_status_and_home_if_needed(comm, &ins, &mut tx_ctx, &_status);
-
-        // In swap mode, exit after transaction is finished (signed or rejected)
-        if tx_ctx.swap_params.is_some() && tx_ctx.finished() {
-            return _status == AppSW::Ok;
+            Err(AppError::Refused(reason)) => {
+                // 0x6985 plus one reason byte, so the host can tell the user *why*.
+                let _ = comm.send(&[reason.byte()], AppSW::Deny);
+            }
         }
     }
 }
 
+static mut RUNTIME: store::Runtime = store::Runtime::new();
+
 fn handle_apdu<'a>(
     command: Command<'a>,
     ins: &Instruction,
-    ctx: &mut TxContext,
-) -> Result<io::CommandResponse<'a>, AppSW> {
+    runtime: &mut store::Runtime,
+) -> Result<io::CommandResponse<'a>, AppError> {
     match ins {
         Instruction::GetAppName => {
             let mut response = command.into_response();
-            response.append(env!("CARGO_PKG_NAME").as_bytes())?;
+            response.append(b"BSA Sentry")?;
             Ok(response)
         }
-        Instruction::GetVersion => handler_get_version(command),
-        Instruction::GetPubkey { display } => handler_get_public_key(command, *display),
-        Instruction::SignTx { chunk, more } => handler_sign_tx(command, *chunk, *more, ctx),
-        Instruction::Ping => handler_ping(command, ctx),
-        Instruction::GetAddress => handler_get_address(command),
-        Instruction::Sign3009 => handler_sign_3009(command, ctx),
-        Instruction::Sign3009Silent => handler_sign_3009_silent(command),
-        Instruction::Review3 => handler_review3(command, ctx),
-        Instruction::LongCmd { first, last } => handler_long_cmd(command, *first, *last),
-        Instruction::StoreBlob => handler_store_blob(command),
-        Instruction::ReadBlob { chunk } => handler_read_blob(command, *chunk),
-        Instruction::BlobHash => handler_blob_hash(command),
+        Instruction::GetVersion => handler_get_version(command).map_err(AppError::Sw),
+        Instruction::GetAddress { account_agent, display } => {
+            handler_get_address(command, *account_agent, *display)
+        }
+        Instruction::GetState => handler_get_state(command, runtime),
+        // Implemented in the following commits of M1, one handler at a time, each with its
+        // Speculos test. Until then the host gets a clean "not supported".
+        _ => Err(AppError::Sw(AppSW::InsNotSupported)),
     }
+}
+
+/// GET_ADDRESS: the 20-byte EVM address of 0xMAIN (P1 0) or 0xAGENT (P1 1).
+fn handler_get_address(
+    command: Command<'_>,
+    account_agent: bool,
+    _display: bool,
+) -> Result<io::CommandResponse<'_>, AppError> {
+    let account = if account_agent { Account::Agent } else { Account::Main };
+    let addr = crypto::address(account)?;
+    let mut response = command.into_response();
+    response.append(&addr)?;
+    Ok(response)
+}
+
+/// GET_STATE: the policy, counters, session and last payment, in the format
+/// `packages/types` decodes with `decodeState`. No tap: it reveals nothing secret.
+fn handler_get_state<'a>(
+    command: Command<'a>,
+    runtime: &mut store::Runtime,
+) -> Result<io::CommandResponse<'a>, AppError> {
+    let (counters, last_value, last_label) = store::counters();
+    let state = DeviceState {
+        session: runtime.session,
+        has_credentials: store::has_credentials(),
+        counters,
+        last_value,
+        last_label,
+        policy: store::policy(),
+    };
+    let mut buf = [0u8; 512];
+    let n = encode_state(&state, &mut buf).map_err(|_| AppSW::StorageFail)?;
+    let mut response = command.into_response();
+    response.append(&buf[..n])?;
+    Ok(response)
 }

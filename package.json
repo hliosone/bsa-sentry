@@ -9,9 +9,11 @@
     "fund": "tsx scripts/fund.ts",
     "recycle": "tsx scripts/recycle.ts",
     "check:domain": "tsx scripts/check-domain.ts",
-    "typecheck": "pnpm -r exec tsc --noEmit"
+    "typecheck": "pnpm -r exec tsc --noEmit",
+    "test:speculos": "vitest run --config vitest.speculos.config.ts"
   },
   "devDependencies": {
+    "@bsa-sentry/types": "workspace:*",
     "dotenv": "^16.4.7",
     "tsx": "^4.19.2",
     "typescript": "^5.7.3",

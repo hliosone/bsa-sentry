@@ -1,10 +1,14 @@
 [package]
-name = "app-boilerplate-rust"
-version = "1.9.1"
-authors = ["Ledger"]
+name = "bsa-sentry"
+version = "0.1.0"
+authors = ["BSA - EPFL Blockchain Student Association"]
 edition = "2021"
 
 [dependencies]
+# The pure decision/encoding logic, host-tested with `cargo test` in ../core.
+bsa-sentry-core = { path = "../core" }
+# `sys` gives the raw NBGL C layout API, needed for the 3-choice orange screen with a
+# timeout and for non-blocking status screens (a blocking one answers 0x6901 to the next APDU).
 ledger_device_sdk = {version = "*", features = ["io_new", "sys"]}
 serde = { version="1.0.192", default-features = false, features = ["derive"] }
 serde-json-core = "0.6.0"
@@ -22,25 +26,19 @@ png = "0.18"
 [features]
 default = ["ledger_device_sdk/nano_nbgl"]
 debug = ["ledger_device_sdk/debug"]
-variant_testnet = ["ledger_device_sdk/variant_0"]
-variant_betanet = ["ledger_device_sdk/variant_1"]
 
 [package.metadata.ledger]
 curve = ["secp256k1"]
 flags = "0"
-path = ["44'/1'", "44'/60'"]
-name = "Rust Boilerplate"
+path = ["44'/60'"]
+name = "BSA Sentry"
 nanosplus = { icon = "icons/crab_14x14.gif" }
 nanox = { icon = "icons/crab_14x14.gif" }
 stax = { icon = "icons/crab_32x32.gif" }
 flex = { icon = "icons/crab_40x40.gif" }
 apex_p = { icon = "icons/crab_32x32.png" }
 
-[package.metadata.ledger.variants.0]
-name = "Rust Testnet BP"
 
-[package.metadata.ledger.variants.1]
-name = "Rust Betanet BP"
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(target_os, values("apex_p", "stax", "flex", "nanos", "nanox", "nanosplus"))'] }

@@ -13,10 +13,7 @@ test: ## All TS tests + the device core Rust tests
 	cd device-app/core && cargo test
 
 device: ## Build the Flex ELF in Ledger's Docker image
-	@# `flex` is mandatory (the default target is apex_p), and the SDK must be cleaned or
-	@# stale install params are reused and the app crashes the moment it derives a key.
-	docker run --rm -v "$(PWD)/$(APP)":/app -v ledger-cargo-registry:/opt/.cargo/registry -w /app \
-		$(DEVICE_IMAGE) sh -c 'cargo clean -p ledger_device_sdk --target flex --release; cargo ledger build flex'
+	scripts/device-build.sh
 
 speculos: ## Run the app in Speculos (Flex model, headless, REST API on :5000)
 	scripts/speculos.sh
