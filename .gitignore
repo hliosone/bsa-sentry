@@ -1,0 +1,28 @@
+# secrets
+.env
+.env.*
+!.env.example
+
+# deps & builds
+node_modules/
+dist/
+build/
+target/
+*.tsbuildinfo
+
+# runtime
+.run/
+*.log
+*.pid
+
+# python
+.venv/
+__pycache__/
+
+# test artifacts
+test-results/
+playwright-report/
+.vitest/
+
+# os
+.DS_Store
