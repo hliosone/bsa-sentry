@@ -8,6 +8,9 @@ importers:
 
   .:
     devDependencies:
+      '@bsa-sentry/sentry-signer':
+        specifier: workspace:*
+        version: link:packages/sentry-signer
       '@bsa-sentry/types':
         specifier: workspace:*
         version: link:packages/types

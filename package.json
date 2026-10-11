@@ -10,9 +10,11 @@
     "recycle": "tsx scripts/recycle.ts",
     "check:domain": "tsx scripts/check-domain.ts",
     "typecheck": "pnpm -r exec tsc --noEmit",
-    "test:speculos": "vitest run --config vitest.speculos.config.ts"
+    "test:speculos": "vitest run --config vitest.speculos.config.ts",
+    "smoke": "tsx scripts/device-smoke.ts"
   },
   "devDependencies": {
+    "@bsa-sentry/sentry-signer": "workspace:*",
     "@bsa-sentry/types": "workspace:*",
     "dotenv": "^16.4.7",
     "tsx": "^4.19.2",
