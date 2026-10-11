@@ -13,6 +13,9 @@ import { chainConfig } from './chain.js';
 import { openDb } from './db.js';
 import { mcpRouter } from './mcp.js';
 import { oauthRouter } from './oauth.js';
+import { ageRouter } from './age/routes.js';
+import { ageVerifier } from './facilitator/age.js';
+import { privateKeyToAccount } from 'viem/accounts';
 
 export type BsaServerEnv = Record<string, string | undefined>;
 
@@ -36,9 +39,14 @@ export async function startBsaServer(env: BsaServerEnv = process.env, opts: { po
   const webOrigin = (env.WEB_ORIGIN ?? baseUrl).replace(/\/$/, '');
   const now = () => Math.floor(Date.now() / 1000);
 
+  const issuerKey = need('ISSUER_PRIVATE_KEY') as Hex;
+  const eudiwMode = env.EUDIW_MODE === 'live' ? 'live' : 'mock';
+
   const bsa = createServer({
     chain,
     facilitatorKey: need('FACILITATOR_PRIVATE_KEY') as Hex,
+    // The facilitator trusts exactly one attestation issuer: ours.
+    verifyAge: ageVerifier({ chainId: chain.chainId, issuer: privateKeyToAccount(issuerKey).address }),
     authenticateSocket: (req) => readSession(req, secret, now),
     webOrigin: env.WEB_ORIGIN,
     log,
@@ -47,6 +55,12 @@ export async function startBsaServer(env: BsaServerEnv = process.env, opts: { po
         db, chainId: chain.chainId, origin: webOrigin, secret, now, secureCookie: baseUrl.startsWith('https://'),
       }));
       app.use(oauthRouter({ db, baseUrl, webOrigin, secret, now }));
+      app.use('/age', ageRouter({
+        db, chainId: chain.chainId, issuerKey, secret, now, mode: eudiwMode,
+        backend: (env.VERIFIER_BACKEND ?? 'https://verifier-backend.eudiw.dev').replace(/\/$/, ''),
+        intendedUseId: env.INTENDED_USE_ID ?? 'TEST-01',
+        qrScheme: env.EUDIW_QR_SCHEME ?? 'openid4vp',
+      }));
       app.use(mcpRouter({
         db, baseUrl, explorer: chain.explorer, agent,
         status: (a) => relay.status(a),
@@ -89,12 +103,12 @@ export async function startBsaServer(env: BsaServerEnv = process.env, opts: { po
       const dist = resolve(env.WEB_DIST ?? resolve(import.meta.dirname, '../../web/dist'));
       if (existsSync(dist)) {
         app.use(express.static(dist, { index: 'index.html' }));
-        app.get(/^\/(?!auth|oauth|mcp|x402|events|api|relay|health|\.well-known).*/, (_req, res) => res.sendFile(resolve(dist, 'index.html')));
+        app.get(/^\/(?!auth|oauth|mcp|x402|events|api|age|relay|health|\.well-known).*/, (_req, res) => res.sendFile(resolve(dist, 'index.html')));
       }
     },
   });
 
   const listening = await bsa.listen(port);
-  log(`[server] listening on :${listening} · public ${baseUrl} · chain ${chain.name} (${chain.chainId}) · facilitator ${bsa.facilitatorAddress}`);
+  log(`[server] listening on :${listening} · public ${baseUrl} · chain ${chain.name} (${chain.chainId}) · facilitator ${bsa.facilitatorAddress} · EUDIW ${eudiwMode}`);
   return { ...bsa, db, port: listening, baseUrl };
 }

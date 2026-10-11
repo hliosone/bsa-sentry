@@ -50,12 +50,13 @@ CREATE TABLE IF NOT EXISTS oauth_tokens (
 );
 CREATE INDEX IF NOT EXISTS oauth_tokens_account ON oauth_tokens(account);
 CREATE TABLE IF NOT EXISTS age_sessions (
-  id TEXT PRIMARY KEY,
-  nonce TEXT NOT NULL,
-  transaction_id TEXT,
-  status TEXT NOT NULL,
-  verified INTEGER NOT NULL DEFAULT 0,
-  evidence TEXT,
+  id TEXT PRIMARY KEY,           -- random bytes32, also the Bind "session" the Flex signs
+  account TEXT NOT NULL,         -- the logged-in 0xMAIN that opened it
+  mode TEXT NOT NULL,            -- 'mock' | 'live'
+  verifier TEXT NOT NULL,        -- the Bind "verifier" string shown on the Flex
+  transaction_id TEXT,           -- the EUDIW backend's opaque transaction id
+  status TEXT NOT NULL,          -- pending | verified | not_over_18 | rejected | wallet_error
+  evidence TEXT,                 -- keccak256(transaction id): the only trace of the presentation
   bound_to TEXT,
   created_at INTEGER NOT NULL,
   expires_at INTEGER NOT NULL
