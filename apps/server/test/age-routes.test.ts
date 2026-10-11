@@ -137,7 +137,7 @@ describe('live mode', () => {
     expect(r.body.bind.verifier).toBe('https://verifier.test');
   });
 
-  it('marks a verified presentation that does not prove 18+ as not_over_18, and refuses to bind it', async () => {
+  it('marks a verified presentation without a usable birthdate as not_over_18, and refuses to bind it', async () => {
     let call = 0;
     const fetchImpl = vi.fn(async (url: string) => {
       call++;

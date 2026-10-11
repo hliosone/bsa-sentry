@@ -25,12 +25,11 @@ describe('the request', () => {
     expect(body.dcql_query.credentials[0]).toMatchObject({ format: 'dc+sd-jwt', meta: { vct_values: ['urn:eudi:pid:1'] } });
   });
 
-  it('asks for the age boolean and nothing else, in either of its two spellings', () => {
+  it('asks for the birthdate and nothing else (the PID has no age_over_18 claim)', () => {
     const cred = body.dcql_query.credentials[0]!;
-    const paths = cred.claims.map((c: { path: string[] }) => c.path.join('.'));
-    expect(paths.sort()).toEqual(['age_equal_or_over.18', 'age_over_18']);
-    expect(cred.claim_sets).toEqual([['age_18'], ['age_over_18']]);
-    expect(JSON.stringify(body)).not.toMatch(/given_name|family_name|birthdate|address|nationalit/);
+    expect(cred.claims).toEqual([{ path: ['birthdate'] }]);
+    expect(cred).not.toHaveProperty('claim_sets');
+    expect(JSON.stringify(body)).not.toMatch(/given_name|family_name|address|nationalit|age_over/);
   });
 
   it('omits issuer_chain when none is given', () => {
@@ -96,37 +95,54 @@ describe('polling', () => {
   });
 });
 
-describe('reading the answer', () => {
-  it('finds age_equal_or_over.18 behind nested selective disclosures', () => {
-    const d18 = b64u(['salt2', '18', true]);
-    const dAge = b64u(['salt1', 'age_equal_or_over', { _sd: [digest(d18)] }]);
-    const token = sdJwt({ _sd: [digest(dAge)], _sd_alg: 'sha-256', vct: 'urn:eudi:pid:1' }, [dAge, d18]);
-    expect(readAgeOver18({ pid: [token] })).toBe(true);
+describe('reading the answer: over 18 computed from the birthdate', () => {
+  const NOW = Date.UTC(2026, 9, 11) / 1000; // 11 Oct 2026
+  const token = (birthdate: unknown) => {
+    const d = b64u(['salt', 'birthdate', birthdate]);
+    return { pid: [sdJwt({ _sd: [digest(d)], _sd_alg: 'sha-256', vct: 'urn:eudi:pid:1' }, [d])] };
+  };
+
+  it('is true for an adult', () => {
+    expect(readAgeOver18(token('1990-01-15'), NOW)).toBe(true);
   });
 
-  it('finds the older flat age_over_18', () => {
-    const d = b64u(['salt', 'age_over_18', true]);
-    expect(readAgeOver18({ pid: [sdJwt({ _sd: [digest(d)] }, [d])] })).toBe(true);
+  it('is true on the 18th birthday itself', () => {
+    expect(readAgeOver18(token('2008-10-11'), NOW)).toBe(true);
   });
 
-  it('is false for someone under 18', () => {
-    const d = b64u(['salt', 'age_over_18', false]);
-    expect(readAgeOver18({ pid: [sdJwt({ _sd: [digest(d)] }, [d])] })).toBe(false);
+  it('is false the day before the 18th birthday', () => {
+    expect(readAgeOver18(token('2008-10-12'), NOW)).toBe(false);
   });
 
-  it('is false when the claim is missing or is not exactly the boolean true', () => {
-    const d = b64u(['salt', 'age_over_18', 'yes']);
-    expect(readAgeOver18({ pid: [sdJwt({ _sd: [digest(d)] }, [d])] })).toBe(false);
-    expect(readAgeOver18({ pid: [sdJwt({}, [])] })).toBe(false);
+  it('counts a 29 February birthday as reached on 1 March in a non-leap year (the conservative rule)', () => {
+    expect(readAgeOver18(token('2008-02-29'), Date.UTC(2026, 1, 28) / 1000)).toBe(false);
+    expect(readAgeOver18(token('2008-02-29'), Date.UTC(2026, 2, 1) / 1000)).toBe(true);
   });
 
-  it('ignores a disclosure whose digest is not in the signed payload (injected claim)', () => {
-    const d = b64u(['salt', 'age_over_18', true]);
-    expect(readAgeOver18({ pid: [sdJwt({ _sd: ['not-the-digest'] }, [d])] })).toBe(false);
+  it('is false for a malformed or impossible date', () => {
+    for (const bad of ['15/01/1990', '1990-13-01', '1990-02-30', '', 19900115, null, '1990-01-15T00:00:00Z extra']) {
+      expect(readAgeOver18(token(bad), NOW), String(bad)).toBe(false);
+    }
+  });
+
+  it('is false when the birthdate is missing', () => {
+    expect(readAgeOver18({ pid: [sdJwt({}, [])] }, NOW)).toBe(false);
+  });
+
+  it('ignores a disclosure whose digest is not in the signed payload (injected birthdate)', () => {
+    const d = b64u(['salt', 'birthdate', '1990-01-15']);
+    expect(readAgeOver18({ pid: [sdJwt({ _sd: ['not-the-digest'] }, [d])] }, NOW)).toBe(false);
+  });
+
+  it('finds a birthdate behind a nested selective disclosure too', () => {
+    const inner = b64u(['s2', 'birthdate', '1990-01-15']);
+    const outer = b64u(['s1', 'person', { _sd: [digest(inner)] }]);
+    // Only a top-level birthdate counts: a nested one is a different claim.
+    expect(readAgeOver18({ pid: [sdJwt({ _sd: [digest(outer)] }, [outer, inner])] }, NOW)).toBe(false);
   });
 
   it('survives garbage', () => {
-    expect(readAgeOver18({ pid: ['not an sd-jwt'] })).toBe(false);
-    expect(readAgeOver18(null)).toBe(false);
+    expect(readAgeOver18({ pid: ['not an sd-jwt'] }, NOW)).toBe(false);
+    expect(readAgeOver18(null, NOW)).toBe(false);
   });
 });

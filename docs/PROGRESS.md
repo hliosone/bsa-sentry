@@ -156,6 +156,9 @@ Follow from anywhere: this file is pushed to GitHub after every milestone.
 _nothing yet_
 
 ## Decisions
+- **M6: 18+ is computed from `birthdate`** (correction from the human, who tested the real
+  wallet: the PID has no `age_over_18` claim). Only `birthdate` is requested (not the name the
+  reference also asked for); it is used in memory for one comparison and never stored or logged.
 - **M4: the spec's "réserve le resto -> Faire confiance" contradicts its own §5.2.** "Faire
   confiance" is only offered when the unknown payee is the *only* problem; the resto is a
   known payee 15 USDC over the auto limit, so trusting it would change nothing. The security

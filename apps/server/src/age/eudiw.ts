@@ -1,10 +1,11 @@
 // Client for the public EUDI reference verifier backend (OpenID4VP 1.0 + DCQL), ported from
 // the team's working integration in ../eudi-verifier-test (see docs/EUDIW.md).
 //
-// Two deliberate differences from that test page: we request ONLY the age boolean, and we read
-// ONLY the age boolean back. The decoded vp_token lives in readAgeOver18's locals and nowhere
-// else (security invariant 8). Signatures are not re-checked here: a "Wallet response posted"
-// transaction has already been verified by the backend (issuer signature, KB-JWT, nonce).
+// The PID has no age_over_18 claim: we request ONLY `birthdate` (not the name the test page also
+// asked for) and compute "18 or older" here. The birthdate lives in readAgeOver18's locals for one
+// comparison and is never stored or logged (security invariant 8): only the boolean survives.
+// Signatures are not re-checked here: a "Wallet response posted" transaction has already been
+// verified by the backend (issuer signature, KB-JWT, nonce).
 import { createHash } from 'node:crypto';
 
 export const PID_VCT = 'urn:eudi:pid:1';
@@ -22,12 +23,8 @@ export function buildPresentationRequest(o: { nonce: string; intendedUseId: stri
         id: 'pid',
         format: 'dc+sd-jwt',
         meta: { vct_values: [PID_VCT] },
-        // Either spelling satisfies the request; nothing else is asked for.
-        claims: [
-          { id: 'age_18', path: ['age_equal_or_over', '18'] },
-          { id: 'age_over_18', path: ['age_over_18'] },
-        ],
-        claim_sets: [['age_18'], ['age_over_18']],
+        // Data minimisation: the birthdate alone, from which "18 or older" is computed.
+        claims: [{ path: ['birthdate'] }],
       }],
     },
     nonce: o.nonce,
@@ -78,23 +75,41 @@ export async function pollTransaction(fetchImpl: typeof fetch, backend: string, 
 }
 
 /**
- * Reads the over-18 boolean out of a verified vp_token, and nothing else.
- * `age_equal_or_over.18` (current PID rulebook) or `age_over_18`; it must be exactly `true`.
+ * "18 or older" from a verified vp_token's `birthdate` (ISO `YYYY-MM-DD`), at `nowSeconds`.
+ * Anything malformed is "not proven". A 29 February birthday is reached on 1 March in a
+ * non-leap year (the conservative reading).
  */
-export function readAgeOver18(vpToken: unknown): boolean {
+export function readAgeOver18(vpToken: unknown, nowSeconds = Math.floor(Date.now() / 1000)): boolean {
   try {
     for (const presentations of Object.values((vpToken ?? {}) as Record<string, unknown>)) {
       for (const p of ([] as unknown[]).concat(presentations)) {
         if (typeof p !== 'string' || !p.includes('~')) continue;
-        const claims = resolveSdJwt(p);
-        const nested = (claims.age_equal_or_over as Record<string, unknown> | undefined)?.['18'];
-        if (nested === true || claims.age_over_18 === true) return true;
+        if (isAtLeast18(resolveSdJwt(p).birthdate, nowSeconds)) return true;
       }
     }
   } catch {
     /* malformed: treated as "not proven" */
   }
   return false;
+}
+
+function isAtLeast18(birthdate: unknown, nowSeconds: number): boolean {
+  if (typeof birthdate !== 'string') return false;
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(birthdate);
+  if (!m) return false;
+  const [y, mo, d] = [Number(m[1]), Number(m[2]), Number(m[3])];
+  // Reject impossible dates (2026-02-30 would otherwise roll over to March).
+  const check = new Date(Date.UTC(y, mo - 1, d));
+  if (check.getUTCFullYear() !== y || check.getUTCMonth() !== mo - 1 || check.getUTCDate() !== d) return false;
+  const today = new Date(nowSeconds * 1000);
+  const now = [today.getUTCFullYear(), today.getUTCMonth() + 1, today.getUTCDate()];
+  const eighteenth = [y + 18, mo, d];
+  // Lexicographic (year, month, day) comparison: 29 Feb compares after 28 Feb, so in a
+  // non-leap year the birthday is reached on 1 March.
+  for (let i = 0; i < 3; i++) {
+    if (now[i]! !== eighteenth[i]!) return now[i]! > eighteenth[i]!;
+  }
+  return true;
 }
 
 const b64json = (s: string) => JSON.parse(Buffer.from(s, 'base64url').toString('utf8'));

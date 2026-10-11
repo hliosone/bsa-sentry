@@ -1,11 +1,11 @@
 // /age — an EUDIW presentation becomes an "over 18" attestation bound to the user's 0xMAIN.
 //
-//   POST /age/sessions            (logged in) opens an EUDIW request for the age boolean only
+//   POST /age/sessions            (logged in) opens an EUDIW request for the birthdate only
 //   GET  /age/sessions/:id        polls it
 //   POST /age/sessions/:id/bind   the Flex's Bind signature -> AgeAttestation signed by our issuer
 //
-// Security invariant 8: nothing about the person is stored. The row holds a status, the
-// verdict and keccak256(transaction id) as evidence. EUDIW_MODE=mock never calls the backend
+// Security invariant 8: nothing about the person is stored. The birthdate is used for one
+// comparison in memory; the row holds a status, the verdict and keccak256(transaction id). EUDIW_MODE=mock never calls the backend
 // and says "mock" in every answer, so it cannot pass for a real verification.
 import { randomBytes } from 'node:crypto';
 import { Router, json } from 'express';
@@ -91,8 +91,8 @@ export function ageRouter(o: AgeOptions) {
       } else {
         try {
           const r = await pollTransaction(fetchImpl, o.backend, row.transaction_id!);
-          // The decoded token is read for one boolean and dropped here; it is never stored.
-          if (r.state === 'verified') status = readAgeOver18(r.vpToken) ? 'verified' : 'not_over_18';
+          // The birthdate is read for one comparison and dropped here; it is never stored or logged.
+          if (r.state === 'verified') status = readAgeOver18(r.vpToken, now()) ? 'verified' : 'not_over_18';
           else if (r.state !== 'pending') status = r.state;
         } catch {
           /* backend hiccup: stay pending, the page polls again */

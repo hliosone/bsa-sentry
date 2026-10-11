@@ -4,6 +4,9 @@ How BSA Sentry turns a PID presentation from an EU Digital Identity Wallet (Proc
 tests) into an "over 18" attestation bound to the user's Ledger, **without storing any personal
 data** (security invariant 8).
 
+> **The PID has no `age_over_18` claim.** Confirmed by the team's real wallet tests: we request
+> the `birthdate`, compute "18 or older" ourselves, and keep only that boolean.
+
 Source: the team's working integration in `../eudi-verifier-test/` (`server.mjs`, `index.html`),
 read for this document. Its `presentations.log` / `server.log` may hold real PID data and were
 **not** read, copied or quoted. Every fixture in this repo is hand-made.
@@ -54,11 +57,7 @@ website              BSA server (/age)                 EUDI verifier backend    
       "id": "pid",
       "format": "dc+sd-jwt",
       "meta": { "vct_values": ["urn:eudi:pid:1"] },
-      "claims": [
-        { "id": "age_18",     "path": ["age_equal_or_over", "18"] },
-        { "id": "age_over_18","path": ["age_over_18"] }
-      ],
-      "claim_sets": [["age_18"], ["age_over_18"]]
+      "claims": [{ "path": ["birthdate"] }]
     }]
   },
   "nonce": "<16 random bytes, base64url>",
@@ -71,10 +70,8 @@ website              BSA server (/age)                 EUDI verifier backend    
 }
 ```
 
-- **Only the age boolean is requested.** The reference page asked for `given_name` and
-  `birthdate`; we never do. `claim_sets` lets the wallet answer with whichever form its PID uses:
-  `age_equal_or_over.18` (current PID SD-JWT VC rulebook) or `age_over_18` (older profiles, and
-  the ISO mdoc name).
+- **Only the birthdate is requested.** The reference page asked for `given_name` and `birthdate`;
+  we drop the name. There is no age claim to ask for instead.
 - `issuer_chain`: Procivis' trial EUDI issuer (`CN=Procivis AG`) is signed by the EUDI test PKI's
   "PID Issuer CA - UT 02", which the public backend no longer trusts by default. We always add
   `https://preprod.pki.eudiw.dev/aia/PIDIssuerCA02-UT.cacert.pem` and `…EU.cacert.pem`, exactly as
@@ -106,12 +103,15 @@ and which is not `Request object retrieved`:
 
 `vp_token` is `{ "pid": ["<issuer-jwt>~<disclosure>~…~<kb-jwt>"] }`. Each disclosure is
 base64url JSON `[salt, name, value]`. We resolve the SD-JWT the way the reference does
-(digests of disclosures matched against `_sd`) and look up **only** `age_equal_or_over.18` or
-`age_over_18`. It must be the boolean `true`.
+(digests of disclosures matched against `_sd`; a disclosure the signed payload does not list is
+ignored) and read **only** the top-level `birthdate` (`YYYY-MM-DD`). "18 or older" means the
+18th birthday is today or earlier, compared as (year, month, day) in UTC; a 29 February birthday
+is reached on 1 March in a non-leap year. A malformed or impossible date is "not proven".
 
-**Stored**: the session status, `verified: 1|0`, and `evidence = keccak256(transaction_id)`.
-**Never stored or logged**: the `vp_token`, any disclosure, any claim value. The decoded token
-lives in one function's locals and is dropped.
+**Stored**: the session status (`verified` / `not_over_18` / …) and
+`evidence = keccak256(transaction_id)`.
+**Never stored or logged**: the `vp_token`, any disclosure, the birthdate. It lives in one
+function's locals for one comparison and is dropped.
 
 ### 5. Bind, then attestation
 
