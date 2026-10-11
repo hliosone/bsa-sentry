@@ -5,4 +5,6 @@ device-app
 .env
 docs
 test
+apps/web/dist
+apps/web/test-results
 **/target

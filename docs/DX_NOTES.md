@@ -218,7 +218,19 @@ The `node-hid` handle keeps the event loop alive; every script needs `process.ex
 **Suggestion.** A `close()`/`dispose()` that releases transport handles, so scripts and test runners
 can exit on their own.
 
-### 5.3 `0x5515` deserves a typed error *(feasibility)*
+### 5.3 The session refresher interleaves its own APDUs with yours
+
+**What happened.** A custom app talks to the device with `dmk.sendApdu`, one command at a time,
+some of which hold a 60 s screen. By default the DMK's session refresher also sends periodic
+"get app and version" APDUs in the background. On a device that handles one command at a time,
+those can land in the middle of an app's sequence (between chunks of a transfer, or while a
+review is up).
+**Fix.** `dmk.connect({ device, sessionRefresherOptions: { isRefresherDisabled: true } })`, plus our
+own single-flight queue and a 120 s `abortTimeout` on `sendApdu`.
+**Suggestion.** Document the refresher next to `sendApdu` ("disable it if you drive your own app's
+protocol"), or pause it automatically while a `sendApdu` is in flight.
+
+### 5.4 `0x5515` deserves a typed error *(feasibility)*
 
 Long runs started failing mid-way with `0x5515`: the Flex had auto-locked after ~2 minutes.
 **Suggestion.** Surface it in the DMK as a `DeviceLockedError` with a message, rather than a raw
@@ -239,10 +251,25 @@ Wired as in our feasibility test: `@ledgerhq/ledger-key-ring-protocol` 0.24.0 +
   That is a type bug, and it costs a confusing runtime failure.
 - **The Ledger Sync app must be open on the device**, so an app using both the DMK and Key Ring has
   to make the user switch apps and back, and must not hold both transports at once.
-  **Suggestion:** document the app-switch requirement prominently, and expose a supported way to
-  request an app switch from the browser.
+- **Two Ledger transports in one page.** The Key Ring SDK takes a legacy `hw-transport-webhid`
+  transport, not a DMK session. So a DMK app has to *disconnect* the DMK, open a second transport
+  to the same device for the Key Ring, close it, and reconnect the DMK. We wrote that dance with
+  care (`apps/web/src/useBsa.ts`, `withKeyRing`); it is the most fragile part of the site.
+  **Suggestion:** let `getSdk` accept a DMK session (or a DMK-backed transport adapter), so one
+  connection serves both.
+- **Switching apps from the browser is undocumented.** The DMK exports `OpenAppCommand` and
+  `CloseAppCommand`, but nothing explains that `OpenApp` only works from the dashboard (so you must
+  close the current app first), whether the device asks the user to confirm, or what happens to
+  the DMK session when the app changes underneath it. We try it and fall back to telling the user
+  which app to open. **Suggestion:** one worked example, "switch from your app to Ledger Sync and
+  back", in the DMK docs.
+- **No way to test it in CI.** Ledger Sync does not run in Speculos, so every Key Ring path is
+  untestable without hardware. We put the Key Ring behind an interface and test our flows with a
+  fake that does real AES-GCM — but the LKRP integration itself only gets exercised on a real Flex.
+  **Suggestion:** a Speculos-loadable Ledger Sync build, or a documented test mode of the LKRP SDK
+  backed by a software member key.
 
-*(Finalised after our M7 hardware run; see `docs/PROGRESS.md` for status.)*
+*(The LKRP hardware run is Phase C step M7-C; results are recorded in `docs/PROGRESS.md`.)*
 
 ---
 
@@ -258,6 +285,16 @@ needs, and it is the one case the current tooling does not cover. It is most of 
 we would rather not have had to.
 
 ---
+
+## 8. Things we only learned by building end to end
+
+- **The confirmation-screen budget is a security budget.** Between §2.2 (a finger stops the
+  timeout clock) and §2.3 (overflowing text hidden under the buttons), both of our worst bugs were
+  cases where the device *looked* right in every APDU-level test and was wrong for a human. Only
+  screenshots caught them. A "lint my layout" tool for NBGL screens would pay for itself.
+- **Silent signing is the feature that makes agents usable** — and the SDK makes it easy. What is
+  missing is everything *around* it for this use case: a deny-by-default screen, a monotonic clock,
+  and a documented pattern for a policy stored in NVM that only the device can change.
 
 ## The five changes we would ask for first
 

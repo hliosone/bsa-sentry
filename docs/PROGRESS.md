@@ -6,7 +6,7 @@ Follow from anywhere: this file is pushed to GitHub after every milestone.
 |---|---|
 | Started | Sun 11 Oct 2026, 14:46 CEST |
 | Deadline | Tue 13 Oct 2026, 23:59 CEST (Phase B cut-off: Tue 10:00) |
-| Phase | **B — autonomous build (M0 → M8)** |
+| Phase | **B done — READY FOR PHASE C** (Mon 12 Oct 2026, ~00:10 CEST) |
 
 ## Milestones
 
@@ -18,7 +18,7 @@ Follow from anywhere: this file is pushed to GitHub after every milestone.
 - [x] **M5** Website complete — **Playwright onboarding against the real server**
 - [x] **M6** 18+ identity (EUDIW) — **wine paid with 18+ verified on Arc**
 - [x] **M7** Key Ring backup/restore — **wipe and one-tap restore proven on Speculos + Arc** (device menu: cut-order item 2, see Decisions)
-- [ ] **M8** Deploy, docs, demo
+- [x] **M8** Deploy, docs, demo — **the full demo passes twice in a row on Speculos + Arc**; deploy scripted (no host credentials → Phase C step 9)
 
 ## Done
 
@@ -176,8 +176,21 @@ Follow from anywhere: this file is pushed to GitHub after every milestone.
 - Real Ledger Key Ring (LKRP 0.24.0, app id 17) wired as in the feasibility test; DMK
   open-app tried first, manual prompt as fallback. Hardware verification: Phase C M7-C.
 
+### M8 — done (Mon 12 Oct 2026, ~00:10 CEST)
+- **`E2E=1 pnpm e2e` passes: the full demo, twice in a row, each from a clean reset** (wiped Flex,
+  recycled funds), on Speculos + the real Arc testnet: café silent · bakery "Faire confiance" · wine
+  with the 18+ badge verified · resto "Une fois" (no trust option) · the prompt-injected 400 USDC
+  deposit refused · sentry_status. `scripts/demo.ts` is exactly `docs/DEMO.md`.
+- Docker image builds the website and serves it with the server (one container + the merchants);
+  `docker-compose.prod.yml` adds Caddy for HTTPS; `scripts/deploy.sh` deploys to any Docker host
+  over SSH. Verified locally (site, SPA routes, API). No host credentials were given → Phase C step 9.
+- Docs: `README.md`, `docs/DEMO.md`, `docs/SUBMISSION.md` (form, post, video script, DX summary,
+  disclosure, pitch), `docs/DX_NOTES.md` (20 entries), `docs/PHASE_C_GUIDE.md` (final, 10 steps).
+
 ## Blocked
-_nothing yet_
+_Nothing is blocked._ Hardware-only items (real Flex sideload, taps, the 60 s timeout under touch,
+DMK app switching, LKRP on the device, the Procivis scan, claude.ai) are built, tested on
+Speculos/fakes, and listed in `docs/PHASE_C_GUIDE.md`.
 
 ## Decisions
 - **M6: 18+ is computed from `birthdate`** (correction from the human, who tested the real
@@ -231,7 +244,17 @@ _nothing yet_
 - **No `ANTHROPIC_API_KEY`**: `scripts/e2e-mcp.ts` plays claude.ai with the MCP TS SDK instead.
 - **Agent name "Claude", device + website UI in French**, code and docs in English.
 
+## Cut (cut order)
+- **Device menu beyond the session switch** (My rules / Trusted merchants / +20 USDC) — cut-order
+  item 2. The kill switch is **not** cut: CLEAR_POLICY with an on-device review, from the website.
+  Rules and trusted merchants are visible on the website and in every review screen.
+
 ## Known issues
+- A merchant trusted via "Faire confiance" gets the agent's hint as its label, clipped to the
+  device's 16 bytes ("Boulangerie - croissant" -> "Boulangerie - cr"). By design (labels are
+  display-only), but the demo merchants' descriptions could be shortened.
+- The status bar only refreshes the session state on a page action ("J'ai démarré l'agent") or a
+  relay message: the bridge deliberately runs no timers.
 - `scripts/setup-machine.sh` prints "Node v18.19.1" in its summary: it runs `su - $SUDO_USER`,
   which does not load nvm. The real toolchain in an interactive shell is Node 22.22.0. Cosmetic.
 
@@ -256,3 +279,4 @@ _nothing yet_
 | M7 | `apps/web` unit (+ Key Ring flows) | 57 |
 | M7 | Playwright | 4 |
 | M7 | e2e wipe + restore on Arc (`E2E=1 pnpm e2e:restore`) | 13 checks |
+| M8 | full demo twice from a clean reset (`E2E=1 pnpm e2e`) | 2 × 14 checks |

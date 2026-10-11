@@ -1,0 +1,27 @@
+# Production overlay: Caddy in front for HTTPS (Let's Encrypt), the server and merchants
+# behind it. Usage on the host:
+#   DOMAIN=sentry.example.org docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+# DNS: DOMAIN and merchants.DOMAIN must point at the host. Ports 80/443 open.
+services:
+  server:
+    ports: !reset []
+    environment:
+      PUBLIC_API_URL: https://${DOMAIN}
+      MERCHANT_URL: https://merchants.${DOMAIN}
+  merchants:
+    ports: !reset []
+    environment:
+      MERCHANT_URL: https://merchants.${DOMAIN}
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports: ["80:80", "443:443"]
+    environment:
+      DOMAIN: ${DOMAIN}
+    command: >
+      sh -c 'printf "%s {\n  reverse_proxy server:8787\n}\nmerchants.%s {\n  reverse_proxy merchants:4021\n}\n" "$$DOMAIN" "$$DOMAIN" > /etc/caddy/Caddyfile && caddy run --config /etc/caddy/Caddyfile'
+    volumes: ["caddy-data:/data"]
+    depends_on: [server, merchants]
+
+volumes:
+  caddy-data:
