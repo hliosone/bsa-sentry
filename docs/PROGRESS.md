@@ -6,7 +6,7 @@ Follow from anywhere: this file is pushed to GitHub after every milestone.
 |---|---|
 | Started | Sun 11 Oct 2026, 14:46 CEST |
 | Deadline | Tue 13 Oct 2026, 23:59 CEST (Phase B cut-off: Tue 10:00) |
-| Phase | **B — finishing (device home screen + menu)** |
+| Phase | **B complete — ready for Phase C** (`docs/PHASE_C_GUIDE.md`) |
 
 ## Milestones
 
@@ -203,6 +203,10 @@ Follow from anywhere: this file is pushed to GitHub after every milestone.
   failed. The fake Flex now dies on an app switch like a real one (Playwright went red), the page
   always uses the latest session, and losing the device during the Key Ring is ignored
   (`withKeyRing` owns the reconnect). Web 58 unit + 4 Playwright green.
+- USB transport for the hardware smoke test installed (`node-hid` needed an allowed build under
+  pnpm 10, DX_NOTES 5.5) and checked against the plugged-in Flex with a read-only APDU.
+- Final sweep: TS 248 + 32 + 185 + 58 + 12, Rust 88, Speculos 73, Playwright 4, typecheck clean,
+  Docker image builds.
 
 ## Blocked
 _Nothing is blocked._ Hardware-only items (real Flex sideload, taps, the 60 s timeout under touch,
