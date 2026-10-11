@@ -6,7 +6,7 @@ Follow from anywhere: this file is pushed to GitHub after every milestone.
 |---|---|
 | Started | Sun 11 Oct 2026, 14:46 CEST |
 | Deadline | Tue 13 Oct 2026, 23:59 CEST (Phase B cut-off: Tue 10:00) |
-| Phase | **A — setup with the human** |
+| Phase | **B — autonomous build (M0 → M8)** |
 
 ## Milestones
 
@@ -38,16 +38,29 @@ Follow from anywhere: this file is pushed to GitHub after every milestone.
 - `scripts/balances.ts` reads USDC (6 dp) balances on Arc for every role.
 - Sleep inhibitor running (`systemd-inhibit`, blocks sleep + idle + lid) so Phase B survives.
 
-## Waiting on the human (Phase A)
-- `sudo bash scripts/setup-machine.sh` → libudev-dev, Ledger udev rules, cloudflared.
-- Faucet: treasury (many requests) + facilitator (once) at https://faucet.circle.com.
-- Answers to the Phase A questions.
+### Phase A — complete (Sun 11 Oct 2026, 16:05 CEST)
+- `sudo bash scripts/setup-machine.sh` run by the human. Verified myself: `libudev-dev` installed,
+  `cloudflared 2026.10.0`, Ledger udev rules at `/etc/udev/rules.d/20-hw1.rules` applied
+  (Flex `2c97:7000` on USB, `hidraw0`/`hidraw1` mode 666).
+- Funded from faucet.circle.com (Arc testnet): treasury 20, facilitator 20, speculos 0xAGENT 20 USDC.
+- `scripts/transfer.ts` + `scripts/fund.ts` + `scripts/recycle.ts`: real 1 USDC treasury -> 0xMAIN
+  settled on Arc, so the live funding path is proven. Measured gas: **0.00185 USDC per transfer**.
+- Human answers: defaults accepted for all Phase A questions (see "Decisions").
+- Human has left; laptop locked, on AC, `systemd-inhibit` blocking sleep/idle/lid.
 
 ## Blocked
 _nothing yet_
 
 ## Decisions
-_nothing yet_
+- **RUN MODE overrides the global `~/.claude/CLAUDE.md` "stop and ask" rule for Phase B.** Phase B
+  never stops; ambiguity is resolved with the safest option that keeps the section 8 security
+  invariants, and recorded here. TDD / simplicity / surgical-changes from the global rules still apply.
+- **EUDIW needs no credentials**: the public reference backend `verifier-backend.eudiw.dev` with
+  `INTENDED_USE_ID=TEST-01`. Plain config in `.env`, nothing secret.
+- **GitHub**: private `hliosone/bsa-sentry`, public at submission.
+- **Deploy**: no host credentials -> M8 writes `scripts/deploy.sh` + instructions, deploy moves to Phase C.
+- **No `ANTHROPIC_API_KEY`**: `scripts/e2e-mcp.ts` plays claude.ai with the MCP TS SDK instead.
+- **Agent name "Claude", device + website UI in French**, code and docs in English.
 
 ## Known issues
 _nothing yet_

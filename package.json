@@ -5,13 +5,15 @@
   "scripts": {
     "test": "pnpm -r test",
     "keys": "tsx scripts/gen-keys.ts",
-    "balances": "tsx scripts/balances.ts"
+    "balances": "tsx scripts/balances.ts",
+    "fund": "tsx scripts/fund.ts",
+    "recycle": "tsx scripts/recycle.ts"
   },
   "devDependencies": {
+    "dotenv": "^16.4.7",
     "tsx": "^4.19.2",
     "typescript": "^5.7.3",
-    "viem": "^2.22.0",
-    "dotenv": "^16.4.7"
+    "viem": "^2.22.0"
   },
   "type": "module"
 }
