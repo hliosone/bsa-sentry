@@ -24,7 +24,7 @@ export function fakeSigner() {
   let creds: Credentials | null = null;
   const state = (): DeviceState => ({ sessionArmed: session, hasCredentials: !!creds, spent, count, lastPayment: last, policy });
 
-  return {
+  const device = {
     /** Test hook standing in for the switch on the device. */
     armSession(on = true) { session = on; },
     getAddress: async (a: 'main' | 'agent') => (a === 'main' ? main.address : agent.address).toLowerCase() as `0x${string}`,
@@ -69,4 +69,22 @@ export function fakeSigner() {
     /** Test hook: what a reinstall of the app does to the device. */
     wipe() { policy = { ...policy, active: false, payees: [] }; creds = null; spent = 0n; count = 0; last = null; session = false; },
   };
+
+  // Like the DMK after an app switch: the old session object is dead and a new one takes over,
+  // so a page that keeps using a stale signer fails here exactly as it would on a real Flex.
+  const hooks = new Set(['armSession', 'wipe']);
+  type Handle = typeof device & { reconnect(): Handle };
+  const connect = (): Handle => {
+    let open = true;
+    const handle = {} as Record<string, unknown>;
+    for (const [k, v] of Object.entries(device)) {
+      handle[k] = hooks.has(k) ? v : (...a: unknown[]) => {
+        if (!open) return Promise.reject(new Error('fake Flex: this session was closed by an app switch'));
+        return (v as (...a: unknown[]) => unknown)(...a);
+      };
+    }
+    handle.reconnect = () => { open = false; return connect(); };
+    return handle as Handle;
+  };
+  return connect();
 }

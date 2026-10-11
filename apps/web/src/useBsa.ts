@@ -36,6 +36,10 @@ export function useBsa() {
   const [error, setError] = useState<string | null>(null);
   const bridge = useRef<Bridge | null>(null);
   const conn = useRef<FlexConnection | null>(null);
+  /** The signer of the current DMK session: an app switch replaces it mid-flow. */
+  const live = useRef<AppSigner | null>(null);
+  /** While the Key Ring runs, BSA Sentry is closed on purpose and `withKeyRing` owns the reconnect. */
+  const keyRingActive = useRef(false);
   const [hasBackup, setHasBackup] = useState(false);
   /** A step only the user can do on the device, with the button that confirms it. */
   const [prompt, setPrompt] = useState<{ text: string; button: string; resolve: () => void } | null>(null);
@@ -60,7 +64,19 @@ export function useBsa() {
     }
   }, []);
 
+  /** Tracks a connection. Losing it during the Key Ring is expected, so it is ignored there. */
+  const watch = useCallback((c: FlexConnection) => {
+    conn.current = c;
+    c.onLost(() => {
+      if (keyRingActive.current) return;
+      live.current = null;
+      setSigner(null);
+      setBridgeStatus((b) => ({ ...b, flex: 'disconnected' }));
+    });
+  }, []);
+
   const adopt = useCallback(async (s: AppSigner) => {
+    live.current = s;
     setSigner(s);
     const [main, agent] = [await s.getAddress('main'), await s.getAddress('agent')];
     setAddresses({ main, agent });
@@ -77,20 +93,18 @@ export function useBsa() {
       return;
     }
     const c = await connectFlex();
-    conn.current = c;
-    c.onLost(() => { setSigner(null); setBridgeStatus((b) => ({ ...b, flex: 'disconnected' })); });
+    watch(c);
     await adopt(c.signer as unknown as AppSigner);
-  }), [run, adopt]);
+  }), [run, adopt, watch]);
 
   // A Flex this browser already approved reconnects on its own after a reload or app switch.
   useEffect(() => {
-    if (signer) return;
+    if (signer || keyRingActive.current) return;
     return reconnectFlex((c) => {
-      conn.current = c;
-      c.onLost(() => setSigner(null));
+      watch(c);
       void adopt(c.signer as unknown as AppSigner);
     });
-  }, [signer, adopt]);
+  }, [signer, adopt, watch]);
 
   /** "Se connecter avec Ledger": the Flex signs a Login with 0xMAIN. */
   const login = useCallback(() => run('Vérifie le site affiché sur ton Flex, puis maintiens pour signer…', async () => {
@@ -134,9 +148,12 @@ export function useBsa() {
 
   /** A device command from the page, queued behind any payment the bridge is handling. */
   const onDevice = useCallback(<T,>(fn: (s: AppSigner) => Promise<T>) => {
-    if (!signer) throw new Error('Connecte d\'abord ton Flex');
-    return bridge.current ? bridge.current.exclusive(() => fn(signer)) : fn(signer);
-  }, [signer]);
+    // The latest session, not the one this callback was created with: a restore writes to the
+    // device right after the Key Ring round trip replaced the DMK session.
+    const s = live.current;
+    if (!s) throw new Error('Connecte d\'abord ton Flex');
+    return bridge.current ? bridge.current.exclusive(() => fn(s)) : fn(s);
+  }, []);
 
   const refreshDevice = useCallback(async () => {
     if (!signer) return;
@@ -172,26 +189,38 @@ export function useBsa() {
   const withKeyRing = useCallback(async <T,>(fn: (kr: KeyRing) => Promise<T>): Promise<T> => {
     if (import.meta.env.DEV && (window as any).__bsaFake) {
       const { FakeKeyRing } = await import('./keyring/fake.js');
-      return fn(new FakeKeyRing(addresses.main ?? 'dev'));
+      try {
+        return await fn(new FakeKeyRing(addresses.main ?? 'dev'));
+      } finally {
+        // As on a real Flex, the round trip through Ledger Sync ends with a new DMK session.
+        const next = (window as any).__bsaFake.reconnect();
+        (window as any).__bsaFake = next;
+        await adopt(next as unknown as AppSigner);
+      }
     }
     const c = conn.current;
     if (!c) throw new Error('Connecte d\'abord ton Flex');
-    if (!(await c.switchApp('Ledger Sync'))) await ask("Sur ton Flex, quitte BSA Sentry et ouvre l'app Ledger Sync.", 'Ledger Sync est ouvert');
-    await c.disconnect();
-    conn.current = null;
-    const { openLedgerKeyRing } = await import('./keyring/ledger.js');
-    const kr = await openLedgerKeyRing((on) => setBusy(on ? 'Confirme sur ton Flex (Ledger Sync)…' : 'Chiffrement…'));
+    keyRingActive.current = true;
     try {
-      return await fn(kr);
+      if (!(await c.switchApp('Ledger Sync'))) await ask("Sur ton Flex, quitte BSA Sentry et ouvre l'app Ledger Sync.", 'Ledger Sync est ouvert');
+      await c.disconnect();
+      conn.current = null;
+      const { openLedgerKeyRing } = await import('./keyring/ledger.js');
+      const kr = await openLedgerKeyRing((on) => setBusy(on ? 'Confirme sur ton Flex (Ledger Sync)…' : 'Chiffrement…'));
+      try {
+        return await fn(kr);
+      } finally {
+        await kr.close().catch(() => undefined);
+      }
     } finally {
-      await kr.close().catch(() => undefined);
       await ask("Sur ton Flex, quitte Ledger Sync et rouvre l'app BSA Sentry.", 'BSA Sentry est rouvert');
       // The browser already allowed this Flex: reconnect without the picker.
       await new Promise<void>((resolve) => {
-        const stop = reconnectFlex((nc) => { conn.current = nc; void adopt(nc.signer as unknown as AppSigner).then(() => { stop(); resolve(); }); });
+        const stop = reconnectFlex((nc) => { watch(nc); void adopt(nc.signer as unknown as AppSigner).then(() => { stop(); resolve(); }); });
       });
+      keyRingActive.current = false;
     }
-  }, [addresses.main, adopt]);
+  }, [addresses.main, adopt, watch]);
 
   const flowDeps = useCallback((onStage: FlowDeps['onStage']): FlowDeps => ({
     readDevice: async () => {

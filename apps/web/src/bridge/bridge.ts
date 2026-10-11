@@ -86,7 +86,8 @@ export class Bridge {
    * from a timer: the user just changed something on the Flex and wants the page to see it.
    */
   refresh(): Promise<void> {
-    return new Promise((resolve) => this.run(async () => { await this.reportStatus(); resolve(); }));
+    // Resolves even if the probe fails: a caller awaiting it must never hang on a dead session.
+    return new Promise((resolve) => this.run(async () => { try { await this.reportStatus(); } finally { resolve(); } }));
   }
 
   /** Runs a device command from the page in the same queue as relay requests. */

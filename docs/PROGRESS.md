@@ -198,6 +198,11 @@ Follow from anywhere: this file is pushed to GitHub after every milestone.
 - The session is now a RAM static (no settings NVM slot at all). GET_ADDRESS with P2=1 shows the
   address and answers only after "Confirm". Login/Bind/Delegation reviews show the network.
 - 11 new Speculos tests; full suite 73/73; `E2E=1 pnpm e2e` passed again twice in a row.
+- Website fix found on the way: after the Key Ring round trip (BSA Sentry → Ledger Sync → back),
+  the restore wrote through the *old* DMK session, and `bridge.refresh()` hung when its probe
+  failed. The fake Flex now dies on an app switch like a real one (Playwright went red), the page
+  always uses the latest session, and losing the device during the Key Ring is ignored
+  (`withKeyRing` owns the reconnect). Web 58 unit + 4 Playwright green.
 
 ## Blocked
 _Nothing is blocked._ Hardware-only items (real Flex sideload, taps, the 60 s timeout under touch,

@@ -311,6 +311,15 @@ describe('page actions', () => {
     expect(socket().statuses.length).toBe(2);
   });
 
+  it('refresh() still resolves when the device cannot be probed (a session closed by an app switch)', async () => {
+    const signer = fakeSigner();
+    const { bridge, socket } = start(signer);
+    socket().open();
+    await vi.waitFor(() => expect(signer.probe).toHaveBeenCalledTimes(1));
+    signer.probe.mockRejectedValueOnce(new Error('session closed'));
+    await expect(bridge.refresh()).resolves.toBeUndefined();
+  });
+
   it('exclusive() runs a page command in the same queue as relay requests', async () => {
     const order: string[] = [];
     let release!: () => void;
