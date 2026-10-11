@@ -67,3 +67,12 @@ These could not be tested on Speculos and need the device:
 | **You see** | The status bar turns to *Flex connected*. Both addresses are shown. |
 | **Claude checks** | Sends a test `sign_payment` from a script through the relay; the tab signs it (silently for the café) and the signature recovers to your 0xAGENT. |
 | **Fallback** | No device in the picker → udev rules (step 0) or another tab holds the device. "App closed" → open BSA Sentry on the Flex. |
+
+## M3-C. The same coffee, with the real Flex
+
+| | |
+|---|---|
+| **You do** | Fund your Flex's 0xAGENT first: `pnpm fund <your 0xAGENT> 10`. Then open the website in Chrome, connect the Flex, set the demo rules (review + hold on the device), turn on the agent session on the device. |
+| **You see** | Claude runs the café purchase: **nothing happens on the Flex** — it signs silently. The dashboard shows the payment and an explorer link. Then the deposit attempt: nothing on the Flex either; Claude reports OVER_HARD_MAX. |
+| **Claude checks** | The Arc tx (one USDC Transfer, 3 USDC, your 0xAGENT -> café), the device budget at 17/20, and that the evil address received nothing. Then `pnpm recycle`. |
+| **Fallback** | DISCONNECTED: the tab is not attached (reload it). NO_SESSION: arm the agent on the device. |

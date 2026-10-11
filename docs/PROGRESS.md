@@ -13,7 +13,7 @@ Follow from anywhere: this file is pushed to GitHub after every milestone.
 - [x] **M0** Setup + contracts (`packages/types`, fixtures, docs) — **207 tests**
 - [x] **M1** Device app core + app + Speculos tests — **88 Rust + 57 Speculos**
 - [x] **M2** sentry-signer + bridge + harness — **30 + 17 TS, 5 Speculos**
-- [ ] **M3** Server core + merchants → first coffee on Arc
+- [x] **M3** Server core + merchants → first coffee on Arc — **real tx on Arc**
 - [ ] **M4** Auth, OAuth, MCP → Claude buys a coffee
 - [ ] **M5** Website complete
 - [ ] **M6** 18+ identity (EUDIW)
@@ -113,10 +113,29 @@ Follow from anywhere: this file is pushed to GitHub after every milestone.
   occupies in the bundle (`splitCredentials` / `joinCredentials`); the facilitator supplies
   the chain id.
 
+### M3 — done (Sun 11 Oct 2026, 20:05 CEST) · first coffee settled on Arc
+- **`E2E=1 pnpm e2e:cafe` passes on the real Arc testnet**: agent API -> relay -> bridge harness
+  -> Speculos signs with no tap -> x402 merchant -> our facilitator -> `transferWithAuthorization`
+  mined in 4.9 s. Exactly one USDC Transfer of 3 USDC from 0xAGENT to the café, balance checked
+  at the receipt block, device budget 17/20.
+  Tx: https://explorer.testnet.arc.io/tx/0x446f860eae50ad4d961991d27defe256ebeeefe1816615d8d1857aefe4077a27
+- Prompt injection: `/promo` -> `/evil/deposit` (400 USDC to a non-policy address) refused by the
+  device as OVER_HARD_MAX; nothing spent, nothing on chain.
+- Facilitator 25 tests, relay 18, agent API 25, merchants 11 (real `@x402/express` 2.28).
+- `pnpm recycle` swept the café's 2.95 USDC back to the treasury.
+- `Dockerfile` + `docker-compose.yml` (server healthcheck gates the merchants).
+
 ## Blocked
 _nothing yet_
 
 ## Decisions
+- **M3: the e2e runs the real stack in-process**, with the relay socket authenticated as a fixed
+  account. Production authenticates it with the Ledger login session (M4); there is no insecure
+  dev flag in the server code. `docker compose up` is verified in M4, once `src/index.ts` wires
+  that auth.
+- **M3: the tab reports 0xAGENT in its status message.** The server needs it as the `from` of
+  each authorization. A wrong value cannot redirect funds: the device signs with its own key and
+  the facilitator's ecrecover then fails.
 - **M2: the bridge page's Playwright test moves to M5.** The bridge module is fully covered in
   Node (fake socket) and end to end against Speculos; the Playwright test belongs with the real
   website, built once in M5 rather than as a throwaway page now.
@@ -163,3 +182,6 @@ _nothing yet_
 | M2 | `packages/sentry-signer` | 30 |
 | M2 | `apps/web` bridge | 17 |
 | M2 | Speculos bridge harness | 5 |
+| M3 | `apps/server` (facilitator, relay, agent) | 68 |
+| M3 | `apps/merchants` | 11 |
+| M3 | e2e on real Arc (`E2E=1 pnpm e2e:cafe`) | 15 checks |

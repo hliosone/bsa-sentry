@@ -12,7 +12,8 @@
     "typecheck": "for p in packages/types packages/sentry-signer apps/server apps/merchants apps/web; do echo \"== $p\"; tsc -p $p/tsconfig.json --noEmit || exit 1; done",
     "test:speculos": "vitest run --config vitest.speculos.config.ts",
     "smoke": "tsx scripts/device-smoke.ts",
-    "harness": "tsx scripts/bridge-harness.ts"
+    "harness": "tsx scripts/bridge-harness.ts",
+    "e2e:cafe": "tsx scripts/e2e-cafe.ts"
   },
   "devDependencies": {
     "@bsa-sentry/sentry-signer": "workspace:*",

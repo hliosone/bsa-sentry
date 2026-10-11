@@ -1,0 +1,8 @@
+node_modules
+**/node_modules
+device-app
+.run
+.env
+docs
+test
+**/target
