@@ -6,3 +6,4 @@ export * from './relay.js';
 export * from './credentials.js';
 export * from './sign.js';
 export * from './signature.js';
+export * from './backup.js';

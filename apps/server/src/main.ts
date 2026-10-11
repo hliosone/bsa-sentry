@@ -14,6 +14,7 @@ import { openDb } from './db.js';
 import { mcpRouter } from './mcp.js';
 import { oauthRouter } from './oauth.js';
 import { ageRouter } from './age/routes.js';
+import { vaultRouter } from './vault.js';
 import { ageVerifier } from './facilitator/age.js';
 import { privateKeyToAccount } from 'viem/accounts';
 
@@ -55,6 +56,7 @@ export async function startBsaServer(env: BsaServerEnv = process.env, opts: { po
         db, chainId: chain.chainId, origin: webOrigin, secret, now, secureCookie: baseUrl.startsWith('https://'),
       }));
       app.use(oauthRouter({ db, baseUrl, webOrigin, secret, now }));
+      app.use('/vault', vaultRouter({ db, chainId: chain.chainId, secret, now }));
       app.use('/age', ageRouter({
         db, chainId: chain.chainId, issuerKey, secret, now, mode: eudiwMode,
         backend: (env.VERIFIER_BACKEND ?? 'https://verifier-backend.eudiw.dev').replace(/\/$/, ''),
@@ -103,7 +105,7 @@ export async function startBsaServer(env: BsaServerEnv = process.env, opts: { po
       const dist = resolve(env.WEB_DIST ?? resolve(import.meta.dirname, '../../web/dist'));
       if (existsSync(dist)) {
         app.use(express.static(dist, { index: 'index.html' }));
-        app.get(/^\/(?!auth|oauth|mcp|x402|events|api|age|relay|health|\.well-known).*/, (_req, res) => res.sendFile(resolve(dist, 'index.html')));
+        app.get(/^\/(?!auth|oauth|mcp|x402|events|api|age|vault|relay|health|\.well-known).*/, (_req, res) => res.sendFile(resolve(dist, 'index.html')));
       }
     },
   });
