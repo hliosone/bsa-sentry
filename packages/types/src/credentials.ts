@@ -8,6 +8,8 @@
 // Layout, big-endian:
 //   0      u8   version (= 1)
 //   1      u8   flags (reserved, must be 0)
+//   2..10  u64  chainId  - part of both EIP-712 domains, so the device can rebuild the
+//                          digests and check the delegation really came from its own 0xMAIN
 //   attestation: [20] subject, u8 claimLen + claim, u64 issuedAt, u64 expiresAt, [32] evidence
 //   [65]   attestationSig: v ‖ r ‖ s
 //   delegation:  [20] agent, u8 nameLen + name, [32] attestation,
@@ -41,6 +43,8 @@ export type AgentDelegation = {
 };
 
 export type Credentials = {
+  /** The chain whose EIP-712 domain both signatures were made under. */
+  chainId: bigint;
   attestation: AgeAttestation;
   attestationSig: Hex;
   delegation: AgentDelegation;
@@ -89,6 +93,7 @@ export function encodeCredentials(c: Credentials): Uint8Array {
   }
   return concat([
     Uint8Array.of(CREDENTIALS_WIRE_VERSION, 0),
+    u64('chainId', c.chainId),
     fixedHex('attestation.subject', c.attestation.subject, 20),
     text('attestation.claim', c.attestation.claim, MAX_CLAIM_BYTES, false),
     u64('attestation.issuedAt', c.attestation.issuedAt),
@@ -107,7 +112,7 @@ export function encodeCredentials(c: Credentials): Uint8Array {
 }
 
 /** Minimum: header + both structs with empty strings and no claims. */
-const MIN_LEN = 2 + (20 + 1 + 8 + 8 + 32) + SIG_LEN + (20 + 1 + 32 + 1 + 8 + 32) + SIG_LEN;
+const MIN_LEN = 2 + 8 + (20 + 1 + 8 + 8 + 32) + SIG_LEN + (20 + 1 + 32 + 1 + 8 + 32) + SIG_LEN;
 
 export function decodeCredentials(b: Uint8Array): Credentials {
   if (b.length < MIN_LEN) throw new Error(`credentials too short: ${b.length} bytes, minimum ${MIN_LEN}`);
@@ -138,6 +143,7 @@ export function decodeCredentials(b: Uint8Array): Credentials {
     return v;
   };
 
+  const chainId = takeU64('chainId');
   const attestation: AgeAttestation = {
     subject: hex(take(20, 'attestation.subject')),
     claim: takeText('attestation.claim', MAX_CLAIM_BYTES),
@@ -162,5 +168,5 @@ export function decodeCredentials(b: Uint8Array): Credentials {
   const delegationSig = hex(take(SIG_LEN, 'delegationSig'));
 
   if (at !== b.length) throw new Error(`trailing bytes after the credentials: ${b.length - at}`);
-  return { attestation, attestationSig, delegation, delegationSig };
+  return { chainId, attestation, attestationSig, delegation, delegationSig };
 }

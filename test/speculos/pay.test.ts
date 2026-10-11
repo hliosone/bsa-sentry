@@ -248,11 +248,11 @@ describe('PAY: the orange screen', () => {
     const shown = await flat();
     await screenshot('05-orange-unknown-payee');
 
-    expect(shown).toMatch(/2 USDC/);
+    expect(shown, 'token and chain on every screen').toMatch(/2 USDC sur Arc/);
     expect(shown).toMatch(/Marchand\s+inconnu/i);
     expect(shown.replace(/\s/g, ''), 'the FULL address must be shown').toContain(STRANGER.slice(2));
-    expect(shown).toMatch(/l'agent dit:\s*Bar du coin/i);
-    expect(shown).toMatch(/non verifie/i);
+    expect(shown, 'the agent claim and its caveat must stay on one line').toMatch(/"Bar du coin"\s*non verifie/i);
+    
     expect(shown).toMatch(/Refuser/);
     expect(shown).toMatch(/Une fois/);
     expect(shown).toMatch(/Faire confiance/);
@@ -308,8 +308,8 @@ describe('PAY: the orange screen', () => {
     await waitForText(/Payer/i);
     const shown = await flat();
     await screenshot('06-orange-over-auto-max');
-    expect(shown).toMatch(/20 USDC/);
-    expect(shown).toMatch(/limite\s+auto/i);
+    expect(shown).toMatch(/20 USDC sur Arc/);
+    expect(shown).toMatch(/Hors limite\s+auto/i);
     expect(shown).toMatch(/Une fois/);
     expect(shown, 'trusting cannot help here').not.toMatch(/Faire confiance/);
 

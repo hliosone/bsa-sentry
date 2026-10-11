@@ -95,3 +95,15 @@ pub fn date_utc(unix_seconds: u64) -> String {
     let y = if m <= 2 { y + 1 } else { y };
     format!("{y:04}-{m:02}-{d:02}")
 }
+
+/// Truncates for display, with an ellipsis. Used only on host-supplied text that has to
+/// share a line with something the user must read: the Flex fits roughly 30 characters per
+/// line, and a line that overflows is drawn *under* the buttons rather than wrapped.
+pub fn clip(s: &str, max: usize) -> String {
+    if s.chars().count() <= max {
+        return String::from(s);
+    }
+    let mut out: String = s.chars().take(max.saturating_sub(1)).collect();
+    out.push('.');
+    out
+}

@@ -91,3 +91,46 @@ auto-locked after ~2 minutes.
 **The fix.** Disable auto-lock on the device during development (first step of our Phase C guide).
 **Suggestion.** Surface `0x5515` in the DMK as a typed `DeviceLockedError` with a message, rather
 than a raw status word the developer has to look up.
+
+## 10. A sixth line on a custom NBGL layout is drawn *under* the buttons, not wrapped
+
+**What happened.** Our 3-choice payment screen (NBGL C layout API: header + `nbgl_layoutAddText`
++ `nbgl_layoutAddChoiceButtons`) showed one line too many for the Flex's 600 px. NBGL did not
+scroll, shrink or clip it: it drew the extra line **behind the buttons**. The line it hid was
+`"Bar du coin" (non verifie)` — the agent's unverified claim about the payee, which is precisely
+the line a user needs in order to distrust a payment. Nothing in the API reported a problem, and
+the APDU-level tests all passed: only looking at a `/screenshot` revealed it.
+
+**What we tried.** Shortening the strings twice. Each time the text re-wrapped and the overflow
+simply moved. There is no "did this fit?" query, and `nbgl_layoutAddText` returns an `int` that
+is a layout handle, not a height.
+
+**The fix.** Budget the screen by hand: the Flex fits **five lines of ~26 characters** above two
+stacked choice buttons, and a full EVM address takes two of them. We now clip every
+variable-length string (`fmt::clip`) so the total can never exceed five lines, and we assert on
+the rendered text in a Speculos test.
+
+**Suggestion.** Make `nbgl_layoutAddText` (and friends) return the Y they consumed, or expose a
+`nbgl_layoutGetRemainingHeight(layout)`. Even better, clip or scroll overflowing content instead
+of drawing it under later elements: silently hiding text on a *confirmation* screen is a security
+problem, not a cosmetic one. A debug build that panics on overflow would have caught this in
+seconds.
+
+## 11. Speculos drives Flex reviews by swiping, and the gesture is undocumented in the REST API
+
+**What happened.** Automating `nbgl_useCaseReview` on Speculos, taps on the obvious places did
+nothing. The review is paged by **swiping** and confirmed by **holding** the final button, and
+the `/finger` endpoint documents only `press`, `release` and `press-and-release` with an `x`/`y`.
+
+**What we tried.** Tapping every plausible coordinate for the "Continue" area. Ten taps, no
+page change.
+
+**The fix.** Reading `speculos/api/finger.py`: `press-and-release` also accepts **`x2`/`y2`**, and
+the release point is what makes it a drag. So a swipe is
+`{action:"press-and-release", x:240, y:300, x2:60, y2:300}`, and a hold is a separate `press`,
+a sleep, then a `release`. We drive every review from the coordinates reported by `/events`
+rather than hardcoded pixels, so a layout change fails loudly instead of tapping nothing.
+
+**Suggestion.** Document `x2`/`y2` in the Speculos API docs and the Swagger schema, and add a
+first-class `/swipe` (direction + optional duration) plus a `/hold` with a duration. Every app
+with a touch review has to rediscover this to write CI tests.

@@ -11,7 +11,7 @@ Follow from anywhere: this file is pushed to GitHub after every milestone.
 ## Milestones
 
 - [x] **M0** Setup + contracts (`packages/types`, fixtures, docs) — **207 tests**
-- [ ] **M1** Device app core + app + Speculos tests
+- [x] **M1** Device app core + app + Speculos tests — **88 Rust + 57 Speculos**
 - [ ] **M2** sentry-signer + bridge + harness
 - [ ] **M3** Server core + merchants → first coffee on Arc
 - [ ] **M4** Auth, OAuth, MCP → Claude buys a coffee
@@ -79,10 +79,47 @@ Follow from anywhere: this file is pushed to GitHub after every milestone.
   - The INS table asserts the feasibility app's `PING` (0x07), `SIGN_3009` (0x09) and
     `SIGN_3009_SILENT` (0x0F, no policy, no tap) **do not exist** here.
 
+### M1 — done (Sun 11 Oct 2026, 17:50 CEST) · 88 Rust + 43 Speculos tests
+- **Toolchain proven end to end before any code**: Docker build of a Flex ELF → Speculos
+  `--model flex` with our own seed → REST `/apdu` → `GET_ADDRESS` returning the exact funded
+  0xAGENT. Everything after that was incremental.
+- `device-app/core` (no_std, zero deps, `unsafe` forbidden, Keccak behind a trait so the host
+  tests use tiny-keccak and the device the SDK):
+  `decide()` 34 tests · `PayFlow` 12 · payee list 11 · EIP-712 10 · codecs vs the shared
+  fixtures 9 · chunk reassembler 12.
+- `device-app/app`: descends from `app-boilerplate-rust`; **removed** its own signing commands
+  and every feasibility test command, including `SIGN_3009_SILENT`. Manifest restricted to
+  `44'/60'`. All 11 BSA Sentry instructions implemented.
+- 57 Speculos integration tests over the REST API: basics 16, policy 10, pay 18, identity 12,
+  timeout 1. The 60 s auto-refusal is measured for real (66 s wall clock), spends nothing and
+  leaves the device immediately usable. Signatures are recovered with viem and must come back as 0xAGENT (payments) or
+  0xMAIN (Login/Bind/Delegation).
+- 11 screenshots in `docs/screens/speculos/`.
+
 ## Blocked
 _nothing yet_
 
 ## Decisions
+- **M1: `scripts/device-smoke.ts` moved to M2.** It must run against both Speculos and a real
+  Flex with the transport chosen by env, which is exactly what `packages/sentry-signer` is for.
+  Writing a second node-hid transport in M1 would be duplicate code thrown away a milestone later.
+- **M1: the agent session is a settings switch on the home screen**, forced off at every app
+  start. The spec asks for a RAM-only session armed from the device menu; the SDK's home screen
+  drives switches from an NVM slot, so the slot is zeroed on boot to get the same semantics. A
+  test walks the whole instruction set and proves no APDU can arm it.
+- **M1: the rest of the device menu (My rules / Trusted merchants / +20 USDC) is deferred**,
+  cut-order item 2. The kill switch is **not** cut: `CLEAR_POLICY` (0x0D) wipes the rules after
+  an on-device review, and the website exposes it.
+- **M1: the device proves a delegation is its own by re-signing and comparing**, rather than
+  recovering a public key. ECDSA here is deterministic (RFC 6979), so only our own 0xMAIN can
+  produce those exact 65 bytes - strictly stronger than a verify, and no DER plumbing on device.
+- **M1: a sixth line on the orange screen is drawn *under* the buttons by NBGL.** It hid the
+  "(non verifie)" caveat. Every variable-length string is now clipped so the screen can never
+  exceed five lines, and the token and chain ride in the title. See DX_NOTES 10.
+- **Contract additions during M1** (fixtures + both sides updated together): `chainId` leads the
+  Login/Bind/Delegation payloads and the credentials bundle (it is part of the EIP-712 domain and
+  Login is signed before any policy exists); `AppSW::WrongApduLength` pinned to the ISO 0x6700;
+  `toWireSignature`/`toViemSignature` because the device uses `v|r|s` and viem uses `r|s|v`.
 - **RUN MODE overrides the global `~/.claude/CLAUDE.md` "stop and ask" rule for Phase B.** Phase B
   never stops; ambiguity is resolved with the safest option that keeps the section 8 security
   invariants, and recorded here. TDD / simplicity / surgical-changes from the global rules still apply.
@@ -100,4 +137,6 @@ _nothing yet_
 ## Test counts
 | Milestone | Suite | Tests |
 |---|---|---|
-| M0 | `packages/types` (vitest) | 207 |
+| M0 | `packages/types` (vitest) | 230 |
+| M1 | `device-app/core` (cargo) | 88 |
+| M1 | Speculos integration (vitest) | 57 |

@@ -27,6 +27,22 @@ importers:
         specifier: ^2.1.9
         version: 2.1.9
 
+  packages/sentry-signer:
+    dependencies:
+      '@bsa-sentry/types':
+        specifier: workspace:*
+        version: link:../types
+      viem:
+        specifier: ^2.22.0
+        version: 2.57.4(typescript@5.9.3)(zod@3.25.76)
+    devDependencies:
+      typescript:
+        specifier: ^5.7.3
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9
+
   packages/types:
     dependencies:
       viem:

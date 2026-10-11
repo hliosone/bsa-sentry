@@ -12,9 +12,11 @@ mod app_ui {
     pub mod menu;
 }
 mod handlers {
+    pub mod credentials;
     pub mod get_version;
     pub mod pay;
     pub mod policy;
+    pub mod sign_main;
 }
 mod fmt;
 mod orange;
@@ -30,6 +32,8 @@ use crypto::Account;
 use handlers::get_version::handler_get_version;
 use handlers::pay::handler_pay;
 use handlers::policy::{handler_clear_policy, handler_set_policy};
+use handlers::credentials::{handler_get_credentials, handler_restore, handler_store_credentials};
+use handlers::sign_main::{handler_sign_bind, handler_sign_delegation, handler_sign_login};
 use ledger_device_sdk::io::{self, init_comm, ApduHeader, Command, Reply};
 use ledger_device_sdk::nbgl::NbglHomeAndSettings;
 
@@ -230,9 +234,12 @@ fn handle_apdu<'a, const N: usize>(
         Instruction::SetPolicy { first, last } => handler_set_policy(command, *first, *last),
         Instruction::ClearPolicy => handler_clear_policy(command),
         Instruction::Pay => handler_pay(command, runtime),
-        // Implemented in the following commits of M1, one handler at a time, each with its
-        // Speculos test. Until then the host gets a clean "not supported".
-        _ => Err(AppError::Sw(AppSW::InsNotSupported)),
+        Instruction::SignLogin => handler_sign_login(command),
+        Instruction::SignBind => handler_sign_bind(command),
+        Instruction::SignDelegation { first, last } => handler_sign_delegation(command, *first, *last),
+        Instruction::StoreCredentials { first, last } => handler_store_credentials(command, *first, *last),
+        Instruction::GetCredentials { chunk } => handler_get_credentials(command, *chunk),
+        Instruction::Restore { first, last } => handler_restore(command, *first, *last),
     }
 }
 

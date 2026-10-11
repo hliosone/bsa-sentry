@@ -47,6 +47,7 @@ const maxima: Policy = {
 };
 
 const creds: Credentials = {
+  chainId: 5042002n,
   attestation: { subject: MAIN, claim: 'age_over_18', issuedAt: 1_760_000_000n, expiresAt: 1_762_592_000n, evidence: b32('05') },
   attestationSig: sig('aa'),
   delegation: { agent: AGENT, agentName: 'Claude', attestation: b32('03'), claims: ['age_over_18'], expiresAt: 1_762_592_000n, nonce: b32('04') },
@@ -54,6 +55,7 @@ const creds: Credentials = {
 };
 
 const credsMax: Credentials = {
+  chainId: 5042002n,
   attestation: { ...creds.attestation, claim: 'c'.repeat(MAX_CLAIM_BYTES) },
   attestationSig: sig('11'),
   delegation: {
@@ -89,13 +91,13 @@ function invalidPolicies() {
 function invalidCredentials() {
   const ok = encodeCredentials(creds);
   const mutate = (why: string, f: (b: Uint8Array) => Uint8Array) => ({ why, hex: hex(f(Uint8Array.from(ok))) });
-  const claimCountAt = 2 + 20 + 1 + 'age_over_18'.length + 8 + 8 + 32 + 65 + 20 + 1 + 'Claude'.length + 32;
+  const claimCountAt = 2 + 8 + 20 + 1 + 'age_over_18'.length + 8 + 8 + 32 + 65 + 20 + 1 + 'Claude'.length + 32;
   return [
     { why: 'empty buffer (means "no credentials stored", never decoded)', hex: '0x' },
     mutate('unknown wire version', (b) => { b[0] = 9; return b; }),
     mutate('non-zero flags', (b) => { b[1] = 1; return b; }),
     mutate('claim count above the maximum', (b) => { b[claimCountAt] = 5; return b; }),
-    mutate('attestation claim is not valid UTF-8', (b) => { b[23] = 0xff; b[24] = 0xfe; return b; }),
+    mutate('attestation claim is not valid UTF-8', (b) => { b[31] = 0xff; b[32] = 0xfe; return b; }),
     { why: 'truncated blob', hex: hex(ok.slice(0, ok.length - 1)) },
     { why: 'trailing byte', hex: hex(Uint8Array.from([...ok, 0x00])) },
   ];

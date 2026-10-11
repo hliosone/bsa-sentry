@@ -53,27 +53,47 @@ pub struct OrangeScreen<'a> {
     pub trust_allowed: bool,
 }
 
+/// Kept under ~20 characters: the Flex fits about 26 per line, and a sixth line on this
+/// screen is drawn underneath the buttons rather than wrapped.
 fn reason_text(reason: OrangeReason) -> &'static str {
     match reason {
-        OrangeReason::UnknownPayee => "Marchand pas dans vos regles",
-        OrangeReason::OverAutoMax => "Montant au-dessus de la limite auto",
+        OrangeReason::UnknownPayee => "Marchand inconnu",
+        OrangeReason::OverAutoMax => "Hors limite auto",
         OrangeReason::BudgetExceeded => "Budget depasse",
-        OrangeReason::CountExceeded => "Nombre de paiements depasse",
+        OrangeReason::CountExceeded => "Trop de paiements",
     }
 }
 
 /// Shows the screen and blocks until the user chooses or 60 s elapse.
 pub fn ask<const N: usize>(comm: &mut Comm<N>, screen: &OrangeScreen<'_>) -> Choice {
     // Keep every C string alive for as long as the layout is drawn.
-    let title = fmt::cstr(&alloc::format!("Payer {} ?", screen.amount));
-    let merchant = fmt::cstr(screen.payee_label.unwrap_or("Marchand inconnu"));
-    let address = fmt::cstr(screen.full_address);
-    let agent_says = screen
-        .hint
-        .map(|h| fmt::cstr(&alloc::format!("l'agent dit: {h}")));
-    let unverified = fmt::cstr("(non verifie)");
+    //
+    // The Flex fits FIVE lines above the buttons, and the full address takes two of them,
+    // so the two variable-length lines are clipped to one line each. NBGL does not scroll
+    // or shrink here: a sixth line is drawn *underneath* the buttons, which hid exactly
+    // the "(non verifie)" caveat the user most needs to see. See docs/DX_NOTES.md.
+    //
+    //   1  Payer 2 USDC sur Arc ?
+    //   2  Marchand inconnu
+    //   3  0xdd70bd3cde251346c0ddfc
+    //   4  7a4db3056bb26f1e50
+    //   5  "Bar du coin" non verifie
+    //
+    // The token and the chain ride in the title so every screen shows them, as the spec
+    // requires, without spending a line of its own.
+    let title = fmt::cstr(&alloc::format!("Payer {} sur Arc ?", screen.amount));
     let reason = fmt::cstr(reason_text(screen.reason));
-    let chain = fmt::cstr("USDC . Arc testnet . refus auto dans 60 s");
+    let address = fmt::cstr(screen.full_address);
+    // The agent's claim never appears without its caveat, on one line, so it can never be
+    // read as something the device vouches for. The hint is clipped because it is
+    // host-supplied and must not be able to push anything else off the screen.
+    let footer = match screen.hint {
+        Some(h) => fmt::cstr(&alloc::format!("\"{}\" non verifie", fmt::clip(h, 12))),
+        None => match screen.payee_label {
+            Some(l) => fmt::cstr(&alloc::format!("{} (enregistre)", fmt::clip(l, 11))),
+            None => fmt::cstr("USDC . Arc testnet"),
+        },
+    };
     let refuser = fmt::cstr("Refuser");
     let once = fmt::cstr("Une fois");
     let trust = fmt::cstr("Faire confiance");
@@ -117,18 +137,10 @@ pub fn ask<const N: usize>(comm: &mut Comm<N>, screen: &OrangeScreen<'_>) -> Cho
         };
         nbgl_layoutAddHeader(layout, &header);
 
-        // The payment, in the order that matters: how much, to whom, the full address,
-        // what the agent claims (unverified), and why this screen is up at all.
-        nbgl_layoutAddText(layout, title.as_ptr(), merchant.as_ptr());
-        nbgl_layoutAddText(layout, address.as_ptr(), reason.as_ptr());
-        match &agent_says {
-            Some(s) => {
-                nbgl_layoutAddText(layout, s.as_ptr(), unverified.as_ptr());
-            }
-            None => {
-                nbgl_layoutAddText(layout, chain.as_ptr(), core::ptr::null());
-            }
-        }
+        // The payment, in the order that matters: how much, to whom and why we are asking,
+        // the full address, and last what the agent claims (always marked unverified).
+        nbgl_layoutAddText(layout, title.as_ptr(), reason.as_ptr());
+        nbgl_layoutAddText(layout, address.as_ptr(), footer.as_ptr());
 
         if screen.trust_allowed {
             let choices = nbgl_layoutChoiceButtons_t {

@@ -392,6 +392,9 @@ impl AgentDelegation {
 
 #[derive(Debug, Clone, Copy)]
 pub struct Credentials {
+    /// The chain whose EIP-712 domain both signatures were made under. Without it the
+    /// device cannot rebuild the digests to check the delegation came from its own 0xMAIN.
+    pub chain_id: u64,
     pub attestation: AgeAttestation,
     pub attestation_sig: [u8; 65],
     pub delegation: AgentDelegation,
@@ -413,7 +416,7 @@ pub fn decode_credentials(b: &[u8]) -> Result<Credentials, WireError> {
 
 pub fn read_credentials(b: &[u8]) -> Result<(Credentials, usize), WireError> {
     // header + both structs with empty strings and no claims
-    const MIN_LEN: usize = 2 + (20 + 1 + 8 + 8 + 32) + 65 + (20 + 1 + 32 + 1 + 8 + 32) + 65;
+    const MIN_LEN: usize = 2 + 8 + (20 + 1 + 8 + 8 + 32) + 65 + (20 + 1 + 32 + 1 + 8 + 32) + 65;
     if b.len() < MIN_LEN {
         return Err(WireError::TooShort);
     }
@@ -425,6 +428,7 @@ pub fn read_credentials(b: &[u8]) -> Result<(Credentials, usize), WireError> {
         return Err(WireError::BadFlags);
     }
 
+    let chain_id = r.u64()?;
     let subject = r.arr20()?;
     let (claim, claim_len) = r.text::<MAX_CLAIM_BYTES>(MAX_CLAIM_BYTES).map_err(claim_err)?;
     let attestation = AgeAttestation {
@@ -472,7 +476,7 @@ pub fn read_credentials(b: &[u8]) -> Result<(Credentials, usize), WireError> {
         return Err(WireError::BadRecoveryByte);
     }
 
-    Ok((Credentials { attestation, attestation_sig, delegation, delegation_sig }, r.at))
+    Ok((Credentials { chain_id, attestation, attestation_sig, delegation, delegation_sig }, r.at))
 }
 
 fn claim_err(e: WireError) -> WireError {

@@ -130,6 +130,7 @@ fn every_credentials_fixture_decodes_to_the_recorded_structure() {
         let want = &case["decoded"];
         let got = decode_credentials(&blob).unwrap_or_else(|e| panic!("{name}: {e:?}"));
 
+        assert_eq!(got.chain_id, u64_of(&want["chainId"]), "{name}: chainId");
         let wa = &want["attestation"];
         assert_eq!(got.attestation.subject, addr(wa["subject"].as_str().unwrap()), "{name}: subject");
         assert_eq!(got.attestation.claim(), wa["claim"].as_str().unwrap().as_bytes(), "{name}: claim");

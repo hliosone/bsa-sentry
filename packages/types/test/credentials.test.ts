@@ -15,6 +15,7 @@ const b32 = (h: string) => `0x${h.repeat(32)}` as const;
 const sig65 = (h: string) => `0x1b${h.repeat(64)}` as const; // v = 0x1b (27)
 
 const bundle = (): Credentials => ({
+  chainId: 5042002n,
   attestation: { subject: MAIN, claim: 'age_over_18', issuedAt: 1_760_000_000n, expiresAt: 1_762_592_000n, evidence: b32('05') },
   attestationSig: sig65('aa'),
   delegation: {
@@ -52,10 +53,11 @@ describe('credentials round trip', () => {
     expect(decodeCredentials(encodeCredentials(c))).toEqual(c);
   });
 
-  it('starts with the version byte and a zero flags byte', () => {
+  it('starts with the version byte, a zero flags byte and the chain id', () => {
     const b = encodeCredentials(bundle());
     expect(b[0]).toBe(CREDENTIALS_WIRE_VERSION);
     expect(b[1]).toBe(0);
+    expect(bytesToHex(b.subarray(2, 10))).toBe('0x00000000004cef52');
   });
 
   it('fits in one chunked transfer, alongside a policy, for RESTORE', () => {
@@ -128,7 +130,7 @@ describe('decodeCredentials rejects bad input', () => {
 
   it('rejects a declared claim count over the maximum', () => {
     // Locate the claims_count byte: it follows agent(20) + nameLen(1) + name + attestation(32).
-    const at = 2 + 20 + 1 + 'age_over_18'.length + 8 + 8 + 32 + 65 + 20 + 1 + 'Claude'.length + 32;
+    const at = 2 + 8 + 20 + 1 + 'age_over_18'.length + 8 + 8 + 32 + 65 + 20 + 1 + 'Claude'.length + 32;
     const bad = Uint8Array.from(ok);
     expect(bad[at]).toBe(1); // sanity: we found the right byte
     bad[at] = 5;
@@ -137,8 +139,8 @@ describe('decodeCredentials rejects bad input', () => {
 
   it('rejects a claim that is not valid UTF-8', () => {
     const bad = Uint8Array.from(ok);
-    bad[2 + 20 + 1] = 0xff; // first byte of the attestation claim
-    bad[2 + 20 + 2] = 0xfe;
+    bad[2 + 8 + 20 + 1] = 0xff; // first byte of the attestation claim
+    bad[2 + 8 + 20 + 2] = 0xfe;
     expect(() => decodeCredentials(bad)).toThrow(/utf-8/i);
   });
 

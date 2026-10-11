@@ -3,15 +3,20 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { config } from 'dotenv';
 import { decodeState, REFUSAL_REASON, SW } from '@bsa-sentry/types';
-import { INS, apdu, screenshot, send, hex } from './client.js';
+import { INS, apdu, restart, screenshot, send, hex } from './client.js';
 
 config({ path: new URL('../../.env', import.meta.url).pathname, quiet: true });
 
 const lower = (s?: string) => (s ?? '').toLowerCase();
 
+// These tests describe a device that has never been configured, so they start from a
+// genuinely wiped NVM rather than from whatever an earlier suite left behind.
+beforeAll(() => {
+  restart(true);
+});
+
 describe('identity', () => {
-  beforeAll(async () => {
-    // Fail fast with a useful message if the emulator is not up.
+  it('is reachable', async () => {
     await send(INS.GET_APP_NAME).catch(() => {
       throw new Error('Speculos is not responding. Run: scripts/speculos.sh start');
     });
