@@ -7,13 +7,15 @@
     "keys": "tsx scripts/gen-keys.ts",
     "balances": "tsx scripts/balances.ts",
     "fund": "tsx scripts/fund.ts",
-    "recycle": "tsx scripts/recycle.ts"
+    "recycle": "tsx scripts/recycle.ts",
+    "check:domain": "tsx scripts/check-domain.ts"
   },
   "devDependencies": {
     "dotenv": "^16.4.7",
     "tsx": "^4.19.2",
     "typescript": "^5.7.3",
-    "viem": "^2.22.0"
+    "viem": "^2.22.0",
+    "vitest": "^2.1.9"
   },
   "type": "module"
 }
