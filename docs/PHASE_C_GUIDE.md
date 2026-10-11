@@ -58,3 +58,12 @@ These could not be tested on Speculos and need the device:
 1. **The 60 s auto-refusal on hardware.** On the emulator it measured 60–64 s. On the Flex, touch the screen repeatedly while the countdown runs (the NBGL ticker pauses during touches; ours counts raw ticks, so it must still refuse at ~60 s). Expected: `0x6985` + `USER_REJECTED`, nothing spent.
 2. **DMK "open app" switching** between BSA Sentry and Ledger Sync (needed for the Key Ring backup in M7).
 3. **A RESTORE payload above 1024 bytes.** Our maxima are 353 (policy) + 483 (credentials) = 836 bytes, so one transfer is enough; this only needs re-checking if the limits ever grow.
+
+## M2-C. The bridge page in Chrome with the real Flex
+
+| | |
+|---|---|
+| **You do** | Open the website in **Google Chrome** (not snap Chromium: its sandbox blocks WebHID). Click "Se connecter avec Ledger" and pick the Flex in the browser's device picker. Keep BSA Sentry open on the device. |
+| **You see** | The status bar turns to *Flex connected*. Both addresses are shown. |
+| **Claude checks** | Sends a test `sign_payment` from a script through the relay; the tab signs it (silently for the café) and the signature recovers to your 0xAGENT. |
+| **Fallback** | No device in the picker → udev rules (step 0) or another tab holds the device. "App closed" → open BSA Sentry on the Flex. |

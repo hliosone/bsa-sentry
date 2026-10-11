@@ -87,26 +87,40 @@ const text = (name: string, value: string, max: number, allowEmpty: boolean): Ui
 
 const hex = (b: Uint8Array): Hex => `0x${Array.from(b, (x) => x.toString(16).padStart(2, '0')).join('')}`;
 
-export function encodeCredentials(c: Credentials): Uint8Array {
-  if (c.delegation.claims.length > MAX_CLAIMS) {
-    throw new Error(`a delegation carries at most ${MAX_CLAIMS} claims, got ${c.delegation.claims.length}`);
+/** The attestation as it appears inside the bundle (and in the relay's `attestation` field). */
+export function encodeAttestation(a: AgeAttestation): Uint8Array {
+  return concat([
+    fixedHex('attestation.subject', a.subject, 20),
+    text('attestation.claim', a.claim, MAX_CLAIM_BYTES, false),
+    u64('attestation.issuedAt', a.issuedAt),
+    u64('attestation.expiresAt', a.expiresAt),
+    fixedHex('attestation.evidence', a.evidence, 32),
+  ]);
+}
+
+/** The delegation as it appears inside the bundle (and in the relay's `delegation` field). */
+export function encodeDelegation(d: AgentDelegation): Uint8Array {
+  if (d.claims.length > MAX_CLAIMS) {
+    throw new Error(`a delegation carries at most ${MAX_CLAIMS} claims, got ${d.claims.length}`);
   }
+  return concat([
+    fixedHex('delegation.agent', d.agent, 20),
+    text('delegation.agentName', d.agentName, MAX_AGENT_NAME_BYTES, false),
+    fixedHex('delegation.attestation', d.attestation, 32),
+    Uint8Array.of(d.claims.length),
+    ...d.claims.map((claim, i) => text(`delegation.claims[${i}]`, claim, MAX_CLAIM_BYTES, false)),
+    u64('delegation.expiresAt', d.expiresAt),
+    fixedHex('delegation.nonce', d.nonce, 32),
+  ]);
+}
+
+export function encodeCredentials(c: Credentials): Uint8Array {
   return concat([
     Uint8Array.of(CREDENTIALS_WIRE_VERSION, 0),
     u64('chainId', c.chainId),
-    fixedHex('attestation.subject', c.attestation.subject, 20),
-    text('attestation.claim', c.attestation.claim, MAX_CLAIM_BYTES, false),
-    u64('attestation.issuedAt', c.attestation.issuedAt),
-    u64('attestation.expiresAt', c.attestation.expiresAt),
-    fixedHex('attestation.evidence', c.attestation.evidence, 32),
+    encodeAttestation(c.attestation),
     signature('attestationSig', c.attestationSig),
-    fixedHex('delegation.agent', c.delegation.agent, 20),
-    text('delegation.agentName', c.delegation.agentName, MAX_AGENT_NAME_BYTES, false),
-    fixedHex('delegation.attestation', c.delegation.attestation, 32),
-    Uint8Array.of(c.delegation.claims.length),
-    ...c.delegation.claims.map((claim, i) => text(`delegation.claims[${i}]`, claim, MAX_CLAIM_BYTES, false)),
-    u64('delegation.expiresAt', c.delegation.expiresAt),
-    fixedHex('delegation.nonce', c.delegation.nonce, 32),
+    encodeDelegation(c.delegation),
     signature('delegationSig', c.delegationSig),
   ]);
 }
@@ -114,59 +128,120 @@ export function encodeCredentials(c: Credentials): Uint8Array {
 /** Minimum: header + both structs with empty strings and no claims. */
 const MIN_LEN = 2 + 8 + (20 + 1 + 8 + 8 + 32) + SIG_LEN + (20 + 1 + 32 + 1 + 8 + 32) + SIG_LEN;
 
-export function decodeCredentials(b: Uint8Array): Credentials {
-  if (b.length < MIN_LEN) throw new Error(`credentials too short: ${b.length} bytes, minimum ${MIN_LEN}`);
-  if (b[0] !== CREDENTIALS_WIRE_VERSION) throw new Error(`unsupported credentials wire version ${b[0]}`);
-  if (b[1] !== 0) throw new Error(`unknown credentials flag bits set: 0x${b[1]!.toString(16)}`);
-
-  let at = 2;
-  const take = (n: number, what: string): Uint8Array => {
-    if (at + n > b.length) throw new Error(`truncated credentials: ${what}`);
-    const out = b.subarray(at, at + n);
-    at += n;
+class Cursor {
+  at = 0;
+  constructor(private readonly b: Uint8Array) {}
+  take(n: number, what: string): Uint8Array {
+    if (this.at + n > this.b.length) throw new Error(`truncated credentials: ${what}`);
+    const out = this.b.subarray(this.at, this.at + n);
+    this.at += n;
     return out;
-  };
-  const takeText = (what: string, max: number): string => {
-    const len = take(1, `${what} length`)[0]!;
+  }
+  text(what: string, max: number): string {
+    const len = this.take(1, `${what} length`)[0]!;
     if (len > max) throw new Error(`${what} length ${len} exceeds ${max}`);
-    const raw = take(len, what);
+    const raw = this.take(len, what);
     try {
       return utf8Strict.decode(raw);
     } catch {
       throw new Error(`${what} is not valid UTF-8`);
     }
-  };
-  const takeU64 = (what: string): bigint => {
-    const raw = take(8, what);
+  }
+  u64(what: string): bigint {
     let v = 0n;
-    for (const byte of raw) v = (v << 8n) | BigInt(byte);
+    for (const byte of this.take(8, what)) v = (v << 8n) | BigInt(byte);
     return v;
-  };
+  }
+  done(what: string) {
+    if (this.at !== this.b.length) throw new Error(`trailing bytes after the ${what}: ${this.b.length - this.at}`);
+  }
+}
 
-  const chainId = takeU64('chainId');
-  const attestation: AgeAttestation = {
-    subject: hex(take(20, 'attestation.subject')),
-    claim: takeText('attestation.claim', MAX_CLAIM_BYTES),
-    issuedAt: takeU64('attestation.issuedAt'),
-    expiresAt: takeU64('attestation.expiresAt'),
-    evidence: hex(take(32, 'attestation.evidence')),
+function readAttestation(c: Cursor): AgeAttestation {
+  return {
+    subject: hex(c.take(20, 'attestation.subject')),
+    claim: c.text('attestation.claim', MAX_CLAIM_BYTES),
+    issuedAt: c.u64('attestation.issuedAt'),
+    expiresAt: c.u64('attestation.expiresAt'),
+    evidence: hex(c.take(32, 'attestation.evidence')),
   };
-  const attestationSig = hex(take(SIG_LEN, 'attestationSig'));
+}
 
-  const agent = hex(take(20, 'delegation.agent'));
-  const agentName = takeText('delegation.agentName', MAX_AGENT_NAME_BYTES);
-  const delegationAttestation = hex(take(32, 'delegation.attestation'));
-  const claimCount = take(1, 'delegation.claimCount')[0]!;
+function readDelegation(c: Cursor): AgentDelegation {
+  const agent = hex(c.take(20, 'delegation.agent'));
+  const agentName = c.text('delegation.agentName', MAX_AGENT_NAME_BYTES);
+  const attestation = hex(c.take(32, 'delegation.attestation'));
+  const claimCount = c.take(1, 'delegation.claimCount')[0]!;
   if (claimCount > MAX_CLAIMS) throw new Error(`delegation declares ${claimCount} claims, at most ${MAX_CLAIMS} are allowed`);
   const claims: string[] = [];
-  for (let i = 0; i < claimCount; i++) claims.push(takeText(`delegation.claims[${i}]`, MAX_CLAIM_BYTES));
-  const delegation: AgentDelegation = {
-    agent, agentName, attestation: delegationAttestation, claims,
-    expiresAt: takeU64('delegation.expiresAt'),
-    nonce: hex(take(32, 'delegation.nonce')),
-  };
-  const delegationSig = hex(take(SIG_LEN, 'delegationSig'));
+  for (let i = 0; i < claimCount; i++) claims.push(c.text(`delegation.claims[${i}]`, MAX_CLAIM_BYTES));
+  return { agent, agentName, attestation, claims, expiresAt: c.u64('delegation.expiresAt'), nonce: hex(c.take(32, 'delegation.nonce')) };
+}
 
-  if (at !== b.length) throw new Error(`trailing bytes after the credentials: ${b.length - at}`);
+export function decodeAttestation(b: Uint8Array): AgeAttestation {
+  const c = new Cursor(b);
+  const a = readAttestation(c);
+  c.done('attestation');
+  return a;
+}
+
+export function decodeDelegation(b: Uint8Array): AgentDelegation {
+  const c = new Cursor(b);
+  const d = readDelegation(c);
+  c.done('delegation');
+  return d;
+}
+
+export function decodeCredentials(b: Uint8Array): Credentials {
+  if (b.length < MIN_LEN) throw new Error(`credentials too short: ${b.length} bytes, minimum ${MIN_LEN}`);
+  if (b[0] !== CREDENTIALS_WIRE_VERSION) throw new Error(`unsupported credentials wire version ${b[0]}`);
+  if (b[1] !== 0) throw new Error(`unknown credentials flag bits set: 0x${b[1]!.toString(16)}`);
+  const c = new Cursor(b);
+  c.take(2, 'header');
+  const chainId = c.u64('chainId');
+  const attestation = readAttestation(c);
+  const attestationSig = hex(c.take(SIG_LEN, 'attestationSig'));
+  const delegation = readDelegation(c);
+  const delegationSig = hex(c.take(SIG_LEN, 'delegationSig'));
+  c.done('credentials');
   return { chainId, attestation, attestationSig, delegation, delegationSig };
+}
+
+// ------------------------------------------------------------------ relay form
+
+/** The four hex fields of the relay message's `credentials` (spec §5.5). */
+export type CredentialParts = {
+  attestation: Hex;
+  attestationSig: Hex;
+  delegation: Hex;
+  delegationSig: Hex;
+};
+
+const unhex = (h: Hex, what: string): Uint8Array => {
+  if (typeof h !== 'string' || !/^0x([0-9a-fA-F]{2})*$/.test(h)) throw new Error(`${what} must be hex`);
+  return Uint8Array.from(h.slice(2).match(/../g) ?? [], (x) => parseInt(x, 16));
+};
+
+/** Bundle -> relay fields. The bridge does this with what the device returns. */
+export function splitCredentials(c: Credentials): CredentialParts {
+  return {
+    attestation: hex(encodeAttestation(c.attestation)),
+    attestationSig: hex(signature('attestationSig', c.attestationSig)),
+    delegation: hex(encodeDelegation(c.delegation)),
+    delegationSig: hex(signature('delegationSig', c.delegationSig)),
+  };
+}
+
+/**
+ * Relay fields -> bundle. The chain id is not on the wire: the facilitator supplies its own,
+ * because a signature made under any other chain's domain must not verify anyway.
+ */
+export function joinCredentials(p: CredentialParts, chainId: bigint): Credentials {
+  return {
+    chainId,
+    attestation: decodeAttestation(unhex(p.attestation, 'attestation')),
+    attestationSig: hex(signature('attestationSig', hex(unhex(p.attestationSig, 'attestationSig')))),
+    delegation: decodeDelegation(unhex(p.delegation, 'delegation')),
+    delegationSig: hex(signature('delegationSig', hex(unhex(p.delegationSig, 'delegationSig')))),
+  };
 }

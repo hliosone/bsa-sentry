@@ -13,8 +13,9 @@
 import {
   CLA, INS, MAX_APDU_DATA, REFUSAL_REASON_BY_BYTE, SW, decodeCredentials, decodeState,
   encodeBindPayload, encodeChunks, encodeCredentials, encodeDelegationPayload,
-  encodeLoginPayload, encodePolicy, splitSignature,
-  type BridgeReason, type Credentials, type DeviceState, type Policy, type RefusalReason,
+  encodeLoginPayload, encodePolicy, splitCredentials, splitSignature,
+  type BridgeReason, type CredentialParts, type Credentials, type DeviceState, type Policy,
+  type RefusalReason,
 } from '@bsa-sentry/types';
 import type { Hex } from 'viem';
 
@@ -206,6 +207,12 @@ export class SentrySigner {
     const joined = concat(parts).subarray(0, total);
     if (joined.length !== total) throw new DeviceError(SW.OK, `credentials truncated: ${joined.length}/${total}`);
     return decodeCredentials(joined);
+  }
+
+  /** The credentials in the relay message's four-field form, or `null` if none are stored. */
+  async getCredentialsWire(): Promise<CredentialParts | null> {
+    const c = await this.getCredentials();
+    return c ? splitCredentials(c) : null;
   }
 
   /** Restores a policy, and optionally credentials, from a backup. Needs a full review. */

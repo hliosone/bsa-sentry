@@ -12,7 +12,7 @@ Follow from anywhere: this file is pushed to GitHub after every milestone.
 
 - [x] **M0** Setup + contracts (`packages/types`, fixtures, docs) — **207 tests**
 - [x] **M1** Device app core + app + Speculos tests — **88 Rust + 57 Speculos**
-- [ ] **M2** sentry-signer + bridge + harness
+- [x] **M2** sentry-signer + bridge + harness — **30 + 17 TS, 5 Speculos**
 - [ ] **M3** Server core + merchants → first coffee on Arc
 - [ ] **M4** Auth, OAuth, MCP → Claude buys a coffee
 - [ ] **M5** Website complete
@@ -96,10 +96,30 @@ Follow from anywhere: this file is pushed to GitHub after every milestone.
   0xMAIN (Login/Bind/Delegation).
 - 11 screenshots in `docs/screens/speculos/`.
 
+### M2 — done (Sun 11 Oct 2026, 18:25 CEST)
+- `packages/sentry-signer` (30 tests on a fake transport): every command, chunking, status
+  word -> typed error (`DeviceRefusedError` with reason, `DeviceLockedError`, `AppClosedError`,
+  `TransportError`), single in-flight queue, 125 s timeout, `probe()` for the status bar.
+  Transports: Speculos (HTTP), DMK/WebHID (browser), node-hid (real Flex, Phase C).
+- `apps/web/src/bridge/bridge.ts` (17 tests, fake socket + fake signer): event-driven only (a
+  test proves it never polls), one request at a time, every request answered exactly once,
+  malformed messages never reach the device, credentials read once and kept in memory only,
+  reconnect on close.
+- `scripts/bridge-harness.ts`: the same Bridge module in Node over Speculos + a real `ws`
+  socket. 5 Speculos tests: status on connect, `sign_payment` -> signature recovering to
+  0xAGENT, OVER_HARD_MAX relayed, `get_state` reflects the payment, malformed input ignored.
+- `scripts/device-smoke.ts`: 8 checks on Speculos or a real Flex (`SMOKE_TRANSPORT=hid`).
+- Contract: credentials in the relay are four hex fields, each the exact byte slice it
+  occupies in the bundle (`splitCredentials` / `joinCredentials`); the facilitator supplies
+  the chain id.
+
 ## Blocked
 _nothing yet_
 
 ## Decisions
+- **M2: the bridge page's Playwright test moves to M5.** The bridge module is fully covered in
+  Node (fake socket) and end to end against Speculos; the Playwright test belongs with the real
+  website, built once in M5 rather than as a throwaway page now.
 - **M1: `scripts/device-smoke.ts` moved to M2.** It must run against both Speculos and a real
   Flex with the transport chosen by env, which is exactly what `packages/sentry-signer` is for.
   Writing a second node-hid transport in M1 would be duplicate code thrown away a milestone later.
@@ -137,6 +157,9 @@ _nothing yet_
 ## Test counts
 | Milestone | Suite | Tests |
 |---|---|---|
-| M0 | `packages/types` (vitest) | 230 |
+| M0 | `packages/types` (vitest) | 238 |
 | M1 | `device-app/core` (cargo) | 88 |
 | M1 | Speculos integration (vitest) | 57 |
+| M2 | `packages/sentry-signer` | 30 |
+| M2 | `apps/web` bridge | 17 |
+| M2 | Speculos bridge harness | 5 |

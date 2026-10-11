@@ -7,7 +7,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
   CLAIM_AGE_OVER_18, REFUSAL_REASON, SW, encodeCredentials, encodePolicy, encodeState,
-  type Credentials, type DeviceState, type Policy,
+  splitCredentials, type Credentials, type DeviceState, type Policy,
 } from '@bsa-sentry/types';
 import {
   AppClosedError, DeviceLockedError, DeviceRefusedError, SentrySigner, TransportError,
@@ -269,6 +269,22 @@ describe('credentials', () => {
   it('returns null when the device has nothing stored', async () => {
     const { signer } = signerWith(ok('0000'));
     expect(await signer.getCredentials()).toBeNull();
+  });
+
+  it('gives the relay form the bridge attaches to a payment', async () => {
+    const blob = encodeCredentials(bundle());
+    const total = Uint8Array.from([blob.length >> 8, blob.length & 0xff]);
+    const { signer } = signerWith(
+      ok(Uint8Array.from([...total, ...blob.subarray(0, 200)])),
+      ok(Uint8Array.from([...total, ...blob.subarray(200)])),
+    );
+    const wire = await signer.getCredentialsWire();
+    expect(wire).toEqual(splitCredentials(bundle()));
+  });
+
+  it('gives null in relay form too when nothing is stored', async () => {
+    const { signer } = signerWith(ok('0000'));
+    expect(await signer.getCredentialsWire()).toBeNull();
   });
 
   it('stores a bundle in chunks', async () => {

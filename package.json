@@ -11,16 +11,20 @@
     "check:domain": "tsx scripts/check-domain.ts",
     "typecheck": "pnpm -r exec tsc --noEmit",
     "test:speculos": "vitest run --config vitest.speculos.config.ts",
-    "smoke": "tsx scripts/device-smoke.ts"
+    "smoke": "tsx scripts/device-smoke.ts",
+    "harness": "tsx scripts/bridge-harness.ts"
   },
   "devDependencies": {
     "@bsa-sentry/sentry-signer": "workspace:*",
     "@bsa-sentry/types": "workspace:*",
+    "@bsa-sentry/web": "workspace:*",
+    "@types/ws": "^8.18.2",
     "dotenv": "^16.4.7",
     "tsx": "^4.19.2",
     "typescript": "^5.7.3",
     "viem": "^2.22.0",
-    "vitest": "^2.1.9"
+    "vitest": "^2.1.9",
+    "ws": "^8.22.0"
   },
   "type": "module"
 }
