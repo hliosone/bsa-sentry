@@ -137,3 +137,35 @@ test('the OAuth consent page asks a logged-out user to sign in with Ledger', asy
   await expect(page.getByText('Se connecter avec Ledger')).toBeVisible();
   await shot(page, '08-oauth-login-required');
 });
+
+test('the 18+ badge: wallet (mock) -> Bind -> delegation -> the facilitator accepts the chain', async ({ page }) => {
+  await page.goto(`${web}/?fakeDevice=1`);
+  await page.getByTestId('connect').click();
+  await page.getByTestId('login').click();
+  await expect(page.getByRole('heading', { name: 'Tes règles' })).toBeVisible();
+  await page.getByTestId('send-rules').click();
+  // The app moves on to the next step once the rules are on the device.
+  await expect(page.getByRole('link', { name: '✓ Définir les règles' })).toBeVisible();
+  await page.evaluate(() => (window as any).__bsaFake.armSession(true));
+  // A hash change is a same-document navigation: the (fake) device connection survives it.
+  await page.goto(`${web}/?fakeDevice=1#/badge`);
+
+  await page.getByTestId('badge-start').click();
+  await expect(page.locator('.qr svg')).toBeVisible();
+  await expect(page.getByTestId('mock-mode')).toBeVisible();
+  await shot(page, '09-badge-qr');
+  await page.getByTestId('badge-bind').click({ timeout: 10_000 });
+  await page.getByTestId('agent-name').fill('Claude');
+  await page.getByTestId('badge-delegate').click();
+  await expect(page.getByTestId('badge-done')).toBeVisible();
+  await shot(page, '10-badge-done');
+
+  // The agent now buys wine. The fake agent holds no USDC, so the payment cannot settle — but
+  // the facilitator must get past the whole 18+ chain first and fail only on the balance.
+  const account = (await page.evaluate(() => fetch('/auth/me').then((r) => r.json()))).account as string;
+  await page.evaluate(() => (window as any).__bsaFake.armSession(true));
+  const wine = await bsa.agent.fetch(account, { url: `${shop}/cave` });
+  expect(wine.kind).toBe('error');
+  expect(wine.kind === 'error' && wine.message).toMatch(/insufficient_funds/);
+  expect(wine.kind === 'error' && wine.message).not.toMatch(/AGE_PROOF|DELEGATION_|ATTESTATION_|SUBJECT_MISMATCH/);
+});

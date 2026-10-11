@@ -16,7 +16,7 @@ Follow from anywhere: this file is pushed to GitHub after every milestone.
 - [x] **M3** Server core + merchants → first coffee on Arc — **real tx on Arc**
 - [x] **M4** Auth, OAuth, MCP → Claude buys a coffee — **passes locally and through a public tunnel**
 - [x] **M5** Website complete — **Playwright onboarding against the real server**
-- [ ] **M6** 18+ identity (EUDIW)
+- [x] **M6** 18+ identity (EUDIW) — **wine paid with 18+ verified on Arc**
 - [ ] **M7** Key Ring backup/restore + device menu
 - [ ] **M8** Deploy, docs, demo
 
@@ -152,6 +152,20 @@ Follow from anywhere: this file is pushed to GitHub after every milestone.
   that wrapped over four lines).
 - Logic tests: onboarding 5, rules 9, feed 6, status 3; bridge 23 (refresh/exclusive added).
 
+### M6 — done (Mon 12 Oct 2026, ~00:30 CEST) · 18+ verified on chain
+- **`E2E=1 pnpm e2e:age` passes on Arc** (mock EUDIW): Bind on the Flex (tap) -> AgeAttestation
+  from our issuer -> AgentDelegation on the Flex (tap) -> STORE_CREDENTIALS -> `/cave` paid with
+  18+ verified by our facilitator. A wiped Flex then gets AGE_PROOF_REQUIRED, nothing settles.
+- Facilitator 18+ chain 13 tests · EUDIW client 20 (birthdate-based, hand-made fixtures) ·
+  `/age` routes 12 · agent API now surfaces the facilitator's reason (from the retry's
+  PAYMENT-REQUIRED header) with a next step.
+- Website: Badge 18+ page (QR, mock label, Bind, delegation, stored on the Flex). Playwright:
+  with the badge, the facilitator gets past the whole 18+ chain and fails only on the fake
+  agent's empty balance.
+- `docs/EUDIW.md`: the verifier flow, written from `server.mjs`/`index.html` only.
+- `EUDIW_MODE=live` builds the real request and QR (tested against hand-made fixtures); the real
+  Procivis scan is Phase C step M6-C.
+
 ## Blocked
 _nothing yet_
 
@@ -226,4 +240,6 @@ _nothing yet_
 | M4 | `apps/server` total (auth, OAuth, MCP added) | 124 |
 | M4 | e2e MCP, local + tunnel (`E2E=1 [TUNNEL=1] pnpm e2e:mcp`) | 19 checks |
 | M5 | `apps/web` unit (bridge + logic) | 43 |
-| M5 | Playwright (`pnpm test:web`) | 2 |
+| M5 | Playwright (`pnpm test:web`) | 3 |
+| M6 | `apps/server` total (18+ added) | 175 |
+| M6 | e2e 18+ on Arc (`E2E=1 pnpm e2e:age`) | 9 checks |

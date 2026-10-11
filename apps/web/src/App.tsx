@@ -8,6 +8,7 @@ import { Session } from './pages/Session.js';
 import { Claude } from './pages/Claude.js';
 import { Dashboard } from './pages/Dashboard.js';
 import { Later } from './pages/Later.js';
+import { Badge } from './pages/Badge.js';
 
 type Route = 'connect' | 'rules' | 'session' | 'claude' | 'dashboard' | 'badge' | 'backup' | 'restore';
 const ROUTES: Route[] = ['connect', 'rules', 'session', 'claude', 'dashboard', 'badge', 'backup', 'restore'];
@@ -78,7 +79,7 @@ export function App() {
           {current === 'session' && <Session bsa={bsa} />}
           {current === 'claude' && <Claude bsa={bsa} />}
           {current === 'dashboard' && <Dashboard bsa={bsa} />}
-          {current === 'badge' && <Later title="Badge 18+">Prouve ta majorité avec ton portefeuille d'identité européen, sans partager aucune donnée personnelle.</Later>}
+          {current === 'badge' && <Badge bsa={bsa} />}
           {current === 'backup' && <Later title="Sauvegarde Key Ring">Sauvegarde tes règles, chiffrées par ta seed Ledger.</Later>}
           {current === 'restore' && <Later title="Restauration">Restaure tes règles sur un Flex réinitialisé.</Later>}
         </main>

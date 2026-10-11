@@ -51,7 +51,18 @@ export function fakeSigner() {
       last = { label: policy.payees.find((p) => p.address === f.to)?.label ?? 'Marchand', value: f.value };
       return splitSignature(toWireSignature(sig));
     },
-    storeCredentials: async (c: Credentials) => { creds = c; encodeCredentials(c); },
+    signBind: async (m: { chainId: bigint; verifier: string; session: `0x${string}`; expiresAt: bigint }) =>
+      toWireSignature(await main.signTypedData({
+        domain: sentryDomain(Number(m.chainId)), types: { Bind: EIP712_TYPES.Bind }, primaryType: 'Bind',
+        message: { verifier: m.verifier, session: m.session, expiresAt: m.expiresAt },
+      })),
+    signDelegation: async (m: { chainId: bigint; agent: `0x${string}`; agentName: string; attestation: `0x${string}`; claims: string[]; expiresAt: bigint; nonce: `0x${string}` }) => {
+      const { chainId, ...message } = m;
+      return toWireSignature(await main.signTypedData({
+        domain: sentryDomain(Number(chainId)), types: { AgentDelegation: EIP712_TYPES.AgentDelegation }, primaryType: 'AgentDelegation', message,
+      }));
+    },
+    storeCredentials: async (c: Credentials) => { encodeCredentials(c); creds = c; },
     getCredentials: async () => creds,
     getCredentialsWire: async () => (creds ? splitCredentials(creds) : null),
   };

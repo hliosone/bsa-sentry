@@ -96,3 +96,13 @@ These could not be tested on Speculos and need the device:
 | **You see** | The same pages as `docs/screens/web/01…07`. The status bar turns green only when everything is ready. |
 | **Claude checks** | Each step's server log line, and that GET_STATE on the device matches the dashboard. |
 | **Fallback** | The device picker shows nothing: another tab or Ledger Live holds the Flex; close it. |
+
+## M6-C. The 18+ badge with the real wallet
+
+| | |
+|---|---|
+| **You do** | Restart the server with `EUDIW_MODE=live`. In the website: **Badge 18+ → Obtenir mon badge 18+**, scan the QR with **Procivis One** (its PID), approve sharing the birthdate. Then **Lier à mon Ledger** (tap on the Flex: it shows the verifier URL and the session) and **Autoriser Claude** (tap: it shows the agent name and your FULL 0xAGENT address). |
+| **Then in Claude** | *"Et une bouteille de vin sur <merchant URL>/cave"* → paid with no tap (cave is a trusted merchant under 5 USDC), the server log shows `verify -> valid`. |
+| **Negative check** | Block the agent + reinstall the app (or `RESTORE` without credentials), set the rules again, ask for the wine again → Claude reports **AGE_PROOF_REQUIRED** and suggests the badge. |
+| **Claude checks** | `/age` session goes pending → verified (never stores the birthdate: `SELECT * FROM age_sessions` shows only status + evidence hash), the Arc tx for the wine. |
+| **Fallback** | QR not recognised: switch `EUDIW_QR_SCHEME` to `haip-vp`. Status `rejected` with `IssuerCertificateIsNotTrusted`: the EUDI test CAs could not be fetched; check network. If the live verifier is down, demo with `EUDIW_MODE=mock` and say so (cut-order item 3). |
