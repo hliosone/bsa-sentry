@@ -7,14 +7,8 @@ const SETTINGS_SIZE: usize = 10;
 static mut DATA: NVMData<AtomicStorage<[u8; SETTINGS_SIZE]>> =
     NVMData::new(AtomicStorage::new(&[0u8; SETTINGS_SIZE]));
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Default)]
 pub struct Settings;
-
-impl Default for Settings {
-    fn default() -> Self {
-        Settings
-    }
-}
 
 impl Settings {
     #[inline(never)]

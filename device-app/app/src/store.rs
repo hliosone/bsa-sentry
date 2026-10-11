@@ -36,16 +36,31 @@ static mut CREDENTIALS_NVM: NVMData<AtomicStorage<[u8; CREDENTIALS_MAX + 2]>> =
 /// Reassembly buffer for the chunked commands. One at a time, by design.
 static mut REASSEMBLER: Reassembler = Reassembler::new();
 
-/// Everything that lives only in RAM. The session in particular: a reboot disarms the agent.
+/// Everything that lives only in RAM: the in-flight payment.
 pub struct Runtime {
-    pub session: Session,
     pub flow: PayFlow,
 }
 
 impl Runtime {
     pub const fn new() -> Self {
-        Runtime { session: Session { armed: false }, flow: PayFlow::new() }
+        Runtime { flow: PayFlow::new() }
     }
+}
+
+/// Settings switch 0 on the home screen: "Session agent".
+///
+/// The switch state lives in the settings NVM slot because that is how the SDK's home
+/// screen drives switches, but [`disarm_session`] is called at every app start, so the
+/// session is effectively RAM-only: relaunching the app always disarms the agent.
+pub const SESSION_SWITCH: usize = 0;
+
+pub fn session() -> Session {
+    Session { armed: crate::settings::Settings.get_element(SESSION_SWITCH) == 1 }
+}
+
+/// Called once at startup, so a restart never leaves the agent armed.
+pub fn disarm_session() {
+    crate::settings::Settings.set_element(SESSION_SWITCH, 0);
 }
 
 pub fn reassembler() -> &'static mut Reassembler {

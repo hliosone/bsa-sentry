@@ -18,7 +18,9 @@ use crate::AppSW;
 use core::str::FromStr;
 use ledger_device_sdk::io::{Command, CommandResponse};
 
-pub fn handler_get_version(command: Command<'_>) -> Result<CommandResponse<'_>, AppSW> {
+pub fn handler_get_version<const N: usize>(
+    command: Command<'_, N>,
+) -> Result<CommandResponse<'_, N>, AppSW> {
     if let Some((major, minor, patch)) = parse_version_string(env!("CARGO_PKG_VERSION")) {
         let mut response = command.into_response();
         response.append(&[major, minor, patch])?;

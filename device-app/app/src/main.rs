@@ -13,7 +13,11 @@ mod app_ui {
 }
 mod handlers {
     pub mod get_version;
+    pub mod pay;
+    pub mod policy;
 }
+mod fmt;
+mod orange;
 mod crypto;
 mod keccak;
 mod settings;
@@ -24,7 +28,9 @@ use bsa_sentry_core::wire::{encode_state, DeviceState};
 use bsa_sentry_core::RefusalReason;
 use crypto::Account;
 use handlers::get_version::handler_get_version;
-use ledger_device_sdk::io::{self, init_comm, ApduHeader, Command, Reply, StatusWords};
+use handlers::pay::handler_pay;
+use handlers::policy::{handler_clear_policy, handler_set_policy};
+use ledger_device_sdk::io::{self, init_comm, ApduHeader, Command, Reply};
 use ledger_device_sdk::nbgl::NbglHomeAndSettings;
 
 ledger_device_sdk::set_panic!(ledger_device_sdk::exiting_panic);
@@ -54,7 +60,10 @@ pub enum AppSW {
     BadState = 0xB00B,
     /// Writing to NVM failed, or the value was too large for its slot.
     StorageFail = 0xB00C,
-    WrongApduLength = StatusWords::BadLen as u16,
+    /// ISO 7816 "wrong length". Pinned explicitly rather than reusing the SDK's
+    /// `StatusWords::BadLen` (0x6E03), so the device matches `SW.WRONG_LENGTH` in
+    /// packages/types and the host has one value to map.
+    WrongApduLength = 0x6700,
     Ok = 0x9000,
 }
 
@@ -167,6 +176,9 @@ extern "C" fn sample_main(_arg0: u32) {
     let comm = init_comm(&COMM);
     comm.set_expected_cla(0xe0);
 
+    // A restart always disarms the agent: the session is never meant to survive it.
+    store::disarm_session();
+
     let mut home = ui_menu_main(comm);
     home.show_and_return();
     // `home` lives for the whole loop below, so this pointer stays valid.
@@ -199,11 +211,11 @@ extern "C" fn sample_main(_arg0: u32) {
 
 static mut RUNTIME: store::Runtime = store::Runtime::new();
 
-fn handle_apdu<'a>(
-    command: Command<'a>,
+fn handle_apdu<'a, const N: usize>(
+    command: Command<'a, N>,
     ins: &Instruction,
     runtime: &mut store::Runtime,
-) -> Result<io::CommandResponse<'a>, AppError> {
+) -> Result<io::CommandResponse<'a, N>, AppError> {
     match ins {
         Instruction::GetAppName => {
             let mut response = command.into_response();
@@ -214,7 +226,10 @@ fn handle_apdu<'a>(
         Instruction::GetAddress { account_agent, display } => {
             handler_get_address(command, *account_agent, *display)
         }
-        Instruction::GetState => handler_get_state(command, runtime),
+        Instruction::GetState => handler_get_state(command),
+        Instruction::SetPolicy { first, last } => handler_set_policy(command, *first, *last),
+        Instruction::ClearPolicy => handler_clear_policy(command),
+        Instruction::Pay => handler_pay(command, runtime),
         // Implemented in the following commits of M1, one handler at a time, each with its
         // Speculos test. Until then the host gets a clean "not supported".
         _ => Err(AppError::Sw(AppSW::InsNotSupported)),
@@ -222,11 +237,11 @@ fn handle_apdu<'a>(
 }
 
 /// GET_ADDRESS: the 20-byte EVM address of 0xMAIN (P1 0) or 0xAGENT (P1 1).
-fn handler_get_address(
-    command: Command<'_>,
+fn handler_get_address<const N: usize>(
+    command: Command<'_, N>,
     account_agent: bool,
     _display: bool,
-) -> Result<io::CommandResponse<'_>, AppError> {
+) -> Result<io::CommandResponse<'_, N>, AppError> {
     let account = if account_agent { Account::Agent } else { Account::Main };
     let addr = crypto::address(account)?;
     let mut response = command.into_response();
@@ -236,13 +251,10 @@ fn handler_get_address(
 
 /// GET_STATE: the policy, counters, session and last payment, in the format
 /// `packages/types` decodes with `decodeState`. No tap: it reveals nothing secret.
-fn handler_get_state<'a>(
-    command: Command<'a>,
-    runtime: &mut store::Runtime,
-) -> Result<io::CommandResponse<'a>, AppError> {
+fn handler_get_state<const N: usize>(command: Command<'_, N>) -> Result<io::CommandResponse<'_, N>, AppError> {
     let (counters, last_value, last_label) = store::counters();
     let state = DeviceState {
-        session: runtime.session,
+        session: store::session(),
         has_credentials: store::has_credentials(),
         counters,
         last_value,
