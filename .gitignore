@@ -26,3 +26,6 @@ playwright-report/
 
 # os
 .DS_Store
+
+# device build output (root-owned, produced in Docker)
+device-app/app/target/

@@ -1,0 +1,31 @@
+target
+app.json
+app_nanos.json
+app_nanosplus.json
+app_nanox.json
+app_stax.json
+app_flex.json
+
+# Automatic generated NBGL glyphs
+glyphs/home_nano_nbgl.png
+
+# Temporary directory with snapshots taken during test runs
+snapshots-tmp/
+
+# Python
+*.pyc[cod]
+*.egg
+__pycache__/
+*.egg-info/
+.eggs/
+.python-version
+
+# Related to the Ledger VSCode extension
+# Virtual env for sideload (macOS and Windows)
+ledger/
+# Build directory
+build/
+
+# Helper script git clone
+tests/swap/.test_dependencies/app-exchange/
+tests/swap/.test_dependencies/app-ethereum/
