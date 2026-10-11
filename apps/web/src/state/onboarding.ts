@@ -1,0 +1,38 @@
+// The onboarding steps, derived from facts rather than clicks: if the Flex is unplugged,
+// "connect" is current again, whatever the user did on a previous visit.
+export type Facts = {
+  deviceConnected: boolean;
+  loggedIn: boolean;
+  policyActive: boolean;
+  sessionArmed: boolean;
+  hasCredentials: boolean;
+  hasBackup: boolean;
+  claudeConnected: boolean;
+};
+
+export type StepId = 'connect' | 'login' | 'rules' | 'session' | 'badge' | 'backup' | 'claude' | 'done';
+
+export type Step = { id: StepId; label: string; done: boolean; current: boolean; optional: boolean };
+
+const REQUIRED: { id: StepId; label: string; fact: keyof Facts }[] = [
+  { id: 'connect', label: 'Brancher le Flex', fact: 'deviceConnected' },
+  { id: 'login', label: 'Se connecter avec Ledger', fact: 'loggedIn' },
+  { id: 'rules', label: 'Définir les règles', fact: 'policyActive' },
+  { id: 'session', label: "Démarrer l'agent sur le Flex", fact: 'sessionArmed' },
+  { id: 'claude', label: 'Connecter Claude', fact: 'claudeConnected' },
+];
+
+const OPTIONAL: { id: StepId; label: string; fact: keyof Facts }[] = [
+  { id: 'badge', label: 'Badge 18+ (optionnel)', fact: 'hasCredentials' },
+  { id: 'backup', label: 'Sauvegarde Key Ring (optionnel)', fact: 'hasBackup' },
+];
+
+export function onboarding(f: Facts): { current: StepId; steps: Step[] } {
+  const firstMissing = REQUIRED.find((s) => !f[s.fact]);
+  const current: StepId = firstMissing?.id ?? 'done';
+  const steps: Step[] = [
+    ...REQUIRED.map((s) => ({ id: s.id, label: s.label, done: f[s.fact], current: s.id === current, optional: false })),
+    ...OPTIONAL.map((s) => ({ id: s.id, label: s.label, done: f[s.fact], current: false, optional: true })),
+  ];
+  return { current, steps };
+}
