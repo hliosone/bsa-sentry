@@ -87,3 +87,12 @@ These could not be tested on Speculos and need the device:
 | **Claude checks** | Server logs (`[facilitator] settle -> 0x…`), the Arc transactions, `sentry_status`. Then `pnpm recycle`. |
 | **Fallback** | claude.ai shows "couldn't connect": the server's `PUBLIC_API_URL` does not match the tunnel URL. Tool errors with "open the BSA Sentry tab": the tab is closed or not logged in. |
 | **Note** | The merchants must be reachable *from the server*, not from claude.ai: localhost is fine. |
+
+## M5-C. The onboarding in Chrome with the real Flex
+
+| | |
+|---|---|
+| **You do** | `pnpm --filter @bsa-sentry/web build`, start the server (it serves the site), open it in Chrome. Follow the left column top to bottom: Brancher le Flex → Se connecter avec Ledger (tap) → Définir les règles (review + hold on the Flex) → Démarrer l'agent (switch on the Flex, then "J'ai démarré l'agent") → Connecter Claude. |
+| **You see** | The same pages as `docs/screens/web/01…07`. The status bar turns green only when everything is ready. |
+| **Claude checks** | Each step's server log line, and that GET_STATE on the device matches the dashboard. |
+| **Fallback** | The device picker shows nothing: another tab or Ledger Live holds the Flex; close it. |

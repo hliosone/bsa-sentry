@@ -32,7 +32,8 @@ export type X402Result =
   | { kind: 'free'; status: number; content: string }
   | { kind: 'paid'; status: number; content: string; receipt: Receipt }
   | { kind: 'refused'; reason: BridgeReason; message: string; amount: string; payee: Hex }
-  | { kind: 'error'; message: string };
+  /** `amount`/`payee` are set when the error happened after the Flex signed. */
+  | { kind: 'error'; message: string; amount?: string; payee?: Hex };
 
 /** Never sign for longer than this, whatever the merchant allows. */
 const MAX_VALIDITY_S = 300;
@@ -190,15 +191,16 @@ export async function x402Fetch(
     ...(answer.credentials ? { extensions: { bsaAge: answer.credentials } } : {}),
   };
 
+  const signed = { amount: usdcAmount(value), payee };
   let paid: Response;
   try {
     paid = await deps.fetch(url, init({ 'PAYMENT-SIGNATURE': encodePaymentSignatureHeader(paymentPayload as any) }));
   } catch (e) {
-    return { kind: 'error', message: `the payment was signed but ${url.host} could not be reached: ${(e as Error).message}` };
+    return { kind: 'error', message: `the payment was signed but ${url.host} could not be reached: ${(e as Error).message}`, ...signed };
   }
   if (paid.status === 402 || paid.status >= 400) {
     const why = await readContent(paid);
-    return { kind: 'error', message: `${url.host} rejected the signed payment (HTTP ${paid.status})${why ? `: ${why.slice(0, 300)}` : ''}` };
+    return { kind: 'error', message: `${url.host} rejected the signed payment (HTTP ${paid.status})${why ? `: ${why.slice(0, 300)}` : ''}`, ...signed };
   }
 
   let txHash: Hex | undefined;

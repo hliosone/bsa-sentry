@@ -211,9 +211,10 @@ describe('refusals and failures, in words the agent can repeat', () => {
     });
   }
 
-  it('reports a merchant that rejects a signed payment', async () => {
+  it('reports a merchant that rejects a signed payment, with what was signed', async () => {
     const r = await x402Fetch('alice', { url: 'http://merchants/cafe' }, deps({}, merchant({ paidStatus: 402 })));
-    expect(r).toMatchObject({ kind: 'error' });
+    // The dashboard needs the amount and payee to mark the signed request as failed.
+    expect(r).toMatchObject({ kind: 'error', amount: '3', payee: CAFE });
   });
 
   it('reports an unreachable merchant', async () => {

@@ -15,7 +15,7 @@ Follow from anywhere: this file is pushed to GitHub after every milestone.
 - [x] **M2** sentry-signer + bridge + harness — **30 + 17 TS, 5 Speculos**
 - [x] **M3** Server core + merchants → first coffee on Arc — **real tx on Arc**
 - [x] **M4** Auth, OAuth, MCP → Claude buys a coffee — **passes locally and through a public tunnel**
-- [ ] **M5** Website complete
+- [x] **M5** Website complete — **Playwright onboarding against the real server**
 - [ ] **M6** 18+ identity (EUDIW)
 - [ ] **M7** Key Ring backup/restore + device menu
 - [ ] **M8** Deploy, docs, demo
@@ -136,6 +136,22 @@ Follow from anywhere: this file is pushed to GitHub after every milestone.
   e2e runs exactly it.
 - `pnpm tunnel [port]` prints the public MCP URL for claude.ai (http2 + IPv4).
 
+### M5 — done (Sun 11 Oct 2026, ~23:30 CEST)
+- React + Vite site, French UI, same origin as the server (Vite proxies in dev; the server
+  serves `apps/web/dist` in prod): Connect + "Se connecter avec Ledger", Rules (pre-filled demo
+  merchants, every device limit checked first), Session (only the device arms the agent),
+  Connect Claude (public MCP URL, OAuth grants + revoke), Dashboard (budget gauge, live feed
+  over SSE, refusal banner, kill switch), always-visible status bar.
+- Real Flex over WebHID via the DMK (refresher disabled, 120 s abort timeout, click-free
+  reconnect). A software stand-in (`?fakeDevice=1`) exists **only in dev builds** — verified
+  absent from the production bundle.
+- `pnpm test:web`: Playwright (installed Chrome) runs the full onboarding against the real
+  server, then has the agent API request payments: the 400 USDC injection raises the refusal
+  banner, a signed coffee the facilitator rejects shows "échec", the kill switch wipes the
+  rules. Screenshots of every page in `docs/screens/web/`, reviewed by eye (fixed a feed row
+  that wrapped over four lines).
+- Logic tests: onboarding 5, rules 9, feed 6, status 3; bridge 23 (refresh/exclusive added).
+
 ## Blocked
 _nothing yet_
 
@@ -206,3 +222,5 @@ _nothing yet_
 | M3 | e2e on real Arc (`E2E=1 pnpm e2e:cafe`) | 15 checks |
 | M4 | `apps/server` total (auth, OAuth, MCP added) | 124 |
 | M4 | e2e MCP, local + tunnel (`E2E=1 [TUNNEL=1] pnpm e2e:mcp`) | 19 checks |
+| M5 | `apps/web` unit (bridge + logic) | 43 |
+| M5 | Playwright (`pnpm test:web`) | 2 |

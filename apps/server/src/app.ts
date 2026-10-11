@@ -10,6 +10,7 @@ import { chainDeps, facilitatorRouter } from './facilitator/routes.js';
 import type { AgeVerdict } from './facilitator/facilitator.js';
 import { Relay } from './relay/relay.js';
 import { x402Fetch, type X402Result } from './agent/x402-client.js';
+import { paymentEvent } from './agent/events.js';
 
 export type ServerOptions = {
   chain: ChainConfig;
@@ -35,8 +36,8 @@ export function createServer(opts: ServerOptions) {
   const deps = chainDeps(opts.chain, opts.facilitatorKey, opts.verifyAge ? { verifyAge: opts.verifyAge } : {});
 
   const agent: Agent = {
-    fetch: (account, req) =>
-      x402Fetch(account, req, {
+    fetch: async (account, req) => {
+      const result = await x402Fetch(account, req, {
         fetch,
         relay,
         chainId: opts.chain.chainId,
@@ -47,7 +48,12 @@ export function createServer(opts: ServerOptions) {
           if (!a) throw new Error('no BSA Sentry tab is attached for this account');
           return a;
         },
-      }),
+      });
+      // The dashboard feed: the settlement (or why nothing was paid) after the device answered.
+      const event = paymentEvent(account, req.url, result);
+      if (event) relay.events.emit('payment', event);
+      return result;
+    },
   };
 
   const app = express();

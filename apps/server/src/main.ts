@@ -63,7 +63,7 @@ export async function startBsaServer(env: BsaServerEnv = process.env, opts: { po
         const send = (type: string, data: unknown) =>
           res.write(`event: ${type}\ndata: ${JSON.stringify(data, (_k, v) => (typeof v === 'bigint' ? v.toString() : v))}\n\n`);
         send('status', { account, ...relay.status(account) });
-        const handlers = ['status', 'request', 'answer'].map((type) => {
+        const handlers = ['status', 'request', 'answer', 'payment'].map((type) => {
           const h = (e: { account: string }) => { if (e.account === account) send(type, e); };
           relay.events.on(type, h);
           return [type, h] as const;
@@ -75,9 +75,14 @@ export async function startBsaServer(env: BsaServerEnv = process.env, opts: { po
         });
       });
 
+      // The demo merchants the rules form offers by default. The bakery is deliberately left
+      // out: it is the "unknown merchant" of the demo.
+      const defaultPayees = [
+        ['Cafe Sat', env.MERCHANT_CAFE_ADDRESS], ['Cave du Coin', env.MERCHANT_CAVE_ADDRESS], ['Resto', env.MERCHANT_RESTO_ADDRESS],
+      ].filter(([, a]) => !!a).map(([label, address]) => ({ label, address: address!.toLowerCase() }));
       app.get('/api/config', (_req, res) => res.json({
         chainId: chain.chainId, chainName: chain.name, usdc: chain.usdc, explorer: chain.explorer,
-        mcpUrl: `${baseUrl}/mcp`, merchantUrl: env.MERCHANT_URL ?? null,
+        mcpUrl: `${baseUrl}/mcp`, merchantUrl: env.MERCHANT_URL ?? null, defaultPayees,
       }));
 
       // The built website, if present. In dev, Vite proxies to us instead.

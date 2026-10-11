@@ -276,6 +276,36 @@ describe('get_state', () => {
   });
 });
 
+describe('page actions', () => {
+  it('refresh() re-reads the device and reports a status, on demand', async () => {
+    const signer = fakeSigner();
+    const { bridge, socket } = start(signer);
+    socket().open();
+    await vi.waitFor(() => expect(signer.probe).toHaveBeenCalledTimes(1));
+    await bridge.refresh();
+    expect(signer.probe).toHaveBeenCalledTimes(2);
+    expect(socket().statuses.length).toBe(2);
+  });
+
+  it('exclusive() runs a page command in the same queue as relay requests', async () => {
+    const order: string[] = [];
+    let release!: () => void;
+    const signer = fakeSigner({
+      pay: vi.fn(async () => { order.push('pay-start'); await new Promise<void>((r) => { release = r; }); order.push('pay-end'); return { v: 27, r: `0x${'aa'.repeat(32)}`, s: `0x${'bb'.repeat(32)}` }; }),
+    });
+    const { bridge, socket } = start(signer);
+    socket().open();
+    socket().deliver(signPayment());
+    await vi.waitFor(() => expect(order).toEqual(['pay-start']));
+    const pageCommand = bridge.exclusive(async () => { order.push('page'); return 42; });
+    await new Promise((r) => setTimeout(r, 20));
+    expect(order).toEqual(['pay-start']); // the page waits its turn
+    release();
+    expect(await pageCommand).toBe(42);
+    expect(order).toEqual(['pay-start', 'pay-end', 'page']);
+  });
+});
+
 describe('start_restore', () => {
   it('hands the request to the page without touching the device', async () => {
     const signer = fakeSigner();

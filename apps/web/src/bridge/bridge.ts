@@ -81,6 +81,22 @@ export class Bridge {
     return { ...this.status };
   }
 
+  /**
+   * Re-reads the device and reports it. Only ever called from a user action (a button), never
+   * from a timer: the user just changed something on the Flex and wants the page to see it.
+   */
+  refresh(): Promise<void> {
+    return new Promise((resolve) => this.run(async () => { await this.reportStatus(); resolve(); }));
+  }
+
+  /** Runs a device command from the page in the same queue as relay requests. */
+  exclusive<T>(fn: () => Promise<T>): Promise<T> {
+    return new Promise<T>((resolve, reject) => this.run(async () => {
+      try { resolve(await fn()); } catch (e) { reject(e); }
+      await this.reportStatus().catch(() => undefined);
+    }));
+  }
+
   // ------------------------------------------------------------------ socket
 
   private open() {
