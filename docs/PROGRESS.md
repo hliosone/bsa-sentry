@@ -227,6 +227,12 @@ Follow from anywhere: this file is pushed to GitHub after every milestone.
 - **Claude connected** (claude.ai in Chrome, OAuth through the public tunnel). Starting the
   flow in one browser and finishing it in another breaks Claude's callback: do it all in Chrome.
 - Everything translated to English at the human's request (device, website, server, docs).
+- **First real coffee: claude.ai → our MCP → the website tab → the real Flex → Arc (Mon 12 Oct 2026, 20:15 CEST).**
+  Signed with no screen (trusted merchant, under the auto limit), verified and settled by our
+  facilitator: tx `0xfcb6bdb018a73e63a3416a36e826ff1af36b652204f19cf11aecfad26d1f31f7`,
+  0xAGENT 71.99 → 68.99 USDC, ~8.5 s end to end. Quick tunnels dropped twice in an hour (each
+  restart = new URL); the shops' tunnel restart is cheap, the server's means re-adding the
+  connector. Claude Code's "auto" mode blocks the MCP payment tool: demo in a claude.ai chat.
 
 ## Blocked
 _Nothing is blocked._ Hardware-only items (real Flex sideload, taps, the 60 s timeout under touch,
