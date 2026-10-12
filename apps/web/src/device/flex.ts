@@ -20,6 +20,25 @@ export type FlexConnection = {
   switchApp: (appName: string) => Promise<boolean>;
 };
 
+// One connection at a time. The page reconnects on load while the user may click "Connect the
+// Flex": two WebHID opens at once fail on the device ("An operation that changes the device
+// state is in progress"), so a second caller gets the connection already open or opening.
+let current: FlexConnection | null = null;
+let opening: Promise<FlexConnection> | null = null;
+
+function openOnce(device: () => Promise<any>): Promise<FlexConnection> {
+  if (current) return Promise.resolve(current);
+  opening ??= device()
+    .then(open)
+    .then((c) => {
+      current = c;
+      c.onLost(() => { if (current === c) current = null; });
+      return c;
+    })
+    .finally(() => { opening = null; });
+  return opening;
+}
+
 async function open(device: any): Promise<FlexConnection> {
   const sessionId = await kit().connect({ device, sessionRefresherOptions: { isRefresherDisabled: true } });
   const lost: (() => void)[] = [];
@@ -30,7 +49,10 @@ async function open(device: any): Promise<FlexConnection> {
   });
   return {
     signer: new SentrySigner(new DmkTransport(kit() as any, sessionId)),
-    disconnect: () => kit().disconnect({ sessionId }).catch(() => undefined),
+    disconnect: () => {
+      current = null;
+      return kit().disconnect({ sessionId }).catch(() => undefined);
+    },
     onLost: (cb) => lost.push(cb),
     switchApp: async (appName) => {
       // OpenApp only works from the dashboard, so close whatever is open first. The device may
@@ -51,8 +73,7 @@ export const webHidAvailable = () => typeof navigator !== 'undefined' && 'hid' i
 /** Opens Chrome's device picker. Must be called from a click. */
 export async function connectFlex(): Promise<FlexConnection> {
   if (!webHidAvailable()) throw new Error('WebHID unavailable: use Google Chrome (not the Chromium snap)');
-  const device = await firstValueFrom(kit().startDiscovering({}));
-  return open(device);
+  return openOnce(() => firstValueFrom(kit().startDiscovering({})));
 }
 
 /**
@@ -66,7 +87,7 @@ export function reconnectFlex(onConnected: (c: FlexConnection) => void): () => v
     if (busy || devices.length === 0) return;
     busy = true;
     try {
-      onConnected(await open(devices[0]));
+      onConnected(await openOnce(async () => devices[0]));
     } catch {
       busy = false;
     }
