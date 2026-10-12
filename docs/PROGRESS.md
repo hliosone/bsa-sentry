@@ -217,6 +217,17 @@ Follow from anywhere: this file is pushed to GitHub after every milestone.
   Sentry 0.1.0 sideloaded. Over USB: GET_APP_NAME `BSA Sentry`, two distinct addresses from the
   real seed, blank state (no rules, session off). 0xAGENT holds 2 USDC on Arc (top-up: step 4).
 
+- **Step 2 — confirmation screen verified on the Flex (Mon 12 Oct 2026, 19:36 CEST).** Reject → refused
+  USER_REJECTED, Pay once → signed with no payee added, Trust merchant → signed and the merchant
+  added; the device's own tap log matched each tap (`scripts/orange-diag.ts`, diagnosis build).
+  The first smoke runs had looked like "every tap counts as the bottom button": they were taps
+  on a different button than asked, under unclear instructions — not a device bug. Silent AUTO
+  payment, OVER_HARD_MAX without a screen, session arming and the rules review also passed.
+  The home screen's budget was right all along: it shows what is *left*, so 0.00 once spent.
+- **Claude connected** (claude.ai in Chrome, OAuth through the public tunnel). Starting the
+  flow in one browser and finishing it in another breaks Claude's callback: do it all in Chrome.
+- Everything translated to English at the human's request (device, website, server, docs).
+
 ## Blocked
 _Nothing is blocked._ Hardware-only items (real Flex sideload, taps, the 60 s timeout under touch,
 DMK app switching, LKRP on the device, the Procivis scan, claude.ai) are built, tested on

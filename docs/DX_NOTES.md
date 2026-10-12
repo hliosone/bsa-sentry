@@ -161,6 +161,17 @@ whose callback writes NVM and redraws. About 300 lines, most of it `unsafe` poin
 lists with a per-bar callback) plus a `refresh_tagline()`. Every app with state worth showing
 needs this; the C SDK already has it.
 
+### 2.8 On a real device you cannot see what NBGL registered
+
+**What happened.** On hardware, payments we expected to be refused came back signed. Speculos
+could not reproduce it, and a real Flex offers no way to observe touch events: no `/events`, no
+log. We lost hours suspecting the touch handling before learning the taps had simply landed
+on a different button than intended.
+**Fix.** A diagnosis build (`--features diag`) that records each `(token, index)` NBGL passes to
+the layout callback and returns it over a debug APDU. It settled the question in two minutes.
+**Suggestion.** A standard debug-build switch in the SDK that streams NBGL touch and callback
+events over USB, so a hardware-only UI question has an answer without custom firmware.
+
 ---
 
 ## 3. Build and load toolchain
