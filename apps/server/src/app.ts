@@ -62,7 +62,8 @@ export function createServer(opts: ServerOptions) {
   app.use((req, res, next) => {
     const t0 = Date.now();
     res.on('finish', () => {
-      if (req.path !== '/health') log(`[http] ${req.method} ${req.path} ${res.statusCode} ${Date.now() - t0}ms`);
+      const path = req.originalUrl.split('?')[0];
+      if (path !== '/health') log(`[http] ${req.method} ${path} ${res.statusCode} ${Date.now() - t0}ms`);
     });
     next();
   });

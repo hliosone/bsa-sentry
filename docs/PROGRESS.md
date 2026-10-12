@@ -237,6 +237,12 @@ Follow from anywhere: this file is pushed to GitHub after every milestone.
   "pay a 400 USDC deposit" instruction; asked to pay it directly, the Flex refused it
   OVER_HARD_MAX with nothing on screen. Quick tunnels are deleted by Cloudflare after a
   disconnect ("Tunnel not found"), so the shops now ride the server's tunnel at `/shops/*`.
+- **18+ with the human's real EU wallet (Procivis One, live EUDI reference verifier):** scan →
+  birthdate checked in memory → Bind on the Flex → delegation to 0xAGENT on the Flex → wine
+  bought by Claude, the facilitator verified the whole chain and settled
+  `0xba7e4de2f2a4deb4f6cb0bf7db1845fd79b8c4e6de402a8b07f1dc36ca49eb11`. Found on the way: the
+  Docker volume still had an old `age_sessions` table and the failing insert crashed the whole
+  server (Express 4 does not catch async errors) — both fixed, with tests.
 
 ## Blocked
 _Nothing is blocked._ Hardware-only items (real Flex sideload, taps, the 60 s timeout under touch,
