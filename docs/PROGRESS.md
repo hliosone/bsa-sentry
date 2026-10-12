@@ -243,6 +243,14 @@ Follow from anywhere: this file is pushed to GitHub after every milestone.
   `0xba7e4de2f2a4deb4f6cb0bf7db1845fd79b8c4e6de402a8b07f1dc36ca49eb11`. Found on the way: the
   Docker volume still had an old `age_sessions` table and the failing insert crashed the whole
   server (Express 4 does not catch async errors) — both fixed, with tests.
+- **Key Ring on real hardware:** backup (BSA Sentry → Ledger Sync → back) stored the
+  ciphertext; after a reinstall the one-tap restore brought the rules, merchants and the 18+
+  badge back. A tab opened before a redeploy failed to load the Key Ring module: it now says
+  "reload" instead, and missing assets are a real 404.
+- **Top-up on the real Flex:** 5 USDC from 0xMAIN to 0xAGENT after one hold, ~5 s to
+  confirmation (0xMAIN 5 → 0, 0xAGENT 56.49 → 61.49). The dashboard now shows both real wallet
+  balances read from Arc (the Flex has no network) and calls the budget what it is, a
+  spending-limit rule.
 
 ## Blocked
 _Nothing is blocked._ Hardware-only items (real Flex sideload, taps, the 60 s timeout under touch,
