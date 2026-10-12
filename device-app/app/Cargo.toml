@@ -26,6 +26,9 @@ png = "0.18"
 [features]
 default = ["ledger_device_sdk/nano_nbgl"]
 debug = ["ledger_device_sdk/debug"]
+# Hardware diagnosis build, never shipped: adds INS 0x7E (read the tap log, pick the screen
+# layout, arm the session without touching the home screen).
+diag = []
 
 [package.metadata.ledger]
 curve = ["secp256k1"]

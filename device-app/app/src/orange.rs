@@ -30,7 +30,33 @@ static mut ENDED: bool = false;
 static mut CHOICE: u8 = 0;
 static mut TRUST_OFFERED: bool = false;
 
+/// Diagnostic build only (`--features diag`, never shipped): records what NBGL reports for each
+/// tap and lets the host pick the screen layout, to find a hardware-only touch bug.
+#[cfg(feature = "diag")]
+pub mod diag {
+    /// 0 = current layout, 1 = the layout proven on hardware in the feasibility test.
+    pub static mut VARIANT: u8 = 0;
+    /// `count | (token, index) x 8`
+    pub static mut LOG: [u8; 17] = [0; 17];
+    pub fn record(token: u8, index: u8) {
+        unsafe {
+            let n = LOG[0] as usize;
+            if n < 8 {
+                LOG[1 + 2 * n] = token;
+                LOG[2 + 2 * n] = index;
+            }
+            LOG[0] = LOG[0].saturating_add(1);
+        }
+    }
+}
+
+/// The feasibility test's 1 s screen ticker, kept only so the screen is configured exactly as
+/// the one proven on hardware. Time is still counted from raw ticker events.
+unsafe extern "C" fn on_screen_tick() {}
+
 unsafe extern "C" fn on_action(token: core::ffi::c_int, index: u8) {
+    #[cfg(feature = "diag")]
+    diag::record(token as u8, index);
     CHOICE = match (token as u8, index) {
         // The two stacked buttons share one token; NBGL passes 0 for the top, 1 for the bottom.
         (TOKEN_CHOICE, 0) if TRUST_OFFERED => 2, // Faire confiance
@@ -104,6 +130,12 @@ pub fn ask<const N: usize>(comm: &mut Comm<N>, screen: &OrangeScreen<'_>) -> Cho
         TRUST_OFFERED = screen.trust_allowed;
     }
 
+    #[cfg(feature = "diag")]
+    let feasibility_layout = unsafe { diag::VARIANT == 1 };
+    #[cfg(not(feature = "diag"))]
+    let feasibility_layout = false;
+    let center_desc = fmt::cstr(&alloc::format!("{}\n{}", reason_text(screen.reason), screen.full_address));
+
     let mut raw_ticks: u32 = 0;
     unsafe {
         let desc = nbgl_layoutDescription_t {
@@ -114,10 +146,10 @@ pub fn ask<const N: usize>(comm: &mut Comm<N>, screen: &OrangeScreen<'_>) -> Cho
             tapTuneId: NB_TUNES,
             onActionCallback: Some(on_action),
             // No ticker callback: we count raw ticker events in the loop below instead.
-            ticker: nbgl_screenTickerConfiguration_t {
-                tickerCallback: None,
-                tickerValue: 0,
-                tickerIntervale: 0,
+            ticker: if feasibility_layout {
+                nbgl_screenTickerConfiguration_t { tickerCallback: Some(on_screen_tick), tickerValue: 1000, tickerIntervale: 1000 }
+            } else {
+                nbgl_screenTickerConfiguration_t { tickerCallback: None, tickerValue: 0, tickerIntervale: 0 }
             },
         };
         let layout = nbgl_layoutGet(&desc);
@@ -139,8 +171,25 @@ pub fn ask<const N: usize>(comm: &mut Comm<N>, screen: &OrangeScreen<'_>) -> Cho
 
         // The payment, in the order that matters: how much, to whom and why we are asking,
         // the full address, and last what the agent claims (always marked unverified).
-        nbgl_layoutAddText(layout, title.as_ptr(), reason.as_ptr());
-        nbgl_layoutAddText(layout, address.as_ptr(), footer.as_ptr());
+        if feasibility_layout {
+            let center = nbgl_contentCenter_t {
+                illustrType: ICON_ILLUSTRATION,
+                icon: core::ptr::null(),
+                animation: core::ptr::null(),
+                animOffsetX: 0,
+                animOffsetY: 0,
+                title: title.as_ptr(),
+                smallTitle: core::ptr::null(),
+                description: center_desc.as_ptr(),
+                subText: footer.as_ptr(),
+                iconHug: 0,
+                padding: false,
+            };
+            nbgl_layoutAddContentCenter(layout, &center);
+        } else {
+            nbgl_layoutAddText(layout, title.as_ptr(), reason.as_ptr());
+            nbgl_layoutAddText(layout, address.as_ptr(), footer.as_ptr());
+        }
 
         if screen.trust_allowed {
             let choices = nbgl_layoutChoiceButtons_t {
