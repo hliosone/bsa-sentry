@@ -10,13 +10,14 @@ import { getAddress, isAddress, recoverTypedDataAddress, type Hex } from 'viem';
 import { EIP712_TYPES, sentryDomain, toViemSignature } from '@bsa-sentry/types';
 import type { Db } from './db.js';
 import { readSession } from './auth.js';
+import { safeRouter } from './safe-router.js';
 
 /** A full backup (8 payees + credentials) is under 1 KB; leave room for the encryption envelope. */
 const MAX_CIPHERTEXT_B64 = 16_384;
 
 export function vaultRouter(o: { db: Db; chainId: number; secret: string; now?: () => number }) {
   const now = o.now ?? (() => Math.floor(Date.now() / 1000));
-  const router = Router();
+  const router = safeRouter();
   router.use(json({ limit: '64kb' }));
 
   async function delegationSigner(d: any): Promise<Hex | null> {

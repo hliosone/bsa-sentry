@@ -3,6 +3,7 @@ import { Router, json } from 'express';
 import type { Hex } from 'viem';
 import { USDC_ABI, clients, type ChainConfig } from '../chain.js';
 import { settlePayment, verifyPayment, type SettleDeps } from './facilitator.js';
+import { safeRouter } from '../safe-router.js';
 
 /** Real viem-backed dependencies. The facilitator key only ever pays gas and submits. */
 export function chainDeps(cfg: ChainConfig, facilitatorKey: Hex, extra: Partial<SettleDeps> = {}): SettleDeps & { address: Hex } {
@@ -36,7 +37,7 @@ export function chainDeps(cfg: ChainConfig, facilitatorKey: Hex, extra: Partial<
 }
 
 export function facilitatorRouter(deps: SettleDeps & { address: Hex }, log: (m: string) => void = () => {}) {
-  const router = Router();
+  const router = safeRouter();
   router.use(json({ limit: '64kb' }));
   const network = `eip155:${deps.chainId}`;
 

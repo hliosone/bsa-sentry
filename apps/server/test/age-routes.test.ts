@@ -37,6 +37,16 @@ async function signBind(bind: { verifier: string; session: Hex; expiresAt: numbe
 }
 
 describe('mock mode', () => {
+  it('answers 500 instead of crashing the server when the database fails', async () => {
+    // Express 4 does not catch errors from async handlers: one of them took the whole server
+    // down, and with it the connection to the user's Flex.
+    const { app, db } = setup();
+    db.exec('DROP TABLE age_sessions;');
+    const r = await request(app).post('/age/sessions').set('Cookie', cookie());
+    expect(r.status).toBe(500);
+    expect(r.body.error).toBeTruthy();
+  });
+
   it('creating a session needs a Ledger login', async () => {
     const { app } = setup();
     expect((await request(app).post('/age/sessions')).status).toBe(401);

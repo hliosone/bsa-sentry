@@ -22,12 +22,18 @@ export function Badge({ bsa }: { bsa: Bsa }) {
   useEffect(() => { if (bsa.device?.hasCredentials) setStage('done'); }, [bsa.device?.hasCredentials]);
 
   const start = async () => {
-    const res = await fetch('/age/sessions', { method: 'POST', credentials: 'same-origin' });
-    const s = await res.json();
-    if (!res.ok) { setWhy(s.error ?? 'error'); setStage('failed'); return; }
-    setSession(s);
-    setSvg(await QRCode.toString(s.qr, { type: 'svg', margin: 1, errorCorrectionLevel: 'L' }));
-    setStage('scan');
+    // Any failure is shown: a click that silently does nothing is the worst outcome here.
+    try {
+      const res = await fetch('/age/sessions', { method: 'POST', credentials: 'same-origin' });
+      const s = await res.json().catch(() => ({ error: `server answered ${res.status}` }));
+      if (!res.ok) { setWhy(s.error ?? 'error'); setStage('failed'); return; }
+      setSession(s);
+      setSvg(await QRCode.toString(s.qr, { type: 'svg', margin: 1, errorCorrectionLevel: 'L' }));
+      setStage('scan');
+    } catch (e) {
+      setWhy((e as Error).message);
+      setStage('failed');
+    }
   };
 
   // While the QR is on screen and the user is looking at this page, ask the server for news.

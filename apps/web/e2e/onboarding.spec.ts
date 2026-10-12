@@ -31,7 +31,7 @@ test.beforeAll(async () => {
   web = `http://localhost:${webPort}`;
   // The site is served by Vite on its own port and proxies to the server, so the server's
   // public URL (Login origin, OAuth issuer) is the Vite origin, exactly as the user sees it.
-  bsa = await startBsaServer({ ...process.env, PORT: String(apiPort), PUBLIC_API_URL: web, DB_PATH: ':memory:', WEB_ORIGIN: undefined, WEB_DIST: '/nonexistent' }, { log: () => {} });
+  bsa = await startBsaServer({ ...process.env, PORT: String(apiPort), PUBLIC_API_URL: web, DB_PATH: ':memory:', WEB_ORIGIN: undefined, WEB_DIST: '/nonexistent', EUDIW_MODE: 'mock' }, { log: () => {} });
   const merchants = await createMerchantsApp({
     facilitatorUrl: `http://127.0.0.1:${apiPort}/x402`, network: 'eip155:5042002',
     payTo: {

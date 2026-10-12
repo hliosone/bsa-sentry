@@ -17,6 +17,7 @@ import {
 import type { Db } from '../db.js';
 import { readSession } from '../auth.js';
 import { buildPresentationRequest, createTransaction, eudiTestCas, pollTransaction, qrUrl, readAgeOver18 } from './eudiw.js';
+import { safeRouter } from '../safe-router.js';
 
 const BIND_WINDOW_S = 15 * 60;
 const ATTESTATION_TTL_S = 30 * 86400;
@@ -45,7 +46,7 @@ export function ageRouter(o: AgeOptions) {
   const now = o.now ?? (() => Math.floor(Date.now() / 1000));
   const fetchImpl = o.fetch ?? fetch;
   const issuer = privateKeyToAccount(o.issuerKey);
-  const router = Router();
+  const router = safeRouter();
   router.use(json({ limit: '8kb' }));
   const get = (id: string) => o.db.prepare('SELECT * FROM age_sessions WHERE id = ?').get(id) as Row | undefined;
 

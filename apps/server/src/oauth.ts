@@ -10,6 +10,7 @@ import { createHash, createHmac, randomBytes, timingSafeEqual } from 'node:crypt
 import { Router, json, urlencoded, type NextFunction, type Request, type Response } from 'express';
 import type { Db } from './db.js';
 import { readSession } from './auth.js';
+import { safeRouter } from './safe-router.js';
 
 export const SCOPE = 'payments:request';
 const CODE_TTL_S = 600;
@@ -54,7 +55,7 @@ export function oauthRouter(opts: OAuthOptions) {
   const base = opts.baseUrl.replace(/\/$/, '');
   const resource = `${base}/mcp`;
   const db = opts.db;
-  const router = Router();
+  const router = safeRouter();
   const body = [json({ limit: '16kb' }), urlencoded({ extended: false, limit: '16kb' })];
 
   // ------------------------------------------------------------------ discovery

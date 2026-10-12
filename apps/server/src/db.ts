@@ -76,6 +76,12 @@ export function openDb(path = process.env.DB_PATH ?? ':memory:'): Db {
   if (path !== ':memory:') mkdirSync(dirname(path), { recursive: true });
   const db = new DatabaseSync(path);
   db.exec('PRAGMA journal_mode = WAL;');
+  // age_sessions only holds short-lived verification sessions: if a volume still has the table
+  // from an older schema, replacing it loses nothing and keeps the 18+ routes working.
+  const ageCols = (db.prepare('PRAGMA table_info(age_sessions)').all() as { name: string }[]).map((c) => c.name);
+  if (ageCols.length > 0 && !['account', 'mode', 'verifier'].every((c) => ageCols.includes(c))) {
+    db.exec('DROP TABLE age_sessions;');
+  }
   db.exec(SCHEMA);
   return db;
 }

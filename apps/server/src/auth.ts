@@ -10,6 +10,7 @@ import { Router, json, type Request } from 'express';
 import { getAddress, isAddress, recoverTypedDataAddress, type Hex } from 'viem';
 import { EIP712_TYPES, sentryDomain, toViemSignature } from '@bsa-sentry/types';
 import type { Db } from './db.js';
+import { safeRouter } from './safe-router.js';
 
 export const SESSION_COOKIE = 'bsa_session';
 const CHALLENGE_TTL_S = 300;
@@ -52,7 +53,7 @@ export function readSession(req: Request | IncomingMessage, secret: string, now 
 
 export function authRouter(opts: AuthOptions) {
   const now = opts.now ?? (() => Math.floor(Date.now() / 1000));
-  const router = Router();
+  const router = safeRouter();
   router.use(json({ limit: '8kb' }));
 
   const cookie = (value: string, maxAge: number) =>
