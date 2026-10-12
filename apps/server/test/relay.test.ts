@@ -252,6 +252,28 @@ describe('status', () => {
     expect(seen.at(-1)).toMatchObject({ account: 'alice', flex: 'connected', session: true });
   });
 
+  it('freshStatus asks the tab for a new status and returns it, instead of a stale cache', async () => {
+    // The tab only reports when something happens, so a session armed on the Flex afterwards
+    // stayed "off" for Claude until the next payment.
+    const relay = new Relay();
+    const tab = new FakeTab();
+    relay.attach('alice', tab);
+    relay.onTabMessage('alice', JSON.stringify({ type: 'status', flex: 'connected', session: false }));
+    const pending = relay.freshStatus('alice', 2000);
+    const asked = tab.sent.at(-1);
+    expect(asked.type).toBe('get_state');
+    relay.onTabMessage('alice', JSON.stringify({ type: 'status', flex: 'connected', session: true }));
+    expect(await pending).toMatchObject({ session: true });
+  });
+
+  it('freshStatus falls back to the last known status if the tab does not answer in time', async () => {
+    const relay = new Relay();
+    relay.attach('alice', new FakeTab());
+    relay.onTabMessage('alice', JSON.stringify({ type: 'status', flex: 'connected', session: false }));
+    expect(await relay.freshStatus('alice', 50)).toMatchObject({ attached: true, session: false });
+    expect(await new Relay().freshStatus('bob', 50)).toMatchObject({ attached: false });
+  });
+
   it('ignores malformed tab messages without crashing', () => {
     const relay = new Relay();
     relay.attach('alice', new FakeTab());

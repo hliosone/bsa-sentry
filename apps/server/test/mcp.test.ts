@@ -143,6 +143,14 @@ describe('sentry_status', () => {
     expect(r.structuredContent).toMatchObject({ bridge: 'attached', flex: 'connected', session: true, budget: { spent: '3', total: '20' } });
   });
 
+  it('asks the Flex for a fresh status rather than reporting a stale cached one', async () => {
+    const { client } = await connect({
+      status: () => ({ attached: true, flex: 'connected', session: false }),
+      freshStatus: async () => ({ attached: true, flex: 'connected', session: true }),
+    });
+    expect(text(await client.callTool({ name: 'sentry_status', arguments: {} }))).toMatch(/Agent session: on/);
+  });
+
   it('says plainly when no tab is open', async () => {
     const { client } = await connect({ status: () => ({ attached: false, flex: 'disconnected', session: false }) });
     expect(text(await client.callTool({ name: 'sentry_status', arguments: {} }))).toMatch(/open the BSA Sentry tab/i);

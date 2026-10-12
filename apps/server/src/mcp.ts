@@ -18,6 +18,8 @@ export type McpDeps = {
   explorer: string;
   agent: { fetch(account: string, req: { url: string; method?: string; body?: string }): Promise<X402Result> };
   status(account: string): TabStatus;
+  /** A status read from the Flex now, when available; `status` is the cached one. */
+  freshStatus?(account: string): Promise<TabStatus>;
   hasBackup(account: string): boolean;
   /** Asks the account's tab to start the restore flow. False if no tab is attached. */
   requestRestore(account: string): boolean;
@@ -83,7 +85,7 @@ export function buildMcpServer(deps: McpDeps): McpServer {
       inputSchema: {},
     },
     async () => {
-      const s = deps.status(deps.account);
+      const s = deps.freshStatus ? await deps.freshStatus(deps.account) : deps.status(deps.account);
       if (!s.attached) {
         return ok('No BSA Sentry tab is attached. Ask the user to open the BSA Sentry tab in Chrome with their Flex plugged in.',
           { bridge: 'detached', flex: 'disconnected', session: false });

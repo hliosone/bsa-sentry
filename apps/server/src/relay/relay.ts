@@ -115,6 +115,24 @@ export class Relay {
     return true;
   }
 
+  /**
+   * Asks the tab for a new status and waits for it, up to `timeoutMs`. The tab reports only when
+   * something happens, so the cached status can be stale (a session armed on the Flex since).
+   */
+  freshStatus(account: string, timeoutMs = 4000): Promise<TabStatus> {
+    if (!this.refreshState(account)) return Promise.resolve(this.status(account));
+    return new Promise((resolve) => {
+      const done = () => {
+        clearTimeout(timer);
+        this.events.off('status', onStatus);
+        resolve(this.status(account));
+      };
+      const onStatus = (e: { account: string }) => { if (e.account === account) done(); };
+      const timer = setTimeout(done, timeoutMs);
+      this.events.on('status', onStatus);
+    });
+  }
+
   private enqueue(account: string, message: Record<string, unknown>): Promise<RelayAnswer> {
     const a = this.account(account);
     if (!a.tab) return Promise.resolve({ ok: false, reason: 'DISCONNECTED' });

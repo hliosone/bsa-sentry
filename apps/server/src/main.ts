@@ -66,6 +66,7 @@ export async function startBsaServer(env: BsaServerEnv = process.env, opts: { po
       app.use(mcpRouter({
         db, baseUrl, explorer: chain.explorer, agent,
         status: (a) => relay.status(a),
+        freshStatus: (a) => relay.freshStatus(a),
         hasBackup: (a) => !!db.prepare('SELECT 1 FROM vault WHERE account = ?').get(a),
         requestRestore: (a) => relay.requestRestore(a),
       }));
