@@ -250,6 +250,13 @@ DMK app switching, LKRP on the device, the Procivis scan, claude.ai) are built, 
 Speculos/fakes, and listed in `docs/PHASE_C_GUIDE.md`.
 
 ## Decisions
+- **Phase C: TOP_UP — 0xMAIN may now transfer USDC, but only to the device's own 0xAGENT**
+  (the human asked for a one-tap "top up the agent from my main account" after the tradeoff was
+  explained). Invariant 5 becomes "0xMAIN signs only Login, Bind, AgentDelegation and top-ups to
+  its own agent". The recipient is not in the payload (a test proves 20 extra bytes are refused),
+  the active rules' chain and token are required, every top-up is reviewed and held, and the
+  agent's budget counters are untouched. The server recovers the signer and checks the balance
+  before submitting (it pays the gas), then confirms the transfer in the receipt.
 - **M6: 18+ is computed from `birthdate`** (correction from the human, who tested the real
   wallet: the PID has no `age_over_18` claim). Only `birthdate` is requested (not the name the
   reference also asked for); it is used in memory for one comparison and never stored or logged.

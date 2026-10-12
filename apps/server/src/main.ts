@@ -18,6 +18,7 @@ import { vaultRouter } from './vault.js';
 import { ageVerifier } from './facilitator/age.js';
 import { privateKeyToAccount } from 'viem/accounts';
 import { shopsProxy } from './shops-proxy.js';
+import { topupRouter } from './topup.js';
 
 export type BsaServerEnv = Record<string, string | undefined>;
 
@@ -52,9 +53,11 @@ export async function startBsaServer(env: BsaServerEnv = process.env, opts: { po
     authenticateSocket: (req) => readSession(req, secret, now),
     webOrigin: env.WEB_ORIGIN,
     log,
-    extend: (app, { relay, agent }) => {
+    extend: (app, { relay, agent, facilitator }) => {
       // The demo shops under this server's own address, so a live demo needs one tunnel.
       if (env.SHOPS_UPSTREAM) app.use('/shops', ...shopsProxy(env.SHOPS_UPSTREAM));
+      // 0xMAIN -> its own 0xAGENT, signed on the Flex; the server only checks and submits it.
+      app.use('/topup', topupRouter({ secret, now, deps: facilitator, agentOf: (a) => relay.status(a).agent }));
       app.use('/auth', authRouter({
         db, chainId: chain.chainId, origin: webOrigin, secret, now, secureCookie: baseUrl.startsWith('https://'),
       }));

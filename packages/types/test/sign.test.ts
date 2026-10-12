@@ -5,11 +5,36 @@ import { describe, expect, it } from 'vitest';
 import { bytesToHex } from 'viem';
 import {
   MAX_AGENT_NAME_BYTES, MAX_CLAIMS, MAX_CLAIM_BYTES, MAX_ORIGIN_BYTES, MAX_VERIFIER_BYTES,
-  encodeLoginPayload, encodeBindPayload, encodeDelegationPayload,
+  encodeLoginPayload, encodeBindPayload, encodeDelegationPayload, encodeTopUpPayload, INS,
 } from '../src/index.js';
 
 const b32 = (h: string) => `0x${h.repeat(32)}` as const;
 const AGENT = '0xaa6abf8f8c5f003a69d26d12d5a625da77e2d9bf' as const;
+
+describe('TopUp payload (0xMAIN -> its own 0xAGENT)', () => {
+  const f = {
+    chainId: 5042002n, token: '0x3600000000000000000000000000000000000000' as const, value: 20_000_000n,
+    validAfter: 0n, validBefore: 4_000_000_000n, nonce: `0x${'ab'.repeat(32)}` as const,
+  };
+
+  it('is chainId(8) | token(20) | value(32) | validAfter(32) | validBefore(32) | nonce(32): no recipient', () => {
+    const b = encodeTopUpPayload(f);
+    expect(b.length).toBe(156);
+    expect(bytesToHex(b.slice(0, 8))).toBe('0x00000000004cef52');
+    expect(bytesToHex(b.slice(8, 28))).toBe(f.token);
+    expect(BigInt(bytesToHex(b.slice(28, 60)))).toBe(20_000_000n);
+    expect(BigInt(bytesToHex(b.slice(92, 124)))).toBe(4_000_000_000n);
+    expect(bytesToHex(b.slice(124))).toBe(f.nonce);
+  });
+
+  it('rejects a zero amount', () => {
+    expect(() => encodeTopUpPayload({ ...f, value: 0n })).toThrow();
+  });
+
+  it('has an INS of its own', () => {
+    expect(INS.TOP_UP).toBe(0x14);
+  });
+});
 
 describe('Login payload', () => {
   const base = { chainId: 5042002n, origin: 'https://bsa-sentry.ch', nonce: b32('01'), issuedAt: 1_760_000_000n, expiresAt: 1_760_000_300n };

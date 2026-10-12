@@ -56,6 +56,7 @@ export const INS = {
   STORE_CREDENTIALS: 0x11,
   GET_CREDENTIALS: 0x12,
   RESTORE: 0x13,
+  TOP_UP: 0x14,
 } as const;
 
 /** Arms or disarms the agent through the device UI, reading the truth back from GET_STATE. */

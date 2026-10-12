@@ -100,3 +100,6 @@ ul.grants li { display: flex; justify-content: space-between; align-items: cente
 .qr svg { width: 100%; height: auto; display: block; }
 .pulse.inline { display: inline-block; width: 9px; height: 9px; margin-right: 6px; vertical-align: middle; }
 .inline-field { display: flex; flex-direction: column; gap: 6px; font-weight: 600; max-width: 360px; margin: 10px 0 14px; }
+
+.topup { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
+.topup input { width: 7rem; }

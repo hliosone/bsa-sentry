@@ -34,6 +34,8 @@ export const INS = {
   STORE_CREDENTIALS: 0x11,
   GET_CREDENTIALS: 0x12,
   RESTORE: 0x13,
+  /** 0xMAIN -> the device's own 0xAGENT, after a review. The recipient is never sent. */
+  TOP_UP: 0x14,
 } as const;
 
 export type Ins = (typeof INS)[keyof typeof INS];

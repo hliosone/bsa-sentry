@@ -7,6 +7,8 @@ import { api, relayUrl, type Config } from './api.js';
 import { feedReducer, initialFeed, type FeedEvent } from './state/feed.js';
 import { connectFlex, reconnectFlex, type FlexConnection } from './device/flex.js';
 import type { FlowDeps } from './keyring/flows.js';
+import type { Hex } from 'viem';
+import { parseUsdc } from './state/rules.js';
 import type { KeyRing } from './keyring/keyring.js';
 
 /** The slice of sentry-signer the website uses; the dev-only fake device implements it too. */
@@ -171,6 +173,23 @@ export function useBsa() {
     await refreshDevice();
   }), [run, onDevice, refreshDevice]);
 
+  /** 0xMAIN -> the agent, signed on the Flex (which picks the recipient itself), submitted by the server. */
+  const topUp = useCallback((amount: string) => run('Check the top-up on your Flex (amount, from your main account, to your agent), then hold to sign…', async () => {
+    const value = parseUsdc(amount);
+    if (!value || !config) throw new Error('Enter an amount in USDC');
+    const validBefore = BigInt(Math.floor(Date.now() / 1000) + 3600);
+    const nonce = `0x${Array.from(crypto.getRandomValues(new Uint8Array(32)), (x) => x.toString(16).padStart(2, '0')).join('')}` as Hex;
+    const signature = await onDevice((s) => s.topUp({ chainId: BigInt(config.chainId), token: config.usdc as Hex, value, validAfter: 0n, validBefore, nonce }));
+    const r = await fetch('/topup', {
+      method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ value: value.toString(), validAfter: '0', validBefore: validBefore.toString(), nonce, signature }),
+    });
+    const body = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(body.error ?? 'the top-up was refused');
+    await refreshDevice();
+    return body as { txHash: string; amount: string };
+  }), [run, onDevice, config, refreshDevice]);
+
   const logout = useCallback(async () => { await api.logout(); setAccount(null); }, []);
 
   // ---------------------------------------------------------------- Key Ring backup / restore
@@ -255,7 +274,7 @@ export function useBsa() {
 
   return {
     config, account, signer, addresses, bridgeStatus, device, feed, busy, error, hasBackup, prompt,
-    connect, login, setRules, clearRules, refreshDevice, logout, onDevice, run, flowDeps,
+    connect, login, setRules, clearRules, refreshDevice, logout, onDevice, run, flowDeps, topUp,
     dismissBanner: () => dispatch({ type: 'dismiss' }),
     clearError: () => setError(null),
   };

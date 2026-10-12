@@ -56,6 +56,13 @@ export function fakeSigner() {
         domain: sentryDomain(Number(m.chainId)), types: { Bind: EIP712_TYPES.Bind }, primaryType: 'Bind',
         message: { verifier: m.verifier, session: m.session, expiresAt: m.expiresAt },
       })),
+    topUp: async (m: { chainId: bigint; token: `0x${string}`; value: bigint; validAfter: bigint; validBefore: bigint; nonce: `0x${string}` }) =>
+      toWireSignature(await main.signTypedData({
+        domain: paymentDomain(Number(m.chainId), m.token),
+        types: { TransferWithAuthorization: EIP712_TYPES.TransferWithAuthorization },
+        primaryType: 'TransferWithAuthorization',
+        message: { from: main.address, to: agent.address, value: m.value, validAfter: m.validAfter, validBefore: m.validBefore, nonce: m.nonce },
+      })),
     signDelegation: async (m: { chainId: bigint; agent: `0x${string}`; agentName: string; attestation: `0x${string}`; claims: string[]; expiresAt: bigint; nonce: `0x${string}` }) => {
       const { chainId, ...message } = m;
       return toWireSignature(await main.signTypedData({

@@ -189,6 +189,9 @@ describe('instruction set', () => {
       GET_ADDRESS: 0x08, SET_POLICY: 0x0a, PAY: 0x0b, GET_STATE: 0x0c, CLEAR_POLICY: 0x0d,
       SIGN_BIND: 0x0e, SIGN_LOGIN: 0x0f, SIGN_DELEGATION: 0x10, STORE_CREDENTIALS: 0x11,
       GET_CREDENTIALS: 0x12, RESTORE: 0x13,
+      // Added in Phase C at the human's request: 0xMAIN tops up the device's OWN 0xAGENT, always
+      // after a review and a hold. It still is not a silent or a free-recipient signature.
+      TOP_UP: 0x14,
     });
     // The feasibility app had PING 0x07, SIGN_3009 0x09 (tap) and SIGN_3009_SILENT 0x0F
     // (no policy, no tap). None of them exist here; 0x0F is SIGN_LOGIN, which always taps.

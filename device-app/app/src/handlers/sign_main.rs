@@ -268,3 +268,68 @@ fn hex_of(bytes: &[u8]) -> String {
     }
     s
 }
+
+/// TOP_UP: 0xMAIN authorizes a USDC transfer to this device's OWN 0xAGENT.
+/// Payload: chainId(8) | token(20) | value(32) | validAfter(32) | validBefore(32) | nonce(32)
+///
+/// The one transfer 0xMAIN ever signs, added at the user's request: there is no recipient in the
+/// payload, the device fills in its own agent address, so a host can never redirect it. It only
+/// moves the token on the chain of the active rules, always after a review and a hold, and it
+/// leaves the agent's budget untouched (a top-up is not an agent spend).
+pub fn handler_top_up<'a, const N: usize>(
+    command: Command<'a, N>,
+) -> Result<CommandResponse<'a, N>, AppError> {
+    let data = command.get_data();
+    let mut r = Reader::new(data);
+    let chain_id = r.u64()?;
+    let token = r.arr20()?;
+    let value = r.arr32()?;
+    let valid_after = r.arr32()?;
+    let valid_before = r.arr32()?;
+    let nonce = r.arr32()?;
+    r.finish()?;
+
+    let policy = store::policy();
+    if !policy.active {
+        return Err(AppError::Refused(RefusalReason::NoPolicy));
+    }
+    if chain_id != policy.chain_id || token != policy.token {
+        return Err(AppError::Refused(RefusalReason::WrongChainOrToken));
+    }
+    if value == [0u8; 32] {
+        return Err(AppError::Refused(RefusalReason::InvalidAmount));
+    }
+
+    let main = crypto::address(Account::Main)?;
+    let agent = crypto::address(Account::Agent)?;
+    let digest = eip712::payment_digest::<DeviceKeccak>(
+        chain_id, &token, &main, &agent, &value, &valid_after, &valid_before, &nonce,
+    );
+    let amount = fmt::amount_u256(&value);
+    let main_shown = fmt::address(&main);
+    let agent_shown = fmt::address(&agent);
+    let chain = fmt::chain_name(chain_id);
+
+    let comm = command.into_comm();
+    let approved = NbglReview::new()
+        .tx_type(TransactionType::Transaction)
+        .titles("Top up your agent", "From your main account to your agent", "Top up")
+        .show(
+            comm,
+            &[
+                Field { name: "Amount", value: &amount },
+                Field { name: "From: your main account", value: &main_shown },
+                Field { name: "To: your agent", value: &agent_shown },
+                Field { name: "Network", value: &chain },
+            ],
+        );
+    show_home();
+    if !approved {
+        return Err(AppError::Refused(RefusalReason::UserRejected));
+    }
+
+    let sig = crypto::sign_digest(Account::Main, &digest)?;
+    let mut response = comm.begin_response();
+    response.append(&sig)?;
+    Ok(response)
+}

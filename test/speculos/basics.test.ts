@@ -79,8 +79,12 @@ describe('the dangerous commands from the feasibility app are gone', () => {
     expect(r.data.length, 'no signature bytes may come back').toBeLessThan(65);
   });
 
-  it('has no blob commands at 0x14', async () => {
-    expect((await send(0x14)).sw).toBe(SW.INS_NOT_SUPPORTED);
+  it('0x14 is no longer the feasibility blob command: it is TOP_UP, and an empty payload gets nothing back', async () => {
+    // The feasibility app stored arbitrary blobs at 0x14. TOP_UP (added in Phase C) needs its
+    // exact 156-byte payload and a review; anything else is a wrong length with no data.
+    const r = await send(0x14);
+    expect(r.sw).toBe(SW.WRONG_LENGTH);
+    expect(r.data).toHaveLength(0);
   });
 
   it('refuses an instruction outside the set', async () => {

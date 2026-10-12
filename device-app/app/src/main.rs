@@ -29,7 +29,7 @@ use handlers::get_version::handler_get_version;
 use handlers::pay::handler_pay;
 use handlers::policy::{handler_clear_policy, handler_set_policy};
 use handlers::credentials::{handler_get_credentials, handler_restore, handler_store_credentials};
-use handlers::sign_main::{handler_sign_bind, handler_sign_delegation, handler_sign_login};
+use handlers::sign_main::{handler_sign_bind, handler_sign_delegation, handler_sign_login, handler_top_up};
 use ledger_device_sdk::io::{self, init_comm, ApduHeader, Command, Reply};
 use ledger_device_sdk::nbgl::{NbglAddressReview, NbglGlyph};
 
@@ -116,6 +116,7 @@ pub enum Instruction {
     StoreCredentials { first: bool, last: bool },
     GetCredentials { chunk: u8 },
     Restore { first: bool, last: bool },
+    TopUp,
     #[cfg(feature = "diag")]
     Diag { p1: u8, p2: u8 },
 }
@@ -155,9 +156,10 @@ impl TryFrom<ApduHeader> for Instruction {
                 let (first, last) = chunked(value.p1, value.p2);
                 Ok(Instruction::Restore { first, last })
             }
+            (0x14, 0, 0) => Ok(Instruction::TopUp),
             #[cfg(feature = "diag")]
             (0x7e, p1, p2) => Ok(Instruction::Diag { p1, p2 }),
-            (0x03 | 0x04 | 0x08 | 0x0a..=0x13, _, _) => Err(AppSW::WrongP1P2),
+            (0x03 | 0x04 | 0x08 | 0x0a..=0x14, _, _) => Err(AppSW::WrongP1P2),
             (_, _, _) => Err(AppSW::InsNotSupported),
         }
     }
@@ -244,6 +246,7 @@ fn handle_apdu<'a, const N: usize>(
         Instruction::StoreCredentials { first, last } => handler_store_credentials(command, *first, *last),
         Instruction::GetCredentials { chunk } => handler_get_credentials(command, *chunk),
         Instruction::Restore { first, last } => handler_restore(command, *first, *last),
+        Instruction::TopUp => handler_top_up(command),
         #[cfg(feature = "diag")]
         Instruction::Diag { p1, p2 } => {
             let mut response = command.into_response();

@@ -76,7 +76,7 @@ Details: [`docs/EUDIW.md`](docs/EUDIW.md).
 2. The device builds every digest from raw fields; no "sign this hash" command exists.
 3. Payees match on the address; labels are display-only; "Pay once" never adds a payee.
 4. Spend counters are persisted before a signature leaves the device.
-5. The identity key (`0xMAIN`) signs only Login, Bind and AgentDelegation, always with a tap.
+5. The identity key (`0xMAIN`) signs only Login, Bind, AgentDelegation and top-ups to the device's own agent (the device picks the recipient), always after a review and a hold.
 6. The server can only request; the facilitator re-verifies credentials and their link to the payer.
 7. OAuth tokens only allow requesting payments, and are revocable.
 8. No personal data is stored anywhere; the vault holds ciphertext only.

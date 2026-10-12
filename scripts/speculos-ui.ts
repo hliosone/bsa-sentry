@@ -135,7 +135,9 @@ export async function rejectReview() {
   await waitForText(/reject|refuser/i);
   await tapText(/^reject$|^refuser$/i);
   await sleep(400);
-  const confirm = (await currentScreen()).find((e) => /yes, reject|reject transaction|oui/i.test(e.text));
+  // The button, never the "Reject transaction?" title above it.
+  const screen = await currentScreen();
+  const confirm = screen.find((e) => /^yes, reject/i.test(e.text)) ?? screen.find((e) => /yes, reject/i.test(e.text));
   if (confirm) {
     await tapAt(Math.round(confirm.x + confirm.w / 2), Math.round(confirm.y + confirm.h / 2));
     await sleep(400);

@@ -99,6 +99,7 @@ test('onboarding, then the dashboard follows what the agent does', async ({ page
   // The dashboard, then the agent asks for money through the real server.
   await page.goto(`${web}/?fakeDevice=1#/dashboard`);
   await expect(page.getByTestId('budget-left')).toContainText('20');
+  await expect(page.getByTestId('topup')).toBeVisible();
   const account = (await page.evaluate(() => fetch('/auth/me').then((r) => r.json()))).account as string;
 
   // The prompt-injection deposit: the device refuses it, the banner says why.

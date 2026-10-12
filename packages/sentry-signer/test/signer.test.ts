@@ -326,3 +326,18 @@ describe('status reporting for the bridge', () => {
     expect(await new SentrySigner(dead).probe()).toMatchObject({ flex: 'disconnected' });
   });
 });
+
+describe('topUp', () => {
+  it('sends TOP_UP with the 156-byte payload and returns the device signature (v | r | s)', async () => {
+    const sig = new Uint8Array(65).fill(7);
+    sig[0] = 27;
+    const { t, signer } = signerWith(new Uint8Array([...sig, 0x90, 0x00]));
+    const out = await signer.topUp({
+      chainId: 5042002n, token: '0x3600000000000000000000000000000000000000', value: 20_000_000n,
+      validAfter: 0n, validBefore: 4_000_000_000n, nonce: `0x${'ab'.repeat(32)}`,
+    });
+    expect(t.header().ins).toBe(0x14);
+    expect(t.header().data).toHaveLength(156);
+    expect(out).toBe(`0x1b${'07'.repeat(64)}`);
+  });
+});

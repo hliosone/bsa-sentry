@@ -84,3 +84,27 @@ export function encodeDelegationPayload(m: {
     fixed('nonce', m.nonce, 32),
   ]);
 }
+
+const u256 = (name: string, v: bigint): Uint8Array => {
+  if (v < 0n || v >= 2n ** 256n) throw new Error(`${name} does not fit in a u256: ${v}`);
+  const out = new Uint8Array(32);
+  for (let i = 31; i >= 0; i--) out[i] = Number((v >> BigInt((31 - i) * 8)) & 0xffn);
+  return out;
+};
+
+/**
+ * TOP_UP: a USDC `TransferWithAuthorization` from 0xMAIN to the device's own 0xAGENT. There is
+ * deliberately no recipient field: the device fills in its own agent address, so no host can
+ * redirect a top-up anywhere else.
+ */
+export function encodeTopUpPayload(m: { chainId: bigint; token: Hex; value: bigint; validAfter: bigint; validBefore: bigint; nonce: Hex }) {
+  if (m.value === 0n) throw new Error('a top-up must move a non-zero amount');
+  return concat([
+    u64('chainId', m.chainId),
+    fixed('token', m.token, 20),
+    u256('value', m.value),
+    u256('validAfter', m.validAfter),
+    u256('validBefore', m.validBefore),
+    fixed('nonce', m.nonce, 32),
+  ]);
+}

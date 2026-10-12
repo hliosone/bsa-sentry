@@ -64,7 +64,7 @@ claude.ai  <--content + receipt {decision, amount, payee, txHash}--
 ## 5.1 Keys and accounts
 
 - `0xMAIN` = `m/44'/60'/0'/0/0` — the user's account/identity. The app signs **only** `Login`,
-  `Bind`, `AgentDelegation` with it, **always with a tap**. Never a transfer.
+  `Bind`, `AgentDelegation` with it, **always with a tap** — plus TOP_UP transfers to **its own** 0xAGENT (Phase C).
 - `0xAGENT` = `m/44'/60'/1'/0/0` — signs EIP-3009 payments under the policy.
 - The app manifest allows `44'/60'` on secp256k1.
 
@@ -134,6 +134,7 @@ the host.** Golden vectors for every type are generated with viem into
 | `11` | STORE_CREDENTIALS | no | chunked; checks the delegation is signed by **its own** 0xMAIN and targets **its own** 0xAGENT |
 | `12` | GET_CREDENTIALS | no | chunked read, or "empty" |
 | `13` | RESTORE | yes | policy + payees + credentials from a backup, full review. Either raise the buffer to 2048 or restore in two commands (policy, then credentials) — **decide with a test** |
+| `14` | TOP_UP | yes | 0xMAIN → **its own** 0xAGENT (USDC `TransferWithAuthorization`): 156 B `chainId token value validAfter validBefore nonce`, **no recipient field** — the device fills in its own agent; active rules required (same chain + token); review + hold; agent counters untouched. The server checks the signature and the balance, then submits it and pays the gas. Added in Phase C at the human's request |
 
 Chunking: P1 `00` first / `01` next, P2 `80` more / `00` last.
 Reason codes (byte after `6985`): `NO_POLICY`, `NO_SESSION`, `WRONG_CHAIN_OR_TOKEN`,
@@ -284,7 +285,7 @@ Each one has at least one test.
 3. Payee matching is on the **address**; labels are display only; **"Once" never adds a payee**.
 4. Counters are **persisted before** the signature is returned; no silent signature outside the
    policy or without an armed session.
-5. 0xMAIN signs **only** `Login`, `Bind`, `AgentDelegation`, always with a tap.
+5. 0xMAIN signs **only** `Login`, `Bind`, `AgentDelegation`, and TOP_UP transfers to the device's **own** 0xAGENT (the device picks the recipient), always after a review and a hold.
 6. The server can only **request** signatures; the facilitator re-verifies credentials and their
    link to the payer itself.
 7. OAuth tokens only allow requesting payments; they are revocable.

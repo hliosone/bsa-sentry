@@ -23,7 +23,7 @@ export type ServerOptions = {
   relayTimeoutMs?: number;
   log?: (m: string) => void;
   /** Lets M4 mount auth, OAuth and MCP routes before the server starts listening. */
-  extend?: (app: express.Express, ctx: { relay: Relay; agent: Agent }) => void;
+  extend?: (app: express.Express, ctx: { relay: Relay; agent: Agent; facilitator: ReturnType<typeof chainDeps> }) => void;
 };
 
 export type Agent = {
@@ -69,7 +69,7 @@ export function createServer(opts: ServerOptions) {
   });
   app.get('/health', (_req, res) => res.json({ ok: true, chainId: opts.chain.chainId }));
   app.use('/x402', facilitatorRouter(deps, (m) => log(`[facilitator] ${m}`)));
-  opts.extend?.(app, { relay, agent });
+  opts.extend?.(app, { relay, agent, facilitator: deps });
 
   const server: Server = createHttpServer(app);
   const wss = new WebSocketServer({ noServer: true, maxPayload: 64 * 1024 });

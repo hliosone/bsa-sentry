@@ -13,7 +13,7 @@
 import {
   CLA, INS, MAX_APDU_DATA, REFUSAL_REASON_BY_BYTE, SW, decodeCredentials, decodeState,
   encodeBindPayload, encodeChunks, encodeCredentials, encodeDelegationPayload,
-  encodeLoginPayload, encodePolicy, splitCredentials, splitSignature,
+  encodeLoginPayload, encodeTopUpPayload, encodePolicy, splitCredentials, splitSignature,
   type BridgeReason, type CredentialParts, type Credentials, type DeviceState, type Policy,
   type RefusalReason,
 } from '@bsa-sentry/types';
@@ -173,6 +173,14 @@ export class SentrySigner {
   /** `Login`, signed by 0xMAIN after a tap. Returns the wire signature (v | r | s). */
   async signLogin(m: { chainId: bigint; origin: string; nonce: Hex; issuedAt: bigint; expiresAt: bigint }): Promise<Hex> {
     return toHex(await this.command(INS.SIGN_LOGIN, 0, 0, encodeLoginPayload(m)));
+  }
+
+  /**
+   * TOP_UP: 0xMAIN authorizes a USDC transfer to the device's own 0xAGENT, after a review and a
+   * hold. Returns the device signature (v | r | s); the recipient is chosen by the device.
+   */
+  async topUp(m: { chainId: bigint; token: Hex; value: bigint; validAfter: bigint; validBefore: bigint; nonce: Hex }): Promise<Hex> {
+    return toHex(await this.command(INS.TOP_UP, 0, 0, encodeTopUpPayload(m)));
   }
 
   /** `Bind`, signed by 0xMAIN after a tap. */

@@ -171,7 +171,7 @@ Commands: `pnpm test` · `pnpm test:speculos` · `pnpm e2e` (Speculos + harness 
 
 ### 5.1 Keys
 - `0xMAIN` = `m/44'/60'/0'/0/0` — the user's identity. Signs **only** `Login`, `Bind`,
-  `AgentDelegation`, **always with a tap**. Never a transfer.
+  `AgentDelegation`, **always with a tap** — and, since Phase C, TOP_UP transfers to **its own** 0xAGENT only.
 - `0xAGENT` = `m/44'/60'/1'/0/0` — signs EIP-3009 payments under the policy.
 - Manifest allows `44'/60'` on secp256k1.
 
@@ -223,6 +223,7 @@ Demo values: auto_max **5**, hard_max **50**, budget **20**, max_count **10**, p
 | 11 | STORE_CREDENTIALS | no | chunked; checks the delegation is signed by **its own** 0xMAIN and targets **its own** 0xAGENT |
 | 12 | GET_CREDENTIALS | no | chunked read, or "empty" |
 | 13 | RESTORE | yes | policy + payees + credentials from a backup, full review. Either raise the buffer to 2048 or restore in two commands — **decide with a test** |
+| 14 | TOP_UP | yes | 0xMAIN → **its own** 0xAGENT (USDC `TransferWithAuthorization`): 156 B `chainId token value validAfter validBefore nonce`, **no recipient field** — the device fills in its own agent; active rules required (same chain + token); review + hold; agent counters untouched. Added in Phase C at the human's request |
 
 Reason byte after `6985`: NO_POLICY, NO_SESSION, WRONG_CHAIN_OR_TOKEN, INVALID_AMOUNT,
 OVER_HARD_MAX, USER_REJECTED, TIMEOUT. OS `5515` = locked.
@@ -271,7 +272,7 @@ Claude via MCP.
 3. Payee matching is on the **address**; labels are display only; **"Once" never adds a payee**.
 4. Counters are **persisted before** the signature is returned; no silent signature outside the
    policy or without an armed session.
-5. 0xMAIN signs **only** Login, Bind, AgentDelegation, always with a tap.
+5. 0xMAIN signs **only** Login, Bind, AgentDelegation, and TOP_UP transfers to the device's **own** 0xAGENT (recipient chosen by the device), always after a review and a hold.
 6. The server can only **request** signatures; the facilitator re-verifies credentials and their
    link to the payer itself.
 7. OAuth tokens only allow requesting payments; they are revocable.

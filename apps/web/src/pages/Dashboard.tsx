@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { Bsa } from '../useBsa.js';
 import { shortAddr, time, usdc } from '../format.js';
 
@@ -61,11 +62,33 @@ export function Dashboard({ bsa }: { bsa: Bsa }) {
         )}
       </section>
 
+      <TopUp bsa={bsa} />
       <section className="card">
         <h2>Emergency stop</h2>
         <p>Erases the rules and trusted merchants from the Flex. The agent cannot pay anything until you set new rules.</p>
         <button className="danger" disabled={!p?.active || !!bsa.busy} onClick={() => void bsa.clearRules()} data-testid="kill">Block the agent</button>
       </section>
     </>
+  );
+}
+
+/** Moves USDC from the user's main account to the agent. The Flex picks the recipient itself. */
+function TopUp({ bsa }: { bsa: Bsa }) {
+  const [amount, setAmount] = useState('20');
+  const [done, setDone] = useState<{ txHash: string; amount: string } | null>(null);
+  return (
+    <section className="card">
+      <h2>Top up the agent</h2>
+      <p>Move USDC from your main account (0xMAIN) to your agent (0xAGENT). Your Flex shows the amount and both full addresses, and you hold to sign. The recipient is always your own agent: the Flex fills it in itself.</p>
+      <div className="topup">
+        <input value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal" aria-label="Amount in USDC" data-testid="topup-amount" /> USDC
+        <button className="primary" disabled={!bsa.signer || !!bsa.busy} onClick={async () => { setDone(null); const r = await bsa.topUp(amount); if (r) setDone(r); }} data-testid="topup">Top up from my main account</button>
+      </div>
+      {done && (
+        <p className="ok" data-testid="topup-done">
+          Topped up {done.amount} USDC{bsa.config && <> · <a href={`${bsa.config.explorer}/tx/${done.txHash}`} target="_blank" rel="noreferrer">view on Arc ↗</a></>}
+        </p>
+      )}
+    </section>
   );
 }
