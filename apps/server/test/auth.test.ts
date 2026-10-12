@@ -1,4 +1,4 @@
-// "Se connecter avec Ledger": the Flex signs an EIP-712 Login with 0xMAIN, the server
+// "Log in with Ledger": the Flex signs an EIP-712 Login with 0xMAIN, the server
 // checks it and sets a session cookie. Every way a login can be forged or replayed fails.
 import { describe, expect, it } from 'vitest';
 import express from 'express';

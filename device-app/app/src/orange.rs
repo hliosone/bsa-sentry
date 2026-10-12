@@ -59,10 +59,10 @@ unsafe extern "C" fn on_action(token: core::ffi::c_int, index: u8) {
     diag::record(token as u8, index);
     CHOICE = match (token as u8, index) {
         // The two stacked buttons share one token; NBGL passes 0 for the top, 1 for the bottom.
-        (TOKEN_CHOICE, 0) if TRUST_OFFERED => 2, // Faire confiance
-        (TOKEN_CHOICE, 1) if TRUST_OFFERED => 1, // Une fois
-        (TOKEN_ONCE_ONLY, _) => 1,               // the single "Une fois" button
-        // Anything else, including the "Refuser" header, is a refusal.
+        (TOKEN_CHOICE, 0) if TRUST_OFFERED => 2, // Trust merchant
+        (TOKEN_CHOICE, 1) if TRUST_OFFERED => 1, // Pay once
+        (TOKEN_ONCE_ONLY, _) => 1,               // the single "Pay once" button
+        // Anything else, including the "Reject" header, is a refusal.
         _ => 0,
     };
     ENDED = true;
@@ -70,7 +70,7 @@ unsafe extern "C" fn on_action(token: core::ffi::c_int, index: u8) {
 
 pub struct OrangeScreen<'a> {
     pub amount: &'a str,
-    /// The payee's label if it is already trusted, otherwise `None` -> "Marchand inconnu".
+    /// The payee's label if it is already trusted, otherwise `None` -> "Unknown merchant".
     pub payee_label: Option<&'a str>,
     pub full_address: &'a str,
     /// What the agent claims, shown as unverified. Never used for any decision.
@@ -83,10 +83,10 @@ pub struct OrangeScreen<'a> {
 /// screen is drawn underneath the buttons rather than wrapped.
 fn reason_text(reason: OrangeReason) -> &'static str {
     match reason {
-        OrangeReason::UnknownPayee => "Marchand inconnu",
-        OrangeReason::OverAutoMax => "Hors limite auto",
-        OrangeReason::BudgetExceeded => "Budget depasse",
-        OrangeReason::CountExceeded => "Trop de paiements",
+        OrangeReason::UnknownPayee => "Unknown merchant",
+        OrangeReason::OverAutoMax => "Above auto limit",
+        OrangeReason::BudgetExceeded => "Budget exceeded",
+        OrangeReason::CountExceeded => "Too many payments",
     }
 }
 
@@ -99,30 +99,30 @@ pub fn ask<const N: usize>(comm: &mut Comm<N>, screen: &OrangeScreen<'_>) -> Cho
     // or shrink here: a sixth line is drawn *underneath* the buttons, which hid exactly
     // the "(non verifie)" caveat the user most needs to see. See docs/DX_NOTES.md.
     //
-    //   1  Payer 2 USDC sur Arc ?
-    //   2  Marchand inconnu
+    //   1  Pay 2 USDC on Arc?
+    //   2  Unknown merchant
     //   3  0xdd70bd3cde251346c0ddfc
     //   4  7a4db3056bb26f1e50
-    //   5  "Bar du coin" non verifie
+    //   5  "Corner bar" unverified
     //
     // The token and the chain ride in the title so every screen shows them, as the spec
     // requires, without spending a line of its own.
-    let title = fmt::cstr(&alloc::format!("Payer {} sur Arc ?", screen.amount));
+    let title = fmt::cstr(&alloc::format!("Pay {} on Arc?", screen.amount));
     let reason = fmt::cstr(reason_text(screen.reason));
     let address = fmt::cstr(screen.full_address);
     // The agent's claim never appears without its caveat, on one line, so it can never be
     // read as something the device vouches for. The hint is clipped because it is
     // host-supplied and must not be able to push anything else off the screen.
     let footer = match screen.hint {
-        Some(h) => fmt::cstr(&alloc::format!("\"{}\" non verifie", fmt::clip(h, 12))),
+        Some(h) => fmt::cstr(&alloc::format!("\"{}\" unverified", fmt::clip(h, 12))),
         None => match screen.payee_label {
-            Some(l) => fmt::cstr(&alloc::format!("{} (enregistre)", fmt::clip(l, 11))),
+            Some(l) => fmt::cstr(&alloc::format!("{} (saved)", fmt::clip(l, 11))),
             None => fmt::cstr("USDC . Arc testnet"),
         },
     };
-    let refuser = fmt::cstr("Refuser");
-    let once = fmt::cstr("Une fois");
-    let trust = fmt::cstr("Faire confiance");
+    let refuser = fmt::cstr("Reject");
+    let once = fmt::cstr("Pay once");
+    let trust = fmt::cstr("Trust merchant");
 
     unsafe {
         ENDED = false;
@@ -154,7 +154,7 @@ pub fn ask<const N: usize>(comm: &mut Comm<N>, screen: &OrangeScreen<'_>) -> Cho
         };
         let layout = nbgl_layoutGet(&desc);
 
-        // "Refuser" in the header. HEADER_RIGHT_TEXT makes the whole header bar the touch
+        // "Reject" in the header. HEADER_RIGHT_TEXT makes the whole header bar the touch
         // target; HEADER_BACK_AND_TEXT only makes its (undrawn) back arrow touchable.
         let header = nbgl_layoutHeader_t {
             type_: HEADER_RIGHT_TEXT,

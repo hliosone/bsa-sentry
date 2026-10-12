@@ -4,7 +4,7 @@
 //   SMOKE_TRANSPORT=hid pnpm smoke   against a real Flex, you tap (Phase C)
 //
 // Same assertions either way: the only difference is the transport and who presses.
-// Covers the four behaviours the product is about: an automatic payment, the orange screen
+// Covers the four behaviours the product is about: an automatic payment, the confirmation screen
 // with each of its three answers, the 60 s auto-refusal, and an outright refusal.
 import 'dotenv/config';
 import { recoverTypedDataAddress } from 'viem';
@@ -71,7 +71,7 @@ async function answering<T>(call: Promise<T>, instruction: string, tap: () => Pr
 const demoPolicy = (): Policy => ({
   active: true, chainId: ARC, token: TOKEN,
   autoMax: 5n * USDC, hardMax: 50n * USDC, budget: 20n * USDC, maxCount: 10,
-  payees: [{ address: CAFE, label: 'Cafe Sat' }, { address: RESTO, label: 'Resto' }],
+  payees: [{ address: CAFE, label: 'Cafe Sat' }, { address: RESTO, label: 'Restaurant' }],
 });
 
 let nonceCounter = 0;
@@ -133,48 +133,48 @@ async function main() {
     if ((await signer.getState()).spent !== 3n * USDC) throw new Error('the budget did not move');
   });
 
-  console.log('\nOutside the rules: the orange screen');
-  await check('"Refuser" refuses and spends nothing', async () => {
+  console.log('\nOutside the rules: the confirmation screen');
+  await check('"Reject" refuses and spends nothing', async () => {
     const before = (await signer.getState()).spent;
     const e = await answering(
-      signer.pay(payment(RESTO, 20n * USDC), { hint: 'Resto' }),
-      'tap "Refuser"',
-      async () => { await ui.waitForText(/Payer/i); await ui.tapText('Refuser'); },
+      signer.pay(payment(RESTO, 20n * USDC), { hint: 'Restaurant' }),
+      'tap "Reject"',
+      async () => { await ui.waitForText(/on Arc\?/i); await ui.tapText('Reject'); },
     );
     if (!(e instanceof DeviceRefusedError) || e.reason !== 'USER_REJECTED') throw new Error(`got ${err(e)}`);
     if ((await signer.getState()).spent !== before) throw new Error('a refusal must not spend');
   });
 
-  // Trusting a merchant comes first: "Faire confiance" is only offered when the unknown
+  // Trusting a merchant comes first: "Trust merchant" is only offered when the unknown
   // payee is the ONLY problem, so it has to run while there is still budget left.
-  await check('"Faire confiance" adds the merchant, which then pays silently', async () => {
+  await check('"Trust merchant" adds the merchant, which then pays silently', async () => {
     const stranger = ('0x' + '5a'.repeat(20)) as `0x${string}`;
     const out = await answering(
-      signer.pay(payment(stranger, 1n * USDC), { hint: 'Kiosque' }),
-      'tap "Faire confiance"',
-      async () => { await ui.waitForText(/Payer/i); await ui.tapText('Faire confiance'); },
+      signer.pay(payment(stranger, 1n * USDC), { hint: 'Kiosk' }),
+      'tap "Trust merchant"',
+      async () => { await ui.waitForText(/on Arc\?/i); await ui.tapText('Trust merchant'); },
     );
     if (out instanceof Error) throw out;
     const added = (await signer.getState()).policy.payees.find((p) => p.address === stranger);
     if (!added) throw new Error('the payee was not added');
-    if (added.label !== 'Kiosque') throw new Error(`label is ${added.label}`);
+    if (added.label !== 'Kiosk') throw new Error(`label is ${added.label}`);
     await signer.pay(payment(stranger, 1n * USDC)); // trusted now: must not prompt
   });
 
-  await check('"Une fois" signs once and adds no payee', async () => {
+  await check('"Pay once" signs once and adds no payee', async () => {
     const before = (await signer.getState()).policy.payees.length;
     const out = await answering(
-      signer.pay(payment(RESTO, 20n * USDC), { hint: 'Resto' }),
-      'tap "Une fois"',
-      async () => { await ui.waitForText(/Payer/i); await ui.tapText('Une fois'); },
+      signer.pay(payment(RESTO, 20n * USDC), { hint: 'Restaurant' }),
+      'tap "Pay once"',
+      async () => { await ui.waitForText(/on Arc\?/i); await ui.tapText('Pay once'); },
     );
     if (out instanceof Error) throw out;
-    if ((await signer.getState()).policy.payees.length !== before) throw new Error('"Une fois" added a payee');
+    if ((await signer.getState()).policy.payees.length !== before) throw new Error('"Pay once" added a payee');
   });
 
   console.log('\nRefused outright');
   await check('400 USDC to an unknown address is OVER_HARD_MAX, with no screen', async () => {
-    const e = await signer.pay(payment(EVIL, 400n * USDC), { hint: 'Depot obligatoire' }).catch((x) => x);
+    const e = await signer.pay(payment(EVIL, 400n * USDC), { hint: 'Mandatory deposit' }).catch((x) => x);
     if (!(e instanceof DeviceRefusedError) || e.reason !== 'OVER_HARD_MAX') throw new Error(`got ${err(e)}`);
   });
 
@@ -186,7 +186,7 @@ async function main() {
       const e = await answering(
         signer.pay(payment(RESTO, 20n * USDC), { hint: 'Patience' }),
         'do not touch the device for 60 seconds',
-        async () => { await ui.waitForText(/Payer/i); },
+        async () => { await ui.waitForText(/on Arc\?/i); },
       );
       const elapsed = (Date.now() - started) / 1000;
       if (!(e instanceof DeviceRefusedError)) throw new Error(`got ${err(e)}`);

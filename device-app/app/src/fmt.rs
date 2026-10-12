@@ -32,7 +32,7 @@ pub fn amount_u256(be: &[u8; 32]) -> String {
         w.copy_from_slice(&be[24..]);
         amount_usdc(u64::from_be_bytes(w))
     } else {
-        format!("0x{} (hors limite)", hex20_of(&be[..8]))
+        format!("0x{} (out of range)", hex20_of(&be[..8]))
     }
 }
 
@@ -41,7 +41,7 @@ pub fn amount_u256(be: &[u8; 32]) -> String {
 pub fn chain_name(chain_id: u64) -> String {
     match chain_id {
         5_042_002 => String::from("Arc testnet"),
-        id => format!("chaine {id}"),
+        id => format!("chain {id}"),
     }
 }
 
@@ -73,7 +73,7 @@ pub fn untrusted_text(raw: &[u8]) -> String {
                 .map(|c| if c.is_ascii_graphic() || c == ' ' { c } else { '?' })
                 .collect();
             if cleaned.is_empty() {
-                String::from("(vide)")
+                String::from("(empty)")
             } else {
                 cleaned
             }

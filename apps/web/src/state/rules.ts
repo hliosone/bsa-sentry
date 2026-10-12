@@ -47,30 +47,30 @@ export function validateRules(form: RulesForm, ctx: { chainId: bigint; token: `0
   const errors: Record<string, string> = {};
   const amount = (field: keyof RulesForm, label: string) => {
     const v = parseUsdc(form[field] as string);
-    if (v === null) errors[field] = `${label} : un montant en USDC, 6 décimales au plus`;
-    else if (v === 0n) errors[field] = `${label} : doit être supérieur à 0`;
+    if (v === null) errors[field] = `${label}: an amount in USDC, at most 6 decimals`;
+    else if (v === 0n) errors[field] = `${label}: must be greater than 0`;
     return v ?? 0n;
   };
-  const autoMax = amount('autoMax', 'Limite automatique');
-  const hardMax = amount('hardMax', 'Plafond absolu');
+  const autoMax = amount('autoMax', 'Automatic limit');
+  const hardMax = amount('hardMax', 'Hard limit');
   const budget = amount('budget', 'Budget');
   if (!errors.autoMax && !errors.hardMax && autoMax > hardMax) {
-    errors.autoMax = 'La limite automatique ne peut pas dépasser le plafond absolu';
+    errors.autoMax = 'The automatic limit cannot be above the hard limit';
   }
 
   const maxCount = Number(form.maxCount.trim());
   if (!/^\d+$/.test(form.maxCount.trim()) || maxCount < 1 || maxCount > 65535) {
-    errors.maxCount = 'Nombre de paiements : un entier entre 1 et 65535';
+    errors.maxCount = 'Number of payments: a whole number between 1 and 65535';
   }
 
-  if (form.payees.length > 8) errors.payees = 'Le Flex garde 8 marchands au plus';
+  if (form.payees.length > 8) errors.payees = 'The Flex keeps at most 8 merchants';
   const seen = new Set<string>();
   form.payees.forEach((p, i) => {
     const label = p.label.trim();
-    if (!label) errors[`payees.${i}.label`] = 'Un nom est requis : le Flex l\'affiche';
-    else if (bytes(label) > 16) errors[`payees.${i}.label`] = 'Nom trop long : 16 octets au plus (les accents comptent double)';
-    if (!isValidAddress(p.address)) errors[`payees.${i}.address`] = 'Adresse invalide (0x suivi de 40 caractères hexadécimaux)';
-    else if (seen.has(p.address.toLowerCase())) errors[`payees.${i}.address`] = 'Ce marchand est déjà dans la liste';
+    if (!label) errors[`payees.${i}.label`] = 'A name is required: the Flex shows it';
+    else if (bytes(label) > 16) errors[`payees.${i}.label`] = 'Name too long: 16 bytes at most (accented letters count double)';
+    if (!isValidAddress(p.address)) errors[`payees.${i}.address`] = 'Invalid address (0x followed by 40 hex characters)';
+    else if (seen.has(p.address.toLowerCase())) errors[`payees.${i}.address`] = 'This merchant is already in the list';
     else seen.add(p.address.toLowerCase());
   });
 

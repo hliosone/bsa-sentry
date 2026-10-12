@@ -280,7 +280,7 @@ fn handler_get_address<const N: usize>(
     let addr = crypto::address(account)?;
     let comm = command.into_comm();
     if display {
-        let title = if account_agent { "Adresse de l'agent" } else { "Votre adresse principale" };
+        let title = if account_agent { "Agent address" } else { "Your main address" };
         let approved = NbglAddressReview::new().glyph(&ICON).review_title(title).show(comm, &fmt::address(&addr));
         show_home();
         if !approved {

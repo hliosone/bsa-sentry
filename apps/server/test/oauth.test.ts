@@ -144,7 +144,7 @@ describe('authorize', () => {
     const c = await register(app);
     const res = await request(app).get(`/oauth/authorize?${authorizeQuery(c.client_id, pkce().challenge)}`);
     expect(res.status).toBe(200);
-    expect(res.text).toMatch(/Se connecter avec Ledger/);
+    expect(res.text).toMatch(/Log in with Ledger/);
     expect(res.text).not.toMatch(/name="csrf"/);
   });
 
@@ -152,7 +152,7 @@ describe('authorize', () => {
     const { app } = setup();
     const c = await register(app);
     const res = await request(app).get(`/oauth/authorize?${authorizeQuery(c.client_id, pkce().challenge)}`).set('Cookie', session());
-    expect(res.text).toMatch(/Autoriser Claude à demander des paiements à ton Flex/);
+    expect(res.text).toMatch(/Allow Claude to request payments from your Flex/);
     expect(res.text).toMatch(/0x21ff/i);
   });
 

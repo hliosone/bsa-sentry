@@ -24,7 +24,7 @@ export function Badge({ bsa }: { bsa: Bsa }) {
   const start = async () => {
     const res = await fetch('/age/sessions', { method: 'POST', credentials: 'same-origin' });
     const s = await res.json();
-    if (!res.ok) { setWhy(s.error ?? 'erreur'); setStage('failed'); return; }
+    if (!res.ok) { setWhy(s.error ?? 'error'); setStage('failed'); return; }
     setSession(s);
     setSvg(await QRCode.toString(s.qr, { type: 'svg', margin: 1, errorCorrectionLevel: 'L' }));
     setStage('scan');
@@ -42,7 +42,7 @@ export function Badge({ bsa }: { bsa: Bsa }) {
     return () => clearInterval(t);
   }, [stage, session]);
 
-  const bind = () => bsa.run('Vérifie le vérificateur et la session sur ton Flex, puis maintiens pour lier…', async () => {
+  const bind = () => bsa.run('Check the verifier and the session on your Flex, then hold to link…', async () => {
     if (!session || !bsa.addresses.main) return;
     const signature = await bsa.onDevice((s) => s.signBind({
       chainId: BigInt(bsa.config!.chainId), verifier: session.bind.verifier, session: session.bind.session, expiresAt: BigInt(session.bind.expiresAt),
@@ -52,7 +52,7 @@ export function Badge({ bsa }: { bsa: Bsa }) {
       body: JSON.stringify({ address: bsa.addresses.main, signature }),
     });
     const b = await res.json();
-    if (!res.ok) throw new Error(b.error ?? 'liaison refusée');
+    if (!res.ok) throw new Error(b.error ?? 'linking refused');
     attestation.current = {
       attestation: { ...b.attestation, issuedAt: BigInt(b.attestation.issuedAt), expiresAt: BigInt(b.attestation.expiresAt) },
       attestationSig: b.attestationSig,
@@ -60,7 +60,7 @@ export function Badge({ bsa }: { bsa: Bsa }) {
     setStage('bound');
   });
 
-  const delegate = () => bsa.run("Vérifie le nom et l'adresse COMPLÈTE de l'agent sur ton Flex, puis maintiens pour autoriser…", async () => {
+  const delegate = () => bsa.run("Check the agent's name and FULL address on your Flex, then hold to authorize…", async () => {
     const a = attestation.current;
     if (!a || !bsa.addresses.agent || !bsa.config) return;
     const chainId = BigInt(bsa.config.chainId);
@@ -81,52 +81,52 @@ export function Badge({ bsa }: { bsa: Bsa }) {
 
   return (
     <section className="card">
-      <h2>Badge 18+</h2>
-      <p>Prouve ta majorité avec ton portefeuille d'identité européen. Le serveur ne garde <b>aucune donnée personnelle</b> : seulement « majeur : oui », lié à ton Ledger.</p>
+      <h2>18+ badge</h2>
+      <p>Prove you are 18 or older with your European identity wallet. The server keeps <b>no personal data</b>: only "over 18: yes", linked to your Ledger.</p>
 
       {stage === 'start' && (
-        <button className="primary" disabled={!bsa.account} onClick={() => void start()} data-testid="badge-start">Obtenir mon badge 18+</button>
+        <button className="primary" disabled={!bsa.account} onClick={() => void start()} data-testid="badge-start">Get my 18+ badge</button>
       )}
 
       {stage === 'scan' && session && (
         <div className="qr-block">
           <div className="qr" dangerouslySetInnerHTML={{ __html: svg }} />
           <div>
-            <p>Scanne ce code avec ton portefeuille d'identité (Procivis One).</p>
-            <p className="muted">Seule ta date de naissance est demandée ; on en déduit « 18 ans ou plus » et on l'oublie.</p>
-            {session.mode === 'mock' && <p className="warn" data-testid="mock-mode">Mode démo : aucun portefeuille réel n'est interrogé.</p>}
-            <p className="muted"><span className="pulse inline" /> En attente du portefeuille…</p>
+            <p>Scan this code with your identity wallet (Procivis One).</p>
+            <p className="muted">Only your date of birth is requested; we work out "18 or older" from it and forget it.</p>
+            {session.mode === 'mock' && <p className="warn" data-testid="mock-mode">Demo mode: no real wallet is queried.</p>}
+            <p className="muted"><span className="pulse inline" /> Waiting for the wallet…</p>
           </div>
         </div>
       )}
 
       {stage === 'verified' && (
         <>
-          <p className="ok">Majorité vérifiée.</p>
-          <p>Lie maintenant ce résultat à ton compte Ledger : ton Flex affiche le vérificateur et te demande de signer.</p>
-          <button className="primary" onClick={() => void bind()} data-testid="badge-bind">Lier à mon Ledger</button>
+          <p className="ok">Age verified.</p>
+          <p>Now link this result to your Ledger account: your Flex shows the verifier and asks you to sign.</p>
+          <button className="primary" onClick={() => void bind()} data-testid="badge-bind">Link to my Ledger</button>
         </>
       )}
 
       {stage === 'bound' && (
         <>
-          <p className="ok">Badge lié à ton compte.</p>
-          <h3>Autoriser ton agent à le présenter</h3>
-          <label className="inline-field">Nom de l'agent (affiché sur le Flex)
+          <p className="ok">Badge linked to your account.</p>
+          <h3>Authorize your agent to present it</h3>
+          <label className="inline-field">Agent name (shown on the Flex)
             <input value={agentName} onChange={(e) => setAgentName(e.target.value)} maxLength={24} data-testid="agent-name" />
           </label>
-          <button className="primary" onClick={() => void delegate()} data-testid="badge-delegate">Autoriser {agentName || "l'agent"}</button>
+          <button className="primary" onClick={() => void delegate()} data-testid="badge-delegate">Authorize {agentName || 'the agent'}</button>
         </>
       )}
 
       {stage === 'done' && (
-        <p className="ok" data-testid="badge-done">Badge 18+ actif : ton agent peut le présenter aux marchands qui le demandent. Il est stocké sur ton Flex.</p>
+        <p className="ok" data-testid="badge-done">18+ badge active: your agent can present it to merchants who ask for it. It is stored on your Flex.</p>
       )}
 
       {stage === 'failed' && (
         <>
-          <p className="err">Vérification impossible : {why}</p>
-          <button className="ghost" onClick={() => { setStage('start'); setSession(null); }}>Réessayer</button>
+          <p className="err">Verification failed: {why}</p>
+          <button className="ghost" onClick={() => { setStage('start'); setSession(null); }}>Try again</button>
         </>
       )}
     </section>

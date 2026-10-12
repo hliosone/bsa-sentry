@@ -15,16 +15,16 @@ export type StepId = 'connect' | 'login' | 'rules' | 'session' | 'badge' | 'back
 export type Step = { id: StepId; label: string; done: boolean; current: boolean; optional: boolean };
 
 const REQUIRED: { id: StepId; label: string; fact: keyof Facts }[] = [
-  { id: 'connect', label: 'Brancher le Flex', fact: 'deviceConnected' },
-  { id: 'login', label: 'Se connecter avec Ledger', fact: 'loggedIn' },
-  { id: 'rules', label: 'Définir les règles', fact: 'policyActive' },
-  { id: 'session', label: "Démarrer l'agent sur le Flex", fact: 'sessionArmed' },
-  { id: 'claude', label: 'Connecter Claude', fact: 'claudeConnected' },
+  { id: 'connect', label: 'Plug in the Flex', fact: 'deviceConnected' },
+  { id: 'login', label: 'Log in with Ledger', fact: 'loggedIn' },
+  { id: 'rules', label: 'Set your rules', fact: 'policyActive' },
+  { id: 'session', label: 'Start the agent on the Flex', fact: 'sessionArmed' },
+  { id: 'claude', label: 'Connect Claude', fact: 'claudeConnected' },
 ];
 
 const OPTIONAL: { id: StepId; label: string; fact: keyof Facts }[] = [
-  { id: 'badge', label: 'Badge 18+ (optionnel)', fact: 'hasCredentials' },
-  { id: 'backup', label: 'Sauvegarde Key Ring (optionnel)', fact: 'hasBackup' },
+  { id: 'badge', label: '18+ badge (optional)', fact: 'hasCredentials' },
+  { id: 'backup', label: 'Key Ring backup (optional)', fact: 'hasBackup' },
 ];
 
 export function onboarding(f: Facts): { current: StepId; steps: Step[] } {

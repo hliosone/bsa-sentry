@@ -1,4 +1,4 @@
-// "Se connecter avec Ledger".
+// "Log in with Ledger".
 //
 // The server issues a one-time challenge; the Flex signs an EIP-712 `Login` with 0xMAIN
 // (always with a tap, invariant 5); the server recovers the signer and sets a session cookie.

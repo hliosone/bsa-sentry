@@ -93,16 +93,16 @@ fn usdc2(units: u64) -> String {
 fn tagline(policy: &bsa_sentry_core::Policy, counters: &Counters, last: (u64, &[u8]), armed: bool, agent_name: Option<String>) -> String {
     let status = format!("{} . session {}", fmt::chain_name(policy.chain_id), if armed { "on" } else { "off" });
     if !policy.active {
-        return format!("Aucune regle :\ndefinis-les sur le site\nsession {}", if armed { "on" } else { "off" });
+        return format!("No rules yet:\nset them on the website\nsession {}", if armed { "on" } else { "off" });
     }
     let left = policy.budget.saturating_sub(counters.spent);
     let mut out = String::new();
     if let Some(name) = agent_name {
-        out.push_str(&format!("Agent : {}\n", fmt::clip(&name, 18)));
+        out.push_str(&format!("Agent: {}\n", fmt::clip(&name, 18)));
     }
     out.push_str(&format!("Budget {} / {} USDC\n", usdc2(left), usdc2(policy.budget)));
     if last.0 > 0 {
-        out.push_str(&format!("Dernier : {} {}\n", fmt::clip(&fmt::untrusted_text(last.1), 10), fmt::amount_usdc(last.0)));
+        out.push_str(&format!("Last: {} {}\n", fmt::clip(&fmt::untrusted_text(last.1), 10), fmt::amount_usdc(last.0)));
     }
     out.push_str(&status);
     out
@@ -124,13 +124,13 @@ pub fn show(page: u8) {
     // Page 1: the rules, read-only.
     let mut rows: Vec<(String, String)> = Vec::new();
     if policy.active {
-        rows.push((String::from("Reseau"), fmt::chain_name(policy.chain_id)));
-        rows.push((String::from("Sans confirmation jusqu'a"), fmt::amount_usdc(policy.auto_max)));
-        rows.push((String::from("Plafond absolu"), fmt::amount_usdc(policy.hard_max)));
-        rows.push((String::from("Budget"), format!("{} sur {}", fmt::amount_usdc(counters.spent), fmt::amount_usdc(policy.budget))));
-        rows.push((String::from("Paiements"), format!("{} sur {}", counters.count, policy.max_count)));
+        rows.push((String::from("Network"), fmt::chain_name(policy.chain_id)));
+        rows.push((String::from("Auto-approve up to"), fmt::amount_usdc(policy.auto_max)));
+        rows.push((String::from("Hard limit"), fmt::amount_usdc(policy.hard_max)));
+        rows.push((String::from("Budget"), format!("{} of {}", fmt::amount_usdc(counters.spent), fmt::amount_usdc(policy.budget))));
+        rows.push((String::from("Payments"), format!("{} of {}", counters.count, policy.max_count)));
     } else {
-        rows.push((String::from("Regles"), String::from("Aucune")));
+        rows.push((String::from("Rules"), String::from("None")));
     }
     let mut pairs: Vec<nbgl_contentTagValue_t> = Vec::new();
     for (item, value) in &rows {
@@ -143,18 +143,18 @@ pub fn show(page: u8) {
     let mut merchant_ptrs: Vec<*const c_char> = Vec::new();
     let mut merchant_tokens: Vec<u8> = Vec::new();
     for (i, p) in policy.payees().iter().enumerate() {
-        merchant_ptrs.push(s(&mut strings, &format!("Retirer : {}", fmt::untrusted_text(p.label()))));
+        merchant_ptrs.push(s(&mut strings, &format!("Remove: {}", fmt::untrusted_text(p.label()))));
         merchant_tokens.push(TOKEN_MERCHANT + i as u8);
     }
     if merchant_ptrs.is_empty() {
-        merchant_ptrs.push(s(&mut strings, "Aucun marchand de confiance"));
+        merchant_ptrs.push(s(&mut strings, "No trusted merchants"));
         merchant_tokens.push(0);
     }
 
     // Page 3: actions.
-    let action_ptrs = [s(&mut strings, "+20 USDC (budget a zero)"), s(&mut strings, "Bloquer l'agent")];
+    let action_ptrs = [s(&mut strings, "+20 USDC (reset budget)"), s(&mut strings, "Block agent")];
     let session_text = s(&mut strings, "Agent session");
-    let session_sub = s(&mut strings, "Autorise l'agent a demander des paiements. Un redemarrage l'arrete.");
+    let session_sub = s(&mut strings, "Lets the agent request payments. A restart turns it off.");
     let info_types = [s(&mut strings, "Version"), s(&mut strings, "Developer")];
     let info_contents = [s(&mut strings, env!("CARGO_PKG_VERSION")), s(&mut strings, "BSA - EPFL Blockchain Student Association")];
 
@@ -250,16 +250,16 @@ unsafe extern "C" fn on_menu(token: c_int, _index: u8, page: c_int) {
         if let Some(p) = policy.payees().get(i as usize) {
             confirm(
                 Pending::RemoveMerchant(p.addr),
-                &format!("Retirer {} ?", fmt::untrusted_text(p.label())),
+                &format!("Remove {}?", fmt::untrusted_text(p.label())),
                 &fmt::address(&p.addr),
-                "Oui, retirer",
+                "Yes, remove",
             );
         }
     } else if token == TOKEN_RESET {
         let (c, _, _) = store::counters();
-        confirm(Pending::ResetBudget, "Remettre le budget a zero ?", &format!("Depense : {} repart a 0", fmt::amount_usdc(c.spent)), "Oui, remettre a zero");
+        confirm(Pending::ResetBudget, "Reset the budget?", &format!("Spent: {} goes back to 0", fmt::amount_usdc(c.spent)), "Yes, reset");
     } else if token == TOKEN_BLOCK {
-        confirm(Pending::Block, "Bloquer l'agent ?", "Les regles et les marchands de confiance seront effaces.", "Oui, bloquer");
+        confirm(Pending::Block, "Block the agent?", "Rules and trusted merchants will be erased.", "Yes, block");
     }
 }
 
@@ -269,7 +269,7 @@ fn confirm(action: Pending, message: &str, sub: &str, yes: &str) {
         if CONFIRM_LIVE {
             slot.assume_init_drop();
         }
-        slot.write([fmt::cstr(message), fmt::cstr(sub), fmt::cstr(yes), fmt::cstr("Annuler")]);
+        slot.write([fmt::cstr(message), fmt::cstr(sub), fmt::cstr(yes), fmt::cstr("Cancel")]);
         CONFIRM_LIVE = true;
         PENDING = action;
         let c = slot.assume_init_ref();

@@ -7,7 +7,7 @@
 //!
 //! Security invariants enforced here:
 //!   2. the digest is built from the raw fields below; nothing signs a host-supplied hash
-//!   3. the payee is matched on its address; the hint is display-only; "Une fois" never
+//!   3. the payee is matched on its address; the hint is display-only; "Pay once" never
 //!      adds a payee
 //!   4. the counters are written to NVM *before* the signature is returned
 use crate::crypto::{self, Account};
@@ -116,7 +116,7 @@ pub fn handler_pay<'a, const N: usize>(
             match choice {
                 // Refuse, and the 60 s timeout, are the same answer to the host.
                 Choice::Refuse => return Err(AppError::Refused(RefusalReason::UserRejected)),
-                // "Une fois" signs this payment and nothing more: no payee is added.
+                // "Pay once" signs this payment and nothing more: no payee is added.
                 Choice::Once => {}
                 Choice::Trust => {
                     if !info.trust_allowed {

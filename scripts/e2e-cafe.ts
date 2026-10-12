@@ -59,8 +59,8 @@ async function main() {
     autoMax: 5n * USDC, hardMax: 50n * USDC, budget: 20n * USDC, maxCount: 10,
     payees: [
       { address: payTo.cafe.toLowerCase() as Hex, label: 'Cafe Sat' },
-      { address: payTo.cave.toLowerCase() as Hex, label: 'Cave du Coin' },
-      { address: payTo.resto.toLowerCase() as Hex, label: 'Resto' },
+      { address: payTo.cave.toLowerCase() as Hex, label: 'Corner Wines' },
+      { address: payTo.resto.toLowerCase() as Hex, label: 'Restaurant' },
     ],
   };
   const setting = signer.setPolicy(policy);
@@ -124,11 +124,11 @@ async function main() {
         expect(transfers.length === 1 && transfers[0]!.args.value === 3n * USDC
           && transfers[0]!.args.from.toLowerCase() === agentAddress.toLowerCase()
           && transfers[0]!.args.to.toLowerCase() === payTo.cafe.toLowerCase(),
-          'exactly one USDC Transfer: 3 USDC from 0xAGENT to the café');
+          'exactly one USDC Transfer: 3 USDC from 0xAGENT to the cafe');
         const cafeAfter = await publicClient.readContract({
           address: cfg.usdc, abi: USDC_ABI, functionName: 'balanceOf', args: [payTo.cafe], blockNumber: receipt.blockNumber,
         });
-        expect(cafeAfter - cafeBefore === 3n * USDC, `café balance +3 USDC (pinned to block ${receipt.blockNumber})`);
+        expect(cafeAfter - cafeBefore === 3n * USDC, `cafe balance +3 USDC (pinned to block ${receipt.blockNumber})`);
       }
     }
     const state = await signer.getState();

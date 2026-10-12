@@ -123,7 +123,7 @@ pub fn handler_restore<'a, const N: usize>(
     };
 
     let credentials_line: String = match &creds {
-        None => String::from("aucune"),
+        None => String::from("none"),
         Some((c, _)) => {
             let mut acc = String::new();
             for i in 0..c.delegation.claim_count as usize {
@@ -133,7 +133,7 @@ pub fn handler_restore<'a, const N: usize>(
                 acc.push_str(&fmt::untrusted_text(c.delegation.claim(i)));
             }
             if acc.is_empty() {
-                String::from("delegation sans claim")
+                String::from("delegation without claims")
             } else {
                 acc
             }
@@ -149,7 +149,7 @@ pub fn handler_restore<'a, const N: usize>(
         let hard_max = fmt::amount_usdc(policy.hard_max);
         let budget = fmt::amount_usdc(policy.budget);
         let payee_names: Vec<String> = (0..policy.payee_count)
-            .map(|i| alloc::format!("Marchand {}", i + 1))
+            .map(|i| alloc::format!("Merchant {}", i + 1))
             .collect();
         let payee_values: Vec<String> = policy
             .payees()
@@ -157,18 +157,18 @@ pub fn handler_restore<'a, const N: usize>(
             .map(|p| alloc::format!("{}\n{}", fmt::untrusted_text(p.label()), fmt::address(&p.addr)))
             .collect();
         let mut fields: Vec<Field> = Vec::with_capacity(6 + policy.payee_count);
-        fields.push(Field { name: "Reseau", value: &chain });
-        fields.push(Field { name: "Jeton", value: &token });
-        fields.push(Field { name: "Sans confirmation jusqu'a", value: &auto_max });
-        fields.push(Field { name: "Plafond absolu", value: &hard_max });
-        fields.push(Field { name: "Budget total", value: &budget });
-        fields.push(Field { name: "Identite restauree", value: &credentials_line });
+        fields.push(Field { name: "Network", value: &chain });
+        fields.push(Field { name: "Token", value: &token });
+        fields.push(Field { name: "Auto-approve up to", value: &auto_max });
+        fields.push(Field { name: "Hard limit", value: &hard_max });
+        fields.push(Field { name: "Total budget", value: &budget });
+        fields.push(Field { name: "Identity restored", value: &credentials_line });
         for i in 0..policy.payee_count {
             fields.push(Field { name: &payee_names[i], value: &payee_values[i] });
         }
         NbglReview::new()
             .tx_type(TransactionType::Operation)
-            .titles("Restaurer vos regles", "Verifiez chaque adresse en entier", "Restaurer")
+            .titles("Restore your rules", "Check every full address", "Restore")
             .show(comm, &fields)
     };
     show_home();

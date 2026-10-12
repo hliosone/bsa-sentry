@@ -1,7 +1,7 @@
 // A cloudflared quick tunnel to a local port, returning its public https URL.
 //
 // Always http2 + IPv4: on this network QUIC and IPv6 tunnels dropped after ~60 s in the
-// feasibility tests, which is shorter than a payment that waits on the orange screen.
+// feasibility tests, which is shorter than a payment that waits on the confirmation screen.
 import { spawn, type ChildProcess } from 'node:child_process';
 import { createWriteStream, mkdirSync } from 'node:fs';
 

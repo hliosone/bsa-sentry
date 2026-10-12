@@ -1,4 +1,4 @@
-// Hardware diagnosis for the orange screen: which on-screen tap does the Flex report?
+// Hardware diagnosis for the confirmation screen: which on-screen tap does the Flex report?
 //   pnpm exec tsx scripts/orange-probe.ts      (BSA Sentry open on the Flex, over USB)
 import 'dotenv/config';
 import { DeviceRefusedError, SentrySigner } from '@bsa-sentry/sentry-signer';
@@ -28,7 +28,7 @@ async function outcome(p: Promise<unknown>) {
 console.log('\nOrange-screen probe (real Flex)');
 say('swipe through the rules, then hold to approve (this resets the budget)');
 await s.setPolicy({ active: true, chainId: ARC, token: TOKEN, autoMax: 5n * USDC, hardMax: 50n * USDC, budget: 20n * USDC, maxCount: 10,
-  payees: [{ address: CAFE, label: 'Cafe Sat' }, { address: RESTO, label: 'Resto' }] });
+  payees: [{ address: CAFE, label: 'Cafe Sat' }, { address: RESTO, label: 'Restaurant' }] });
 if (!(await s.getState()).sessionArmed) {
   say('tap the gear, turn on "Agent session", tap the back arrow');
   for (let i = 0; i < 90 && !(await s.getState()).sessionArmed; i++) await new Promise((r) => setTimeout(r, 1000));
@@ -36,13 +36,13 @@ if (!(await s.getState()).sessionArmed) {
 
 const results: string[] = [];
 say('A — tap ONCE on the ADDRESS text in the middle (NOT a button), then touch nothing (auto-refusal at 60 s)');
-results.push(`A middle tap   (expect: refused TIMEOUT ~60 s): ${await outcome(s.pay(pay(RESTO, 20n * USDC), { hint: 'Resto' }))}`);
+results.push(`A middle tap   (expect: refused TIMEOUT ~60 s): ${await outcome(s.pay(pay(RESTO, 20n * USDC), { hint: 'Restaurant' }))}`);
 console.log('  ' + results.at(-1));
-say('B — tap "Refuser" (top right)');
-results.push(`B Refuser      (expect: refused USER_REJECTED):  ${await outcome(s.pay(pay(RESTO, 20n * USDC), { hint: 'Resto' }))}`);
+say('B — tap "Reject" (top right)');
+results.push(`B Reject       (expect: refused USER_REJECTED):  ${await outcome(s.pay(pay(RESTO, 20n * USDC), { hint: 'Restaurant' }))}`);
 console.log('  ' + results.at(-1));
-say('C — tap "Faire confiance" (black button)');
-results.push(`C Faire conf.  (expect: SIGNED, merchant added):  ${await outcome(s.pay(pay(STRANGER, 1n * USDC), { hint: 'Kiosque' }))}`);
+say('C — tap "Trust merchant" (black button)');
+results.push(`C Trust      (expect: SIGNED, merchant added):  ${await outcome(s.pay(pay(STRANGER, 1n * USDC), { hint: 'Kiosk' }))}`);
 const st = await s.getState();
 results.push(`  merchant added: ${st.policy.payees.some((p) => p.address === STRANGER)}`);
 console.log('  ' + results.slice(-2).join('\n  '));

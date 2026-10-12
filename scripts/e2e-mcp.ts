@@ -5,8 +5,8 @@
 // browser would do — the consent page — is done here headlessly, with a Ledger session the
 // Flex (Speculos) signed after a simulated tap. Then it calls the tools like Claude would:
 //
-//   sentry_status · café (silent) · boulangerie (orange -> "Faire confiance", then silent)
-//   · restaurant (orange -> "Une fois") · promo -> 400 USDC deposit (refused) · sentry_status
+//   sentry_status · cafe (silent) · boulangerie (orange -> "Trust merchant", then silent)
+//   · restaurant (orange -> "Pay once") · promo -> 400 USDC deposit (refused) · sentry_status
 //
 //   E2E=1 pnpm e2e:mcp            local
 //   E2E=1 TUNNEL=1 pnpm e2e:mcp   through a public cloudflared URL, like claude.ai
@@ -57,7 +57,7 @@ const freePort = () => new Promise<number>((resolve) => {
 /**
  * An OAuth provider for the SDK client. Everything a real client stores is kept in memory;
  * `redirectToAuthorization` is where a browser would open the consent page — here we fetch
- * it with the Ledger session cookie, submit "Autoriser", and keep the code from the redirect.
+ * it with the Ledger session cookie, submit "Allow", and keep the code from the redirect.
  */
 class HeadlessClaude implements OAuthClientProvider {
   private info?: OAuthClientInformationFull;
@@ -85,7 +85,7 @@ class HeadlessClaude implements OAuthClientProvider {
   async redirectToAuthorization(url: URL) {
     const page = await fetch(url, { headers: { cookie: this.cookie } });
     const html = await page.text();
-    this.sawConsent = /Autoriser .* à demander des paiements à ton Flex/.test(html);
+    this.sawConsent = /Allow .* to request payments from your Flex/.test(html);
     const csrf = /name="csrf" value="([^"]+)"/.exec(html)?.[1];
     if (!csrf) throw new Error(`no consent form (logged in?): ${html.slice(0, 200)}`);
     const consent = await fetch(url, {
@@ -103,14 +103,14 @@ async function main() {
   const signer = new SentrySigner(new SpeculosTransport());
   const tunnelled = process.env.TUNNEL === '1';
 
-  step('Device: demo rules (café, cave, resto - NOT the bakery) + armed session');
+  step('Device: demo rules (cafe, cave, resto - NOT the bakery) + armed session');
   const policy: Policy = {
     active: true, chainId: 5042002n, token: lower(need('USDC_ADDRESS')),
     autoMax: 5n * USDC, hardMax: 50n * USDC, budget: 20n * USDC, maxCount: 10,
     payees: [
       { address: lower(payTo.cafe), label: 'Cafe Sat' },
-      { address: lower(payTo.cave), label: 'Cave du Coin' },
-      { address: lower(payTo.resto), label: 'Resto' },
+      { address: lower(payTo.cave), label: 'Corner Wines' },
+      { address: lower(payTo.resto), label: 'Restaurant' },
     ],
   };
   const setting = signer.setPolicy(policy);
@@ -139,14 +139,14 @@ async function main() {
   let harness: ReturnType<typeof startBridgeHarness> | undefined;
   let client: Client | undefined;
   try {
-    step('"Se connecter avec Ledger": the Flex signs a Login with 0xMAIN (simulated tap)');
+    step('"Log in with Ledger": the Flex signs a Login with 0xMAIN (simulated tap)');
     const challenge = await (await fetch(`${base}/auth/challenge`, { method: 'POST' })).json();
     const main = await signer.getAddress('main');
     const signing = signer.signLogin({
       chainId: BigInt(challenge.chainId), origin: challenge.origin, nonce: challenge.nonce,
       issuedAt: BigInt(challenge.issuedAt), expiresAt: BigInt(challenge.expiresAt),
     });
-    await ui.waitForText(/Se connecter/i);
+    await ui.waitForText(/Log in/i);
     await ui.approveReview();
     const login = await fetch(`${base}/auth/login`, {
       method: 'POST', headers: { 'content-type': 'application/json' },
@@ -178,7 +178,7 @@ async function main() {
       await t.finishAuth(provider.code!);
       client = await connect();
     }
-    expect(provider.sawConsent, 'the consent page asked "Autoriser … à demander des paiements à ton Flex ?"');
+    expect(provider.sawConsent, 'the consent page asked "Allow … to request payments from your Flex?"');
     expect(provider.tokens()?.access_token, 'access token issued');
     const tools = (await client.listTools()).tools.map((t) => t.name).sort();
     expect(JSON.stringify(tools) === JSON.stringify(['sentry_restore', 'sentry_status', 'x402_fetch']), `tools: ${tools.join(', ')}`);
@@ -188,28 +188,28 @@ async function main() {
     console.log(text(s1).split('\n').map((l) => `      ${l}`).join('\n'));
     expect(/20 \/ 20 USDC left/.test(text(s1)), 'full budget before any purchase');
 
-    step('"Achète-moi un café" -> x402_fetch /cafe (3 USDC, trusted, under the limit: no tap)');
+    step('"Buy me a coffee" -> x402_fetch /cafe (3 USDC, trusted, under the limit: no tap)');
     const coffee = await client.callTool({ name: 'x402_fetch', arguments: { url: `${shop}/cafe` } });
     console.log(`      ${text(coffee).split('\n')[0]}`);
     expect(!coffee.isError && /Paid 3 USDC/.test(text(coffee)) && /explorer\.testnet\.arc\.io\/tx\/0x/.test(text(coffee)), 'paid silently and settled on Arc');
 
-    step('"Un croissant" -> /boulangerie (2 USDC, unknown merchant): orange screen -> "Faire confiance"');
-    const croissant = client.callTool({ name: 'x402_fetch', arguments: { url: `${shop}/boulangerie` } });
-    await ui.waitForText(/Payer 2 USDC/i, 30_000);
-    expect(/Marchand\s+inconnu/i.test(await ui.screenText()), 'the Flex says "Marchand inconnu" and offers "Faire confiance"');
+    step('"A croissant" -> /bakery (2 USDC, unknown merchant): confirmation screen -> "Trust merchant"');
+    const croissant = client.callTool({ name: 'x402_fetch', arguments: { url: `${shop}/bakery` } });
+    await ui.waitForText(/Pay 2 USDC/i, 30_000);
+    expect(/Unknown\s+merchant/i.test(await ui.screenText()), 'the Flex says "Unknown merchant" and offers "Trust merchant"');
     await ui.screenshot('12-mcp-orange-boulangerie');
-    await ui.tapText('Faire confiance');
+    await ui.tapText('Trust merchant');
     const croissantR = await croissant;
-    expect(!croissantR.isError && /Paid 2 USDC/.test(text(croissantR)), 'paid after "Faire confiance"');
-    const again = await client.callTool({ name: 'x402_fetch', arguments: { url: `${shop}/boulangerie` } });
+    expect(!croissantR.isError && /Paid 2 USDC/.test(text(croissantR)), 'paid after "Trust merchant"');
+    const again = await client.callTool({ name: 'x402_fetch', arguments: { url: `${shop}/bakery` } });
     expect(!again.isError && /Paid 2 USDC/.test(text(again)), 'second croissant: paid silently, the bakery is now trusted');
 
-    step('"Réserve le resto" -> /resto (20 USDC, over the auto limit): orange screen -> "Une fois"');
-    const resto = client.callTool({ name: 'x402_fetch', arguments: { url: `${shop}/resto` } });
-    await ui.waitForText(/Payer 20 USDC/i, 30_000);
+    step('"Book the restaurant" -> /restaurant (20 USDC, over the auto limit): confirmation screen -> "Pay once"');
+    const resto = client.callTool({ name: 'x402_fetch', arguments: { url: `${shop}/restaurant` } });
+    await ui.waitForText(/Pay 20 USDC/i, 30_000);
     const restoScreen = await ui.screenText();
-    expect(!/Faire confiance/.test(restoScreen), '"Faire confiance" is not offered: the amount, not the merchant, is the problem');
-    await ui.tapText('Une fois');
+    expect(!/Trust merchant/.test(restoScreen), '"Trust merchant" is not offered: the amount, not the merchant, is the problem');
+    await ui.tapText('Pay once');
     const restoR = await resto;
     // 3 + 2 + 2 = 7 spent, +20 = 27 > 20: still allowed because the user approved it on screen.
     expect(!restoR.isError && /Paid 20 USDC/.test(text(restoR)), 'paid once, after the tap');
@@ -224,7 +224,7 @@ async function main() {
     step('sentry_status after the session');
     const s2 = await client.callTool({ name: 'sentry_status', arguments: {} });
     console.log(text(s2).split('\n').map((l) => `      ${l}`).join('\n'));
-    expect(/Last payment: Resto 20 USDC/.test(text(s2)), 'the last payment is the restaurant');
+    expect(/Last payment: Restaurant 20 USDC/.test(text(s2)), 'the last payment is the restaurant');
   } finally {
     await client?.close().catch(() => undefined);
     harness?.stop();

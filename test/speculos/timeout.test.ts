@@ -1,4 +1,4 @@
-// The orange screen denies by default. This is the one test that has to spend real wall
+// The confirmation screen denies by default. This is the one test that has to spend real wall
 // clock: the device counts 600 raw ticker events at 100 ms each, and the whole point is
 // that no host and no missing user can turn that into an approval.
 //
@@ -20,7 +20,7 @@ const policy: Policy = {
   payees: [{ address: CAFE, label: 'Cafe Sat' }],
 };
 
-describe('the orange screen refuses on its own after 60 s', () => {
+describe('the confirmation screen refuses on its own after 60 s', () => {
   it('times out with USER_REJECTED and spends nothing', { timeout: 150_000 }, async () => {
     const chunks = encodeChunks(INS.SET_POLICY, encodePolicy(policy));
     const set = apdu(chunks[0]!);
@@ -34,7 +34,7 @@ describe('the orange screen refuses on its own after 60 s', () => {
     });
     const started = Date.now();
     const pending = apdu(Uint8Array.from([0xe0, INS.PAY, 0, 0, data.length, ...data]));
-    await waitForText(/Payer/i);
+    await waitForText(/on Arc\?/i);
     await screenshot('11-orange-before-timeout');
 
     // Touch nothing at all.

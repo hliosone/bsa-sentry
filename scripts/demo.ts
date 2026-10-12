@@ -1,12 +1,12 @@
 // The demo, end to end, exactly as docs/DEMO.md runs it in front of the jury — with Speculos
 // as the Flex (taps simulated) and this script as claude.ai (MCP + OAuth). Real Arc testnet.
 //
-//   1  "Achète-moi un café"                     -> paid, NO tap          (trusted, under 5 USDC)
-//   2  "Un croissant à la boulangerie"          -> orange -> Faire confiance (unknown merchant)
-//   3  "Une bouteille de vin à la cave"         -> paid, NO tap, 18+ verified by our facilitator
-//   4  "Réserve le resto pour ce soir"          -> orange, no trust offered -> Une fois (20 USDC)
+//   1  "Buy me a coffee"                        -> paid, NO tap          (trusted, under 5 USDC)
+//   2  "A croissant from the bakery"            -> confirmation -> Trust merchant (unknown merchant)
+//   3  "A bottle of wine from the wine shop"    -> paid, NO tap, 18+ verified by our facilitator
+//   4  "Book the restaurant for tonight"        -> confirmation, no trust offered -> Pay once (20 USDC)
 //   5  "Regarde la page promo"                  -> injected 400 USDC "deposit" -> REFUSED by the Flex
-//   6  "Où en est mon budget ?"                 -> sentry_status
+//   6  "How much budget is left?"               -> sentry_status
 //
 //   E2E=1 pnpm demo            once
 //   E2E=1 pnpm e2e             reset + demo, twice in a row (M8 acceptance)
@@ -37,14 +37,14 @@ export async function runDemo(label = 'demo'): Promise<number> {
   const policy: Policy = {
     active: true, chainId: 5042002n, token: lower(need('USDC_ADDRESS')),
     autoMax: 5n * USDC, hardMax: 50n * USDC, budget: 20n * USDC, maxCount: 10,
-    payees: [{ address: lower(pay.cafe), label: 'Cafe Sat' }, { address: lower(pay.cave), label: 'Cave du Coin' }, { address: lower(pay.resto), label: 'Resto' }],
+    payees: [{ address: lower(pay.cafe), label: 'Cafe Sat' }, { address: lower(pay.cave), label: 'Corner Wines' }, { address: lower(pay.resto), label: 'Restaurant' }],
   };
   const setting = signer.setPolicy(policy);
   await ui.approveReview();
   await setting;
   await ui.setSessionVia(async () => (await signer.getState()).sessionArmed, true);
   await ui.goHome();
-  r.ok('rules on the Flex: auto <= 5 USDC to Cafe Sat / Cave du Coin / Resto, ceiling 50, budget 20');
+  r.ok('rules on the Flex: auto <= 5 USDC to Cafe Sat / Corner Wines / Restaurant, ceiling 50, budget 20');
 
   const stack = await startStack();
   let harness: Awaited<ReturnType<typeof attachBridge>> | undefined;
@@ -52,7 +52,7 @@ export async function runDemo(label = 'demo'): Promise<number> {
   try {
     const { cookie, main } = await ledgerLogin(signer, stack.base);
     harness = await attachBridge(stack, cookie, main);
-    r.ok(`"Se connecter avec Ledger" as ${main}; the BSA Sentry tab is attached`);
+    r.ok(`"Log in with Ledger" as ${main}; the BSA Sentry tab is attached`);
 
     r.step('Badge 18+ (mock EUDI wallet), Bind and delegation signed on the Flex');
     const s = await (await fetch(`${stack.base}/age/sessions`, { method: 'POST', headers: { cookie } })).json();
@@ -75,26 +75,26 @@ export async function runDemo(label = 'demo'): Promise<number> {
     ({ client } = await connectClaude(stack.base, cookie));
     r.ok('connected; tools: x402_fetch, sentry_status, sentry_restore');
 
-    r.step('1. "Achète-moi un café"');
+    r.step('1. "Buy me a coffee"');
     const cafe = await client.callTool({ name: 'x402_fetch', arguments: { url: `${stack.shop}/cafe` } });
     r.expect(!cafe.isError && /Paid 3 USDC/.test(text(cafe)), `${text(cafe).split('\n')[0]}`);
 
-    r.step('2. "Un croissant à la boulangerie" (unknown merchant)');
-    const bread = client.callTool({ name: 'x402_fetch', arguments: { url: `${stack.shop}/boulangerie` } });
-    await ui.waitForText(/Payer 2 USDC/i, 30_000);
-    r.expect(/Faire confiance/.test(await ui.screenText()), 'orange screen on the Flex, "Faire confiance" offered');
-    await ui.tapText('Faire confiance');
+    r.step('2. "A croissant from the bakery" (unknown merchant)');
+    const bread = client.callTool({ name: 'x402_fetch', arguments: { url: `${stack.shop}/bakery` } });
+    await ui.waitForText(/Pay 2 USDC/i, 30_000);
+    r.expect(/Trust merchant/.test(await ui.screenText()), 'confirmation screen on the Flex, "Trust merchant" offered');
+    await ui.tapText('Trust merchant');
     r.expect(/Paid 2 USDC/.test(text(await bread)), 'paid; the bakery is now trusted on the Flex');
 
-    r.step('3. "Une bouteille de vin à la cave" (merchant requires 18+)');
-    const wine = await client.callTool({ name: 'x402_fetch', arguments: { url: `${stack.shop}/cave` } });
+    r.step('3. "A bottle of wine from the wine shop" (merchant requires 18+)');
+    const wine = await client.callTool({ name: 'x402_fetch', arguments: { url: `${stack.shop}/wine` } });
     r.expect(!wine.isError && /Paid 4.5 USDC/.test(text(wine)), `${text(wine).split('\n')[0]}`);
 
-    r.step('4. "Réserve le resto pour ce soir" (20 USDC, over the automatic limit)');
-    const resto = client.callTool({ name: 'x402_fetch', arguments: { url: `${stack.shop}/resto` } });
-    await ui.waitForText(/Payer 20 USDC/i, 30_000);
-    r.expect(!/Faire confiance/.test(await ui.screenText()), 'orange screen, no trust option: the amount is the problem');
-    await ui.tapText('Une fois');
+    r.step('4. "Book the restaurant for tonight" (20 USDC, over the automatic limit)');
+    const resto = client.callTool({ name: 'x402_fetch', arguments: { url: `${stack.shop}/restaurant` } });
+    await ui.waitForText(/Pay 20 USDC/i, 30_000);
+    r.expect(!/Trust merchant/.test(await ui.screenText()), 'confirmation screen, no trust option: the amount is the problem');
+    await ui.tapText('Pay once');
     r.expect(/Paid 20 USDC/.test(text(await resto)), 'paid once, after the tap');
 
     r.step('5. "Regarde la page promo" (hidden prompt injection)');
@@ -103,10 +103,10 @@ export async function runDemo(label = 'demo'): Promise<number> {
     const deposit = await client.callTool({ name: 'x402_fetch', arguments: { url: `${stack.shop}/evil/deposit` } });
     r.expect(deposit.isError && /OVER_HARD_MAX/.test(text(deposit)), `refused by the Flex, no screen: "${text(deposit).split('\n')[0]}"`);
 
-    r.step('6. "Où en est mon budget ?"');
+    r.step('6. "How much budget is left?"');
     const st = await client.callTool({ name: 'sentry_status', arguments: {} });
     console.log(text(st).split('\n').map((l) => `      ${l}`).join('\n'));
-    r.expect(/Last payment: Resto 20 USDC/.test(text(st)) && /18\+ credentials on the Flex: yes/.test(text(st)), 'status matches the device');
+    r.expect(/Last payment: Restaurant 20 USDC/.test(text(st)) && /18\+ credentials on the Flex: yes/.test(text(st)), 'status matches the device');
   } finally {
     await client?.close().catch(() => undefined);
     harness?.stop();

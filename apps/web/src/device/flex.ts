@@ -50,7 +50,7 @@ export const webHidAvailable = () => typeof navigator !== 'undefined' && 'hid' i
 
 /** Opens Chrome's device picker. Must be called from a click. */
 export async function connectFlex(): Promise<FlexConnection> {
-  if (!webHidAvailable()) throw new Error('WebHID indisponible : utilise Google Chrome (pas Chromium snap)');
+  if (!webHidAvailable()) throw new Error('WebHID unavailable: use Google Chrome (not the Chromium snap)');
   const device = await firstValueFrom(kit().startDiscovering({}));
   return open(device);
 }

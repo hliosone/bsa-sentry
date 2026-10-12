@@ -58,7 +58,7 @@ impl Payment {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct OrangeInfo {
     pub reason: OrangeReason,
-    /// "Faire confiance" is offered only when the unknown payee is the *only* problem and
+    /// "Trust merchant" is offered only when the unknown payee is the *only* problem and
     /// there is a free slot. Otherwise trusting the merchant would not change the outcome.
     pub trust_allowed: bool,
 }

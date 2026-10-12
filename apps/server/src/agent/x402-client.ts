@@ -232,7 +232,7 @@ export async function x402Fetch(
 function hintForReason(reason: string | undefined): string {
   if (!reason) return '';
   if (reason === 'AGE_PROOF_REQUIRED' || reason.startsWith('DELEGATION_') || reason.startsWith('ATTESTATION_') || reason === 'SUBJECT_MISMATCH') {
-    return '. This merchant requires the 18+ badge: the user can add it on the BSA Sentry website (Badge 18+, then Délégation).';
+    return '. This merchant requires the 18+ badge: the user can add it on the BSA Sentry website (18+ badge, then authorize the agent).';
   }
   if (reason === 'insufficient_funds') return '. The agent account has not enough USDC on Arc testnet.';
   return '';

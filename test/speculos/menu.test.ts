@@ -14,7 +14,7 @@ const CAVE = '0x0b34839c51d7d6932a9cf00d63b15d58a29265ac';
 const USDC = 1_000_000n;
 const policy: Policy = {
   active: true, chainId: 5042002n, token: TOKEN, autoMax: 5n * USDC, hardMax: 50n * USDC, budget: 20n * USDC, maxCount: 10,
-  payees: [{ address: CAFE, label: 'Cafe Sat' }, { address: CAVE, label: 'Cave du Coin' }],
+  payees: [{ address: CAFE, label: 'Cafe Sat' }, { address: CAVE, label: 'Corner Wines' }],
 };
 const state = async () => decodeState((await send(INS.GET_STATE)).data);
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -50,7 +50,7 @@ describe('the home screen', () => {
     expect(t).toMatch(/BSA Sentry/);
     expect(t).toMatch(/20(\.00)? \/ 20(\.00)? USDC/);
     expect(t).toMatch(/Arc testnet/);
-    expect(t).toMatch(/session (off|arr)/i);
+    expect(t).toMatch(/session off/i);
     await screenshot('15-home-with-rules');
   });
 
@@ -62,14 +62,14 @@ describe('the home screen', () => {
     const t = await screenText();
     expect(t).toMatch(/17(\.00)? \/ 20(\.00)? USDC/);
     expect(t).toMatch(/Cafe Sat 3/);
-    expect(t).toMatch(/session (on|actif)/i);
+    expect(t).toMatch(/session on/i);
     await screenshot('16-home-after-coffee');
   });
 
   it('says plainly when there are no rules', async () => {
     restart(true);
     await goHome();
-    expect(await screenText()).toMatch(/Aucune r[eè]gle/i);
+    expect(await screenText()).toMatch(/No rules/i);
     await install();
   });
 });
@@ -78,7 +78,7 @@ describe('the menu', () => {
   beforeEach(async () => { await install(); });
 
   it('shows my rules', async () => {
-    await openMenuPage(/Plafond/i);
+    await openMenuPage(/Hard limit/i);
     const t = await screenText();
     expect(t).toMatch(/5 USDC/);
     expect(t).toMatch(/50 USDC/);
@@ -87,22 +87,22 @@ describe('the menu', () => {
   });
 
   it('removes a trusted merchant after a confirmation, by address', async () => {
-    await openMenuPage(/Cave du Coin/);
+    await openMenuPage(/Corner Wines/);
     await screenshot('18-menu-merchants');
-    await tapText(/Cave du Coin/);
-    await waitForText(/^Oui, retirer$/);
+    await tapText(/Corner Wines/);
+    await waitForText(/^Yes, remove$/);
     // The confirmation names the full address, not just the label.
     expect((await screenText()).replace(/\s/g, '')).toContain(CAVE.slice(2, 22));
-    await tapText(/^Oui, retirer$/);
+    await tapText(/^Yes, remove$/);
     await sleep(600);
     expect((await state()).policy.payees.map((p) => p.address)).toEqual([CAFE]);
   });
 
   it('keeps the merchant when the removal is cancelled', async () => {
-    await openMenuPage(/Cave du Coin/);
-    await tapText(/Cave du Coin/);
-    await waitForText(/^Annuler$/);
-    await tapText(/^Annuler$/);
+    await openMenuPage(/Corner Wines/);
+    await tapText(/Corner Wines/);
+    await waitForText(/^Cancel$/);
+    await tapText(/^Cancel$/);
     await sleep(600);
     expect((await state()).policy.payees).toHaveLength(2);
   });
@@ -114,8 +114,8 @@ describe('the menu', () => {
     expect((await state()).spent).toBe(4n * USDC);
     await openMenuPage(/\+20 USDC/);
     await tapText(/\+20 USDC/);
-    await waitForText(/^Oui, remettre/);
-    await tapText(/^Oui, remettre/);
+    await waitForText(/^Yes, reset/);
+    await tapText(/^Yes, reset/);
     await sleep(600);
     const s = await state();
     expect(s.spent).toBe(0n);
@@ -123,12 +123,12 @@ describe('the menu', () => {
   });
 
   it('blocks the agent from the device itself: rules and merchants wiped after a confirmation', async () => {
-    await openMenuPage(/Bloquer l'agent/);
+    await openMenuPage(/Block agent/);
     await screenshot('19-menu-actions');
-    await tapText(/Bloquer l'agent/);
-    await waitForText(/^Oui, bloquer$/);
+    await tapText(/Block agent/);
+    await waitForText(/^Yes, block$/);
     await screenshot('20-menu-block-confirm');
-    await tapText(/^Oui, bloquer$/);
+    await tapText(/^Yes, block$/);
     await sleep(700);
     const s = await state();
     expect(s.policy.active).toBe(false);
@@ -153,7 +153,7 @@ describe('GET_ADDRESS with P2 = 1 shows the address on the device', () => {
   it('displays the full agent address and answers once the user confirms', async () => {
     const silent = await apdu('e008010000');
     const pending = apdu('e008010100');
-    await waitForText(/Adresse de l'agent/);
+    await waitForText(/Agent address/);
     await screenshot('21-show-address');
     await swipe('left');
     await waitForText(/^Confirm$/);
@@ -167,7 +167,7 @@ describe('GET_ADDRESS with P2 = 1 shows the address on the device', () => {
 
   it('answers DENY when the user cancels', async () => {
     const pending = apdu('e008000100');
-    await waitForText(/Votre adresse/);
+    await waitForText(/Your main/);
     await tapText(/^Cancel$/);
     expect((await pending).sw).toBe(SW.DENY);
   });

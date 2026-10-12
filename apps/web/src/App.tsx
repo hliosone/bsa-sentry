@@ -55,10 +55,10 @@ export function App() {
       <header>
         <div className="brand"><span className="logo">◆</span> BSA Sentry</div>
         <div className="tagline">Your agent spends. Your Ledger decides.</div>
-        {bsa.account && <button className="ghost small" onClick={() => void bsa.logout()}>Déconnexion</button>}
+        {bsa.account && <button className="ghost small" onClick={() => void bsa.logout()}>Log out</button>}
       </header>
       <div className={`statusbar ${bsa.account ? status.level : 'warn'}`} data-testid="statusbar">
-        {bsa.account ? status.text : 'Connecte ton Flex puis connecte-toi avec Ledger'}
+        {bsa.account ? status.text : 'Connect your Flex, then log in with Ledger'}
       </div>
 
       <div className="layout">
@@ -68,8 +68,8 @@ export function App() {
               <span className="tick">{s.done ? '✓' : s.optional ? '○' : '•'}</span> {s.label}
             </a>
           ))}
-          <a href="#/dashboard" className={current === 'dashboard' ? 'active' : ''}><span className="tick">▸</span> Tableau de bord</a>
-          <a href="#/restore" className={current === 'restore' ? 'active' : ''}><span className="tick">↺</span> Restaurer un Flex</a>
+          <a href="#/dashboard" className={current === 'dashboard' ? 'active' : ''}><span className="tick">▸</span> Dashboard</a>
+          <a href="#/restore" className={current === 'restore' ? 'active' : ''}><span className="tick">↺</span> Restore a Flex</a>
         </nav>
 
         <main>

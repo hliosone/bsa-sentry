@@ -59,17 +59,17 @@ test.afterAll(async () => {
 
 test('onboarding, then the dashboard follows what the agent does', async ({ page }) => {
   await page.goto(`${web}/?fakeDevice=1`);
-  await expect(page.getByTestId('statusbar')).toContainText('Connecte ton Flex');
+  await expect(page.getByTestId('statusbar')).toContainText('Connect your Flex');
   await shot(page, '01-connect');
 
-  // 1-2. Connect the (fake) Flex, then "Se connecter avec Ledger" against the real server.
+  // 1-2. Connect the (fake) Flex, then "Log in with Ledger" against the real server.
   await page.getByTestId('connect').click();
   await expect(page.locator('dl.addresses')).toContainText('0x');
   await page.getByTestId('login').click();
   // The app moves on to the next onboarding step by itself once logged in.
-  await expect(page.getByRole('button', { name: 'Déconnexion' })).toBeVisible();
-  await expect(page.getByRole('link', { name: '✓ Se connecter avec Ledger' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Tes règles' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Log out' })).toBeVisible();
+  await expect(page.getByRole('link', { name: '✓ Log in with Ledger' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Your rules' })).toBeVisible();
   await shot(page, '02-logged-in');
 
   // 3. Rules: the form is pre-filled with the demo merchants; an invalid value is caught first.
@@ -77,7 +77,7 @@ test('onboarding, then the dashboard follows what the agent does', async ({ page
   await expect(page.locator('.payee')).toHaveCount(3);
   await page.getByTestId('autoMax').fill('60');
   await page.getByTestId('send-rules').click();
-  await expect(page.locator('.err').first()).toContainText('plafond');
+  await expect(page.locator('.err').first()).toContainText('hard limit');
   await page.getByTestId('autoMax').fill('5');
   await page.getByTestId('send-rules').click();
   await expect(page.getByTestId('rules-active')).toContainText('budget 20 USDC');
@@ -88,7 +88,7 @@ test('onboarding, then the dashboard follows what the agent does', async ({ page
   await page.evaluate(() => (window as any).__bsaFake.armSession(true));
   await page.getByTestId('session-check').click();
   await expect(page.getByTestId('session-on')).toBeVisible();
-  await expect(page.getByTestId('statusbar')).toContainText('agent actif');
+  await expect(page.getByTestId('statusbar')).toContainText('agent active');
   await shot(page, '04-session');
 
   // 5. Connect Claude: the MCP URL is the public one.
@@ -104,7 +104,7 @@ test('onboarding, then the dashboard follows what the agent does', async ({ page
   // The prompt-injection deposit: the device refuses it, the banner says why.
   const evil = await bsa.agent.fetch(account, { url: `${shop}/evil/deposit` });
   expect(evil.kind).toBe('refused');
-  await expect(page.getByTestId('refusal-banner')).toContainText('plafond absolu');
+  await expect(page.getByTestId('refusal-banner')).toContainText('hard limit');
   await expect(page.getByTestId('feed')).toContainText('400 USDC');
   await shot(page, '06-dashboard-refusal');
 
@@ -113,15 +113,15 @@ test('onboarding, then the dashboard follows what the agent does', async ({ page
   const coffee = await bsa.agent.fetch(account, { url: `${shop}/cafe` });
   expect(coffee.kind).toBe('error');
   await expect(page.getByTestId('feed').locator('li').first()).toContainText('3 USDC');
-  await expect(page.getByTestId('feed').locator('li').first()).toContainText('échec');
+  await expect(page.getByTestId('feed').locator('li').first()).toContainText('failed');
   await page.getByRole('button', { name: 'OK' }).click();
   await expect(page.getByTestId('refusal-banner')).toHaveCount(0);
   await shot(page, '07-dashboard-feed');
 
   // The kill switch wipes the rules on the device.
   await page.getByTestId('kill').click();
-  await expect(page.getByText('Aucune règle active sur le Flex.')).toBeVisible();
-  await expect(page.getByTestId('statusbar')).toContainText('Aucune règle');
+  await expect(page.getByText('No active rules on the Flex.')).toBeVisible();
+  await expect(page.getByTestId('statusbar')).toContainText('No rules');
 });
 
 test('the OAuth consent page asks a logged-out user to sign in with Ledger', async ({ page }) => {
@@ -134,7 +134,7 @@ test('the OAuth consent page asks a logged-out user to sign in with Ledger', asy
     code_challenge: 'E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM', code_challenge_method: 'S256', state: 'x',
   });
   await page.goto(`${web}/oauth/authorize?${q}`);
-  await expect(page.getByText('Se connecter avec Ledger')).toBeVisible();
+  await expect(page.getByText('Log in with Ledger')).toBeVisible();
   await shot(page, '08-oauth-login-required');
 });
 
@@ -142,10 +142,10 @@ test('the 18+ badge: wallet (mock) -> Bind -> delegation -> the facilitator acce
   await page.goto(`${web}/?fakeDevice=1`);
   await page.getByTestId('connect').click();
   await page.getByTestId('login').click();
-  await expect(page.getByRole('heading', { name: 'Tes règles' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Your rules' })).toBeVisible();
   await page.getByTestId('send-rules').click();
   // The app moves on to the next step once the rules are on the device.
-  await expect(page.getByRole('link', { name: '✓ Définir les règles' })).toBeVisible();
+  await expect(page.getByRole('link', { name: '✓ Set your rules' })).toBeVisible();
   await page.evaluate(() => (window as any).__bsaFake.armSession(true));
   // A hash change is a same-document navigation: the (fake) device connection survives it.
   await page.goto(`${web}/?fakeDevice=1#/badge`);
@@ -164,7 +164,7 @@ test('the 18+ badge: wallet (mock) -> Bind -> delegation -> the facilitator acce
   // the facilitator must get past the whole 18+ chain first and fail only on the balance.
   const account = (await page.evaluate(() => fetch('/auth/me').then((r) => r.json()))).account as string;
   await page.evaluate(() => (window as any).__bsaFake.armSession(true));
-  const wine = await bsa.agent.fetch(account, { url: `${shop}/cave` });
+  const wine = await bsa.agent.fetch(account, { url: `${shop}/wine` });
   expect(wine.kind).toBe('error');
   expect(wine.kind === 'error' && wine.message).toMatch(/insufficient_funds/);
   expect(wine.kind === 'error' && wine.message).not.toMatch(/AGE_PROOF|DELEGATION_|ATTESTATION_|SUBJECT_MISMATCH/);
@@ -175,30 +175,30 @@ test('Key Ring backup, a wiped Flex, and a one-tap restore', async ({ page }) =>
   await page.getByTestId('connect').click();
   await page.getByTestId('login').click();
   await page.getByTestId('send-rules').click();
-  await expect(page.getByRole('link', { name: '✓ Définir les règles' })).toBeVisible();
+  await expect(page.getByRole('link', { name: '✓ Set your rules' })).toBeVisible();
 
   await page.goto(`${web}/?fakeDevice=1#/backup`);
   await page.getByTestId('backup').click();
-  await expect(page.getByTestId('backup-result')).toContainText('Sauvegardé');
+  await expect(page.getByTestId('backup-result')).toContainText('Backed up');
   await expect(page.getByTestId('backup-exists')).toBeVisible();
   await shot(page, '11-backup');
 
   // The vault holds ciphertext only: nothing readable about the rules.
   const main = (await page.evaluate(() => fetch('/auth/me').then((r) => r.json()))).account as string;
   const vault = await page.evaluate((m) => fetch(`/vault/${m}`).then((r) => r.json()), main);
-  expect(Buffer.from(vault.ciphertext, 'base64').toString('latin1')).not.toMatch(/Cafe Sat|Resto/);
+  expect(Buffer.from(vault.ciphertext, 'base64').toString('latin1')).not.toMatch(/Cafe Sat|Restaurant/);
 
   // Reinstalling the app wipes it.
   await page.evaluate(() => (window as any).__bsaFake.wipe());
   await page.goto(`${web}/?fakeDevice=1#/restore`);
   await page.getByTestId('restore').click();
-  await expect(page.getByTestId('restore-result')).toContainText('Restauré');
+  await expect(page.getByTestId('restore-result')).toContainText('Restored');
   const restored = await page.evaluate(() => (window as any).__bsaFake.getState());
   expect(restored.policy.active).toBe(true);
-  expect(restored.policy.payees.map((p: any) => p.label)).toEqual(['Cafe Sat', 'Cave du Coin', 'Resto']);
+  expect(restored.policy.payees.map((p: any) => p.label)).toEqual(['Cafe Sat', 'Corner Wines', 'Restaurant']);
   await shot(page, '12-restore');
 
   // Restoring over live rules is refused rather than silent.
   await page.getByTestId('restore').click();
-  await expect(page.getByTestId('restore-result')).toContainText('déjà des règles');
+  await expect(page.getByTestId('restore-result')).toContainText('already has rules');
 });

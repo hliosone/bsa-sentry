@@ -31,47 +31,47 @@ export function Rules({ bsa }: { bsa: Bsa }) {
   const p = bsa.device?.policy;
   return (
     <section className="card">
-      <h2>Tes règles</h2>
-      <p>Elles vivent <b>dans le Flex</b>. Le site ne fait que les proposer : ton Flex te les montre et c'est toi qui les valides.</p>
+      <h2>Your rules</h2>
+      <p>They live <b>in the Flex</b>. This website only proposes them: your Flex shows them to you and you approve them.</p>
       {p?.active && (
         <p className="ok" data-testid="rules-active">
-          Règles actives : automatique jusqu'à {usdc(p.autoMax)} USDC, plafond {usdc(p.hardMax)} USDC, budget {usdc(p.budget)} USDC, {p.payees.length} marchands de confiance.
+          Active rules: automatic up to {usdc(p.autoMax)} USDC, hard limit {usdc(p.hardMax)} USDC, budget {usdc(p.budget)} USDC, {p.payees.length} trusted merchants.
         </p>
       )}
       <form onSubmit={submit} className="rules">
-        <label>Payé sans me demander jusqu'à (USDC)
+        <label>Paid without asking me up to (USDC)
           <input value={form.autoMax} onChange={set('autoMax')} inputMode="decimal" data-testid="autoMax" />
           {errors.autoMax && <span className="err">{errors.autoMax}</span>}
         </label>
-        <label>Plafond absolu, refusé même avec ma confirmation (USDC)
+        <label>Hard limit, refused even if I confirm (USDC)
           <input value={form.hardMax} onChange={set('hardMax')} inputMode="decimal" data-testid="hardMax" />
           {errors.hardMax && <span className="err">{errors.hardMax}</span>}
         </label>
-        <label>Budget total (USDC)
+        <label>Total budget (USDC)
           <input value={form.budget} onChange={set('budget')} inputMode="decimal" data-testid="budget" />
           {errors.budget && <span className="err">{errors.budget}</span>}
         </label>
-        <label>Nombre de paiements max
+        <label>Maximum number of payments
           <input value={form.maxCount} onChange={set('maxCount')} inputMode="numeric" data-testid="maxCount" />
           {errors.maxCount && <span className="err">{errors.maxCount}</span>}
         </label>
 
-        <h3>Marchands de confiance ({form.payees.length}/8)</h3>
+        <h3>Trusted merchants ({form.payees.length}/8)</h3>
         {errors.payees && <p className="err">{errors.payees}</p>}
         {form.payees.map((m, i) => (
           <div className="payee" key={i}>
-            <input value={m.label} onChange={(e) => setPayee(i, 'label', e.target.value)} placeholder="Nom (16 octets max)" aria-label={`Nom du marchand ${i + 1}`} />
-            <input value={m.address} onChange={(e) => setPayee(i, 'address', e.target.value)} placeholder="0x…" className="mono" aria-label={`Adresse du marchand ${i + 1}`} />
-            <button type="button" className="ghost" onClick={() => setForm({ ...form, payees: form.payees.filter((_, j) => j !== i) })}>Retirer</button>
+            <input value={m.label} onChange={(e) => setPayee(i, 'label', e.target.value)} placeholder="Name (16 bytes max)" aria-label={`Merchant ${i + 1} name`} />
+            <input value={m.address} onChange={(e) => setPayee(i, 'address', e.target.value)} placeholder="0x…" className="mono" aria-label={`Merchant ${i + 1} address`} />
+            <button type="button" className="ghost" onClick={() => setForm({ ...form, payees: form.payees.filter((_, j) => j !== i) })}>Remove</button>
             {(errors[`payees.${i}.label`] || errors[`payees.${i}.address`]) && (
               <span className="err">{errors[`payees.${i}.label`] ?? errors[`payees.${i}.address`]}</span>
             )}
           </div>
         ))}
         {form.payees.length < 8 && (
-          <button type="button" className="ghost" onClick={() => setForm({ ...form, payees: [...form.payees, { label: '', address: '' }] })}>+ Ajouter un marchand</button>
+          <button type="button" className="ghost" onClick={() => setForm({ ...form, payees: [...form.payees, { label: '', address: '' }] })}>+ Add a merchant</button>
         )}
-        <div><button className="primary" disabled={!bsa.signer || !!bsa.busy} data-testid="send-rules">Envoyer au Flex pour validation</button></div>
+        <div><button className="primary" disabled={!bsa.signer || !!bsa.busy} data-testid="send-rules">Send to the Flex for approval</button></div>
       </form>
     </section>
   );

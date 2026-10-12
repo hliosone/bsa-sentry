@@ -41,7 +41,7 @@ describe('SIGN_LOGIN', () => {
   it('shows the origin, and 0xMAIN signs it after a tap', async () => {
     const payload = encodeLoginPayload({ chainId: ARC, ...msg });
     const pending = apdu(Uint8Array.from([0xe0, INS.SIGN_LOGIN, 0, 0, payload.length, ...payload]));
-    await waitForText(/Se connecter/i);
+    await waitForText(/Log in/i);
     await screenshot('08-sign-login');
     await approveReview();
     const r = await pending;
@@ -61,7 +61,7 @@ describe('SIGN_LOGIN', () => {
   it('returns nothing when the user rejects', async () => {
     const payload = encodeLoginPayload({ chainId: ARC, ...msg, nonce: b32('a2') });
     const pending = apdu(Uint8Array.from([0xe0, INS.SIGN_LOGIN, 0, 0, payload.length, ...payload]));
-    await waitForText(/Se connecter/i);
+    await waitForText(/Log in/i);
     await rejectReview();
     const r = await pending;
     expect(r.sw).toBe(SW.DENY);
@@ -79,7 +79,7 @@ describe('SIGN_BIND', () => {
     const msg = { verifier: 'https://verifier-backend.eudiw.dev', session: b32('b1'), expiresAt: 1_760_000_900n };
     const payload = encodeBindPayload({ chainId: ARC, ...msg });
     const pending = apdu(Uint8Array.from([0xe0, INS.SIGN_BIND, 0, 0, payload.length, ...payload]));
-    await waitForText(/Lier/i);
+    await waitForText(/Link/i);
     await screenshot('09-sign-bind');
     await approveReview();
     const r = await pending;
@@ -141,7 +141,7 @@ describe('SIGN_DELEGATION and the credential store', () => {
         continue;
       }
       const pending = apdu(chunks[i]!);
-      await waitForText(/Autoriser/i);
+      await waitForText(/Authorize/i);
       await screenshot('10-sign-delegation');
       await approveReview();
       last = await pending;

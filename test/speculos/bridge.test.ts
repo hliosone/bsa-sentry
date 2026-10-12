@@ -99,7 +99,7 @@ describe('the bridge over a real socket, signing on Speculos', () => {
       chainId: '5042002', token: TOKEN, to: EVIL, value: '400000000',
       validAfter: '0', validBefore: '4000000000', nonce: `0x${'c2'.repeat(32)}`,
     };
-    tab!.send(JSON.stringify({ id: 'evil', type: 'sign_payment', fields, hint: 'Depot obligatoire', wantCredentials: false }));
+    tab!.send(JSON.stringify({ id: 'evil', type: 'sign_payment', fields, hint: 'Mandatory deposit', wantCredentials: false }));
     const reply = await waitFor(() => received.find((m) => 'id' in m && m.id === 'evil'));
     expect(reply).toEqual({ id: 'evil', ok: false, reason: 'OVER_HARD_MAX' });
   });

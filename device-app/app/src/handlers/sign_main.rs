@@ -93,14 +93,14 @@ pub fn handler_sign_login<'a, const N: usize>(
     let comm = command.into_comm();
     let approved = NbglReview::new()
         .tx_type(TransactionType::Message)
-        .titles("Se connecter", "Connexion a un site web", "Se connecter")
+        .titles("Log in", "Log in to a website", "Log in")
         .show(
             comm,
             &[
                 Field { name: "Site", value: &origin_shown },
-                Field { name: "Compte", value: "Votre compte principal" },
-                Field { name: "Reseau", value: &chain },
-                Field { name: "Valable jusqu'au", value: &expiry },
+                Field { name: "Account", value: "Your main account" },
+                Field { name: "Network", value: &chain },
+                Field { name: "Valid until", value: &expiry },
             ],
         );
     show_home();
@@ -136,15 +136,15 @@ pub fn handler_sign_bind<'a, const N: usize>(
     let comm = command.into_comm();
     let approved = NbglReview::new()
         .tx_type(TransactionType::Message)
-        .titles("Lier votre identite", "Preuve 18+ depuis votre portefeuille", "Lier")
+        .titles("Link your identity", "18+ proof from your wallet", "Link")
         .show(
             comm,
             &[
-                Field { name: "Verificateur", value: &verifier_shown },
+                Field { name: "Verifier", value: &verifier_shown },
                 Field { name: "Session", value: &session_shown },
-                Field { name: "Reseau", value: &chain },
-                Field { name: "Valable jusqu'au", value: &expiry },
-                Field { name: "Donnees partagees", value: "Aucune donnee personnelle" },
+                Field { name: "Network", value: &chain },
+                Field { name: "Valid until", value: &expiry },
+                Field { name: "Data shared", value: "No personal data" },
             ],
         );
     show_home();
@@ -213,7 +213,7 @@ pub fn handler_sign_delegation<'a, const N: usize>(
     let name_shown = fmt::untrusted_text(name.as_bytes());
     let agent_shown = fmt::address(&agent);
     let claims_shown: String = if claims.is_empty() {
-        String::from("aucune")
+        String::from("none")
     } else {
         let mut acc = String::new();
         for (i, c) in claims.iter().enumerate() {
@@ -230,15 +230,15 @@ pub fn handler_sign_delegation<'a, const N: usize>(
     let comm = command.into_comm();
     let approved = NbglReview::new()
         .tx_type(TransactionType::Message)
-        .titles("Autoriser votre agent", "Verifiez l'adresse en entier", "Autoriser l'agent")
+        .titles("Authorize your agent", "Check the full address", "Authorize agent")
         .show(
             comm,
             &[
                 Field { name: "Agent", value: &name_shown },
-                Field { name: "Adresse de l'agent", value: &agent_shown },
-                Field { name: "Peut prouver", value: &claims_shown },
-                Field { name: "Reseau", value: &chain },
-                Field { name: "Jusqu'au", value: &expiry },
+                Field { name: "Agent address", value: &agent_shown },
+                Field { name: "Can prove", value: &claims_shown },
+                Field { name: "Network", value: &chain },
+                Field { name: "Until", value: &expiry },
             ],
         );
     show_home();

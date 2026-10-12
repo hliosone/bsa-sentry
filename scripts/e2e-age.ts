@@ -39,7 +39,7 @@ const freePort = () => new Promise<number>((r) => { const s = createNetServer().
 const policy: Policy = {
   active: true, chainId: 5042002n, token: lower(need('USDC_ADDRESS')),
   autoMax: 5n * USDC, hardMax: 50n * USDC, budget: 20n * USDC, maxCount: 10,
-  payees: [{ address: lower(payTo.cafe), label: 'Cafe Sat' }, { address: lower(payTo.cave), label: 'Cave du Coin' }, { address: lower(payTo.resto), label: 'Resto' }],
+  payees: [{ address: lower(payTo.cafe), label: 'Cafe Sat' }, { address: lower(payTo.cave), label: 'Corner Wines' }, { address: lower(payTo.resto), label: 'Restaurant' }],
 };
 
 async function prepareDevice(signer: SentrySigner) {
@@ -68,7 +68,7 @@ async function main() {
 
   let harness: ReturnType<typeof startBridgeHarness> | undefined;
   try {
-    step('Se connecter avec Ledger (Login signed on the Flex)');
+    step('Log in with Ledger (Login signed on the Flex)');
     const ch = await (await fetch(`${base}/auth/challenge`, { method: 'POST' })).json();
     const signing = signer.signLogin({ chainId: BigInt(ch.chainId), origin: ch.origin, nonce: ch.nonce, issuedAt: BigInt(ch.issuedAt), expiresAt: BigInt(ch.expiresAt) });
     await ui.approveReview();
@@ -87,7 +87,7 @@ async function main() {
 
     step('Bind: the Flex ties the presentation to 0xMAIN (tap)');
     const binding = signer.signBind({ chainId: 5042002n, verifier: s.bind.verifier, session: s.bind.session, expiresAt: BigInt(s.bind.expiresAt) });
-    await ui.waitForText(/Lier/i);
+    await ui.waitForText(/Link/i);
     await ui.screenshot('13-bind');
     await ui.approveReview();
     const bound = await (await fetch(`${base}/age/sessions/${s.sessionId}/bind`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ address: main, signature: await binding }) })).json();
@@ -101,7 +101,7 @@ async function main() {
       claims: [CLAIM_AGE_OVER_18], expiresAt: attestation.expiresAt, nonce: `0x${'5e'.repeat(32)}` as Hex,
     };
     const delegating = signer.signDelegation(delegation);
-    await ui.waitForText(/Autoriser/i);
+    await ui.waitForText(/Authorize/i);
     await ui.approveReview();
     const delegationSig = await delegating;
     const { chainId: _c, ...delegationStruct } = delegation;
@@ -109,7 +109,7 @@ async function main() {
     expect((await signer.getState()).hasCredentials, 'credentials stored on the Flex (it checked they are its own)');
 
     step('"Et une bouteille de vin" -> /cave (4.5 USDC, merchant requires 18+)');
-    const wine = await server.agent.fetch(main, { url: `${shop}/cave` });
+    const wine = await server.agent.fetch(main, { url: `${shop}/wine` });
     if (wine.kind === 'paid') {
       ok(`paid ${wine.receipt.amount} USDC, 18+ verified by the facilitator: https://explorer.testnet.arc.io/tx/${wine.receipt.txHash}`);
     } else {
@@ -121,7 +121,7 @@ async function main() {
     await prepareDevice(signer);
     expect(!(await signer.getState()).hasCredentials, 'the Flex holds no credentials now');
     await harness.bridge.refresh();
-    const noBadge = await server.agent.fetch(main, { url: `${shop}/cave` });
+    const noBadge = await server.agent.fetch(main, { url: `${shop}/wine` });
     expect(noBadge.kind === 'error' && /AGE_PROOF_REQUIRED/.test(noBadge.message), `refused: ${noBadge.kind === 'error' ? noBadge.message.slice(0, 160) : noBadge.kind}`);
   } finally {
     harness?.stop();

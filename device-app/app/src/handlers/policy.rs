@@ -40,7 +40,7 @@ pub fn handler_set_policy<'a, const N: usize>(
     let policy = decode_policy(payload).map_err(|_| AppError::Sw(AppSW::TxParsingFail))?;
 
     let comm = command.into_comm();
-    let approved = review_policy(comm, &policy, "Nouvelles regles");
+    let approved = review_policy(comm, &policy, "New rules");
     show_home();
     if !approved {
         return Err(AppError::Refused(bsa_sentry_core::RefusalReason::UserRejected));
@@ -64,7 +64,7 @@ pub fn review_policy<const N: usize>(comm: &mut Comm<N>, policy: &Policy, title:
     let max_count = format!("{}", policy.max_count);
 
     let payee_names: Vec<String> = (0..policy.payee_count)
-        .map(|i| format!("Marchand {}", i + 1))
+        .map(|i| format!("Merchant {}", i + 1))
         .collect();
     let payee_values: Vec<String> = policy
         .payees()
@@ -73,19 +73,19 @@ pub fn review_policy<const N: usize>(comm: &mut Comm<N>, policy: &Policy, title:
         .collect();
 
     let mut fields: Vec<Field> = Vec::with_capacity(6 + policy.payee_count);
-    fields.push(Field { name: "Reseau", value: &chain });
-    fields.push(Field { name: "Jeton", value: &token });
-    fields.push(Field { name: "Sans confirmation jusqu'a", value: &auto_max });
-    fields.push(Field { name: "Plafond absolu", value: &hard_max });
-    fields.push(Field { name: "Budget total", value: &budget });
-    fields.push(Field { name: "Paiements max", value: &max_count });
+    fields.push(Field { name: "Network", value: &chain });
+    fields.push(Field { name: "Token", value: &token });
+    fields.push(Field { name: "Auto-approve up to", value: &auto_max });
+    fields.push(Field { name: "Hard limit", value: &hard_max });
+    fields.push(Field { name: "Total budget", value: &budget });
+    fields.push(Field { name: "Max payments", value: &max_count });
     for i in 0..policy.payee_count {
         fields.push(Field { name: &payee_names[i], value: &payee_values[i] });
     }
 
     NbglReview::new()
         .tx_type(TransactionType::Operation)
-        .titles(title, "Verifiez chaque adresse en entier", "Approuver les regles")
+        .titles(title, "Check every full address", "Approve rules")
         .show(comm, &fields)
 }
 
@@ -97,15 +97,15 @@ pub fn handler_clear_policy<'a, const N: usize>(
     let approved = NbglReview::new()
         .tx_type(TransactionType::Operation)
         .titles(
-            "Bloquer l'agent ?",
-            "Les regles et le budget seront effaces",
-            "Bloquer l'agent",
+            "Block the agent?",
+            "Rules and budget will be erased",
+            "Block agent",
         )
         .show(
             comm,
             &[
-                Field { name: "Effet", value: "L'agent ne pourra plus payer" },
-                Field { name: "Marchands de confiance", value: "Tous effaces" },
+                Field { name: "Effect", value: "The agent can no longer pay" },
+                Field { name: "Trusted merchants", value: "All erased" },
             ],
         );
     show_home();

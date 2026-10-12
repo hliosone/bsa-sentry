@@ -20,7 +20,7 @@ export type OAuthOptions = {
   db: Db;
   /** Public base URL of this server, e.g. the tunnel or the deployed host. */
   baseUrl: string;
-  /** Where "Se connecter avec Ledger" lives. */
+  /** Where "Log in with Ledger" lives. */
   webOrigin: string;
   secret: string;
   now?: () => number;
@@ -133,23 +133,23 @@ export function oauthRouter(opts: OAuthOptions) {
     const account = readSession(req, opts.secret, now);
     if (!account) {
       const back = encodeURIComponent(`${base}/oauth/authorize?${query}`);
-      return res.type('html').send(page('Connexion requise', `
-        <p>Pour autoriser <b>${esc(check.c.client_name ?? 'cet agent')}</b>, connecte-toi d'abord avec ton Ledger.</p>
-        <p><a class="btn" href="${esc(opts.webOrigin)}/?returnTo=${back}">Se connecter avec Ledger</a></p>`));
+      return res.type('html').send(page('Login required', `
+        <p>To authorize <b>${esc(check.c.client_name ?? 'this agent')}</b>, log in with your Ledger first.</p>
+        <p><a class="btn" href="${esc(opts.webOrigin)}/?returnTo=${back}">Log in with Ledger</a></p>`));
     }
 
-    res.type('html').send(page('Autoriser cet agent ?', `
-      <h1>Autoriser ${esc(check.c.client_name ?? 'cet agent')} à demander des paiements à ton Flex ?</h1>
-      <p>Compte <code>${esc(account)}</code></p>
+    res.type('html').send(page('Authorize this agent?', `
+      <h1>Allow ${esc(check.c.client_name ?? 'this agent')} to request payments from your Flex?</h1>
+      <p>Account <code>${esc(account)}</code></p>
       <ul>
-        <li>${esc(check.c.client_name ?? "L'agent")} pourra <b>demander</b> des paiements en USDC sur Arc testnet.</li>
-        <li><b>Ton Flex décide</b> : il signe seul ce qui respecte tes règles, te demande pour le reste, et refuse ce qui est dangereux.</li>
-        <li>Tu peux retirer cet accès à tout moment depuis le tableau de bord.</li>
+        <li>${esc(check.c.client_name ?? 'The agent')} will be able to <b>request</b> USDC payments on Arc testnet.</li>
+        <li><b>Your Flex decides</b>: it signs on its own what fits your rules, asks you about the rest, and refuses what is dangerous.</li>
+        <li>You can revoke this access at any time from the dashboard.</li>
       </ul>
       <form method="post" action="/oauth/authorize?${esc(query)}">
         <input type="hidden" name="csrf" value="${esc(csrfFor(account, query))}">
-        <button name="decision" value="allow" class="btn">Autoriser Claude à demander des paiements à ton Flex</button>
-        <button name="decision" value="deny" class="btn secondary">Refuser</button>
+        <button name="decision" value="allow" class="btn">Allow Claude to request payments from your Flex</button>
+        <button name="decision" value="deny" class="btn secondary">Deny</button>
       </form>`));
   });
 
@@ -157,10 +157,10 @@ export function oauthRouter(opts: OAuthOptions) {
     const check = checkAuthorize(req.query as Record<string, unknown>);
     if (typeof check === 'string') return res.status(400).type('html').send(page('Demande invalide', `<p>${esc(check)}</p>`));
     const account = readSession(req, opts.secret, now);
-    if (!account) return res.status(401).type('html').send(page('Connexion requise', '<p>Session expirée.</p>'));
+    if (!account) return res.status(401).type('html').send(page('Login required', '<p>Session expired.</p>'));
     const query = new URLSearchParams(req.query as Record<string, string>).toString();
     const csrf = typeof req.body?.csrf === 'string' ? req.body.csrf : '';
-    if (!sameSecret(csrf, csrfFor(account, query))) return res.status(403).type('html').send(page('Refusé', '<p>Jeton de formulaire invalide.</p>'));
+    if (!sameSecret(csrf, csrfFor(account, query))) return res.status(403).type('html').send(page('Denied', '<p>Invalid form token.</p>'));
 
     const back = new URL(check.redirect);
     const state = typeof req.query.state === 'string' ? req.query.state : undefined;
@@ -293,7 +293,7 @@ export function requireBearer(opts: { db: Db; baseUrl: string; now?: () => numbe
 }
 
 function page(title: string, content: string) {
-  return `<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width">
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width">
 <title>${esc(title)} · BSA Sentry</title>
 <style>
   body{font:16px/1.5 system-ui,sans-serif;max-width:560px;margin:48px auto;padding:0 20px;color:#111}

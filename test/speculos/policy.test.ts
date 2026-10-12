@@ -24,8 +24,8 @@ export const demoPolicy = (): Policy => ({
   maxCount: 10,
   payees: [
     { address: CAFE, label: 'Cafe Sat' },
-    { address: CAVE, label: 'Cave du Coin' },
-    { address: RESTO, label: 'Resto' },
+    { address: CAVE, label: 'Corner Wines' },
+    { address: RESTO, label: 'Restaurant' },
   ],
 });
 
@@ -86,7 +86,7 @@ describe('SET_POLICY', () => {
     expect(s.policy.budget).toBe(20_000_000n);
     expect(s.policy.maxCount).toBe(10);
     expect(s.policy.payees.map((p) => p.address)).toEqual([CAFE, CAVE, RESTO]);
-    expect(s.policy.payees.map((p) => p.label)).toEqual(['Cafe Sat', 'Cave du Coin', 'Resto']);
+    expect(s.policy.payees.map((p) => p.label)).toEqual(['Cafe Sat', 'Corner Wines', 'Restaurant']);
   });
 
   it('stores nothing when the user rejects the review', async () => {
@@ -176,7 +176,7 @@ describe('CLEAR_POLICY (the kill switch)', () => {
   it('wipes the rules and the counters after a tap', async () => {
     expect((await state()).policy.active).toBe(true);
     const pending = apdu(Uint8Array.from([0xe0, INS.CLEAR_POLICY, 0, 0, 0]));
-    await waitForText(/bloquer/i);
+    await waitForText(/block/i);
     await screenshot('03-clear-policy-review');
     await approveReview();
     expect((await pending).sw).toBe(SW.OK);

@@ -65,7 +65,7 @@ describe('rules form', () => {
   });
 
   it('accepts the demo rules', () => {
-    const r = validateRules(defaultRules([{ label: 'Cafe Sat', address: CAFE }, { label: 'Resto', address: RESTO }]), ctx);
+    const r = validateRules(defaultRules([{ label: 'Cafe Sat', address: CAFE }, { label: 'Restaurant', address: RESTO }]), ctx);
     expect(r.ok).toBe(true);
     if (!r.ok) return;
     expect(r.policy).toMatchObject({ autoMax: 5_000_000n, hardMax: 50_000_000n, budget: 20_000_000n, maxCount: 10, token: TOKEN, active: true });
@@ -76,7 +76,7 @@ describe('rules form', () => {
     const r = validateRules({ ...defaultRules([]), autoMax: '60', hardMax: '50' }, ctx);
     expect(r.ok).toBe(false);
     if (r.ok) return;
-    expect(r.errors.autoMax).toMatch(/plafond/i);
+    expect(r.errors.autoMax).toMatch(/hard limit/i);
   });
 
   it('rejects zero or malformed amounts and counts', () => {
@@ -98,7 +98,7 @@ describe('rules form', () => {
     expect(!r3.ok && r3.errors['payees.0.address']).toBeTruthy();
 
     const r4 = validateRules(defaultRules([{ label: 'a', address: CAFE }, { label: 'b', address: CAFE.toUpperCase().replace('0X', '0x') }]), ctx);
-    expect(!r4.ok && r4.errors['payees.1.address']).toMatch(/déjà/i);
+    expect(!r4.ok && r4.errors['payees.1.address']).toMatch(/already/i);
   });
 
   it('applies EIP-55: any single case is fine, a wrong mixed-case checksum is a typo', async () => {
@@ -140,7 +140,7 @@ describe('dashboard feed', () => {
   });
 
   it('a refusal is marked and raises the banner', () => {
-    let s = feedReducer(initialFeed, req('a', '400000000', 'Depot'));
+    let s = feedReducer(initialFeed, req('a', '400000000', 'Deposit'));
     s = feedReducer(s, { type: 'answer', id: 'a', answer: { ok: false, reason: 'OVER_HARD_MAX' } });
     expect(s.items[0]).toMatchObject({ stage: 'refused', reason: 'OVER_HARD_MAX', amount: '400' });
     expect(s.banner).toMatchObject({ reason: 'OVER_HARD_MAX', amount: '400' });
@@ -173,15 +173,15 @@ describe('status bar', () => {
   });
 
   it('says exactly what to fix, most fundamental first', () => {
-    expect(statusLine({ socket: 'closed', flex: 'connected', session: true, policyActive: true }).text).toMatch(/serveur/i);
-    expect(statusLine({ socket: 'open', flex: 'disconnected', session: false, policyActive: false }).text).toMatch(/branche/i);
-    expect(statusLine({ socket: 'open', flex: 'locked', session: false, policyActive: true }).text).toMatch(/déverrouille/i);
-    expect(statusLine({ socket: 'open', flex: 'app_closed', session: false, policyActive: true }).text).toMatch(/ouvre.*BSA Sentry/i);
-    expect(statusLine({ socket: 'open', flex: 'connected', session: true, policyActive: false }).text).toMatch(/règles/i);
+    expect(statusLine({ socket: 'closed', flex: 'connected', session: true, policyActive: true }).text).toMatch(/server/i);
+    expect(statusLine({ socket: 'open', flex: 'disconnected', session: false, policyActive: false }).text).toMatch(/plug in/i);
+    expect(statusLine({ socket: 'open', flex: 'locked', session: false, policyActive: true }).text).toMatch(/unlock/i);
+    expect(statusLine({ socket: 'open', flex: 'app_closed', session: false, policyActive: true }).text).toMatch(/open.*BSA Sentry/i);
+    expect(statusLine({ socket: 'open', flex: 'connected', session: true, policyActive: false }).text).toMatch(/rules/i);
     expect(statusLine({ socket: 'open', flex: 'connected', session: false, policyActive: true }).text).toMatch(/session/i);
   });
 
   it('always reminds to keep the computer awake while ready', () => {
-    expect(statusLine({ socket: 'open', flex: 'connected', session: true, policyActive: true }).text).toMatch(/veille/i);
+    expect(statusLine({ socket: 'open', flex: 'connected', session: true, policyActive: true }).text).toMatch(/awake/i);
   });
 });

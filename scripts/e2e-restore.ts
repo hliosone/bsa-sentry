@@ -4,7 +4,7 @@
 //   -> Key Ring backup (fake Key Ring: real AES-GCM; Ledger Sync cannot run in Speculos) -> vault
 //   -> the Flex is WIPED (fresh NVM, same seed: what reinstalling the app does)
 //   -> restore: vault -> decrypt -> RESTORE, reviewed and approved on the device (tap)
-//   -> the café is paid again, the trusted bakery is silent again, the badge is back.
+//   -> the cafe is paid again, the trusted bakery is silent again, the badge is back.
 //
 //   E2E=1 pnpm e2e:restore
 import 'dotenv/config';
@@ -43,7 +43,7 @@ async function main() {
   const policy: Policy = {
     active: true, chainId: 5042002n, token: lower(need('USDC_ADDRESS')),
     autoMax: 5n * USDC, hardMax: 50n * USDC, budget: 20n * USDC, maxCount: 10,
-    payees: [{ address: lower(payTo.cafe), label: 'Cafe Sat' }, { address: lower(payTo.cave), label: 'Cave du Coin' }, { address: lower(payTo.resto), label: 'Resto' }],
+    payees: [{ address: lower(payTo.cafe), label: 'Cafe Sat' }, { address: lower(payTo.cave), label: 'Corner Wines' }, { address: lower(payTo.resto), label: 'Restaurant' }],
   };
   const arm = () => ui.setSessionVia(async () => (await signer.getState()).sessionArmed, true).then(() => ui.goHome());
 
@@ -74,10 +74,10 @@ async function main() {
     for (let i = 0; i < 100 && !server.relay.status(main).agent; i++) await new Promise((r) => setTimeout(r, 150));
     expect(server.relay.status(main).agent === agent, 'logged in, bridge attached');
 
-    step('Trust the bakery on the device ("Faire confiance")');
-    const croissant = server.agent.fetch(main, { url: `${shop}/boulangerie` });
-    await ui.waitForText(/Payer 2 USDC/i, 30_000);
-    await ui.tapText('Faire confiance');
+    step('Trust the bakery on the device ("Trust merchant")');
+    const croissant = server.agent.fetch(main, { url: `${shop}/bakery` });
+    await ui.waitForText(/Pay 2 USDC/i, 30_000);
+    await ui.tapText('Trust merchant');
     expect((await croissant).kind === 'paid', 'paid, bakery now trusted on the device');
 
     step('18+ badge (mock wallet): Bind + delegation on the device, stored on the Flex');
@@ -115,7 +115,7 @@ async function main() {
       withKeyRing: (fn) => fn(keyRing),
       restore: async (p, c) => {
         const pending = signer.restore(p, c);
-        await ui.waitForText(/Restaurer/i);
+        await ui.waitForText(/Restore/i);
         await ui.screenshot('14-restore-review');
         await ui.approveReview();
         await pending;
@@ -127,7 +127,7 @@ async function main() {
     const before = await signer.getState();
     expect(await runBackup(deps()) === 'backed_up', `backed up ${before.policy.payees.length} merchants + the badge`);
     const vault = await (await fetch(`${base}/vault/${main}`, { headers: { cookie } })).json();
-    expect(!/Cafe|Boulangerie|age_over/.test(Buffer.from(vault.ciphertext, 'base64').toString('latin1')), 'the vault holds no readable rules');
+    expect(!/Cafe|Bakery|age_over/.test(Buffer.from(vault.ciphertext, 'base64').toString('latin1')), 'the vault holds no readable rules');
 
     step('The Flex is wiped (app reinstalled: fresh NVM, same seed)');
     ui.restart(true);
@@ -146,8 +146,8 @@ async function main() {
     await arm();
     await harness.bridge.refresh();
     const coffee = await server.agent.fetch(main, { url: `${shop}/cafe` });
-    expect(coffee.kind === 'paid', `café paid on Arc${coffee.kind === 'paid' ? `: ${coffee.receipt.txHash}` : ` -> ${JSON.stringify(coffee).slice(0, 200)}`}`);
-    const bread = await server.agent.fetch(main, { url: `${shop}/boulangerie` });
+    expect(coffee.kind === 'paid', `cafe paid on Arc${coffee.kind === 'paid' ? `: ${coffee.receipt.txHash}` : ` -> ${JSON.stringify(coffee).slice(0, 200)}`}`);
+    const bread = await server.agent.fetch(main, { url: `${shop}/bakery` });
     expect(bread.kind === 'paid', 'the bakery is still trusted: paid with no tap');
   } finally {
     harness?.stop();

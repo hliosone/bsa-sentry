@@ -83,8 +83,8 @@ export function useBsa() {
     setDevice(await s.getState().catch(() => null));
   }, []);
 
-  /** "Connecter le Flex". In a dev build, `?fakeDevice=1` swaps in the Playwright stand-in. */
-  const connect = useCallback(() => run('Choisis ton Flex dans la fenêtre de Chrome…', async () => {
+  /** "Connect the Flex". In a dev build, `?fakeDevice=1` swaps in the Playwright stand-in. */
+  const connect = useCallback(() => run('Pick your Flex in the Chrome window…', async () => {
     if (import.meta.env.DEV && new URLSearchParams(location.search).has('fakeDevice')) {
       const { fakeSigner } = await import('./device/fake.js');
       const fake = fakeSigner();
@@ -106,9 +106,9 @@ export function useBsa() {
     });
   }, [signer, adopt, watch]);
 
-  /** "Se connecter avec Ledger": the Flex signs a Login with 0xMAIN. */
-  const login = useCallback(() => run('Vérifie le site affiché sur ton Flex, puis maintiens pour signer…', async () => {
-    if (!signer || !addresses.main) throw new Error('Connecte d\'abord ton Flex');
+  /** "Log in with Ledger": the Flex signs a Login with 0xMAIN. */
+  const login = useCallback(() => run('Check the website shown on your Flex, then hold to sign…', async () => {
+    if (!signer || !addresses.main) throw new Error('Connect your Flex first');
     const c = await api.challenge();
     const signature = await signer.signLogin({
       chainId: BigInt(c.chainId), origin: c.origin, nonce: c.nonce, issuedAt: BigInt(c.issuedAt), expiresAt: BigInt(c.expiresAt),
@@ -151,7 +151,7 @@ export function useBsa() {
     // The latest session, not the one this callback was created with: a restore writes to the
     // device right after the Key Ring round trip replaced the DMK session.
     const s = live.current;
-    if (!s) throw new Error('Connecte d\'abord ton Flex');
+    if (!s) throw new Error('Connect your Flex first');
     return bridge.current ? bridge.current.exclusive(() => fn(s)) : fn(s);
   }, []);
 
@@ -161,12 +161,12 @@ export function useBsa() {
     await bridge.current?.refresh();
   }, [signer, onDevice]);
 
-  const setRules = useCallback((p: Policy) => run('Vérifie chaque règle et chaque adresse EN ENTIER sur ton Flex, puis maintiens pour approuver…', async () => {
+  const setRules = useCallback((p: Policy) => run('Check every rule and every FULL address on your Flex, then hold to approve…', async () => {
     await onDevice((s) => s.setPolicy(p));
     await refreshDevice();
   }), [run, onDevice, refreshDevice]);
 
-  const clearRules = useCallback(() => run('Confirme le blocage de l\'agent sur ton Flex…', async () => {
+  const clearRules = useCallback(() => run('Confirm blocking the agent on your Flex…', async () => {
     await onDevice((s) => s.clearPolicy());
     await refreshDevice();
   }), [run, onDevice, refreshDevice]);
@@ -199,14 +199,14 @@ export function useBsa() {
       }
     }
     const c = conn.current;
-    if (!c) throw new Error('Connecte d\'abord ton Flex');
+    if (!c) throw new Error('Connect your Flex first');
     keyRingActive.current = true;
     try {
-      if (!(await c.switchApp('Ledger Sync'))) await ask("Sur ton Flex, quitte BSA Sentry et ouvre l'app Ledger Sync.", 'Ledger Sync est ouvert');
+      if (!(await c.switchApp('Ledger Sync'))) await ask('On your Flex, quit BSA Sentry and open the Ledger Sync app.', 'Ledger Sync is open');
       await c.disconnect();
       conn.current = null;
       const { openLedgerKeyRing } = await import('./keyring/ledger.js');
-      const kr = await openLedgerKeyRing((on) => setBusy(on ? 'Confirme sur ton Flex (Ledger Sync)…' : 'Chiffrement…'));
+      const kr = await openLedgerKeyRing((on) => setBusy(on ? 'Confirm on your Flex (Ledger Sync)…' : 'Encrypting…'));
       try {
         return await fn(kr);
       } finally {
@@ -216,7 +216,7 @@ export function useBsa() {
       // The browser already allowed this Flex: reconnect without the picker. If BSA Sentry is not
       // open yet, its first command fails: ask again rather than hang.
       for (let back = false; !back; ) {
-        await ask("Sur ton Flex, quitte Ledger Sync et rouvre l'app BSA Sentry.", 'BSA Sentry est rouvert');
+        await ask('On your Flex, quit Ledger Sync and reopen the BSA Sentry app.', 'BSA Sentry is open again');
         back = await new Promise<boolean>((resolve) => {
           const stop = reconnectFlex((nc) => {
             stop();
@@ -239,13 +239,13 @@ export function useBsa() {
     },
     putVault: async (ciphertext) => {
       const r = await fetch(vaultUrl(), { method: 'PUT', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ciphertext }) });
-      if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error ?? 'sauvegarde refusée');
+      if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error ?? 'backup refused');
       setHasBackup(true);
     },
     getVault: async () => {
       const r = await fetch(vaultUrl(), { credentials: 'same-origin' });
       if (r.status === 404) return null;
-      if (!r.ok) throw new Error('lecture de la sauvegarde refusée');
+      if (!r.ok) throw new Error('reading the backup was refused');
       return (await r.json()).ciphertext;
     },
     withKeyRing,

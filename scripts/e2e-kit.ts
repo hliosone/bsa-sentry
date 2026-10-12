@@ -50,12 +50,12 @@ export async function startStack(opts: { port?: number; publicUrl?: string } = {
   };
 }
 
-/** "Se connecter avec Ledger" with the Flex being Speculos: returns the session cookie. */
+/** "Log in with Ledger" with the Flex being Speculos: returns the session cookie. */
 export async function ledgerLogin(signer: SentrySigner, base: string): Promise<{ cookie: string; main: Hex }> {
   const ch = await (await fetch(`${base}/auth/challenge`, { method: 'POST' })).json();
   const main = await signer.getAddress('main');
   const signing = signer.signLogin({ chainId: BigInt(ch.chainId), origin: ch.origin, nonce: ch.nonce, issuedAt: BigInt(ch.issuedAt), expiresAt: BigInt(ch.expiresAt) });
-  await ui.waitForText(/Se connecter/i);
+  await ui.waitForText(/Log in/i);
   await ui.approveReview();
   const login = await fetch(`${base}/auth/login`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ address: main, nonce: ch.nonce, signature: await signing }) });
   if (!login.ok) throw new Error(`login failed: ${login.status}`);
@@ -90,7 +90,7 @@ export class HeadlessClaude implements OAuthClientProvider {
   codeVerifier() { return this.verifier; }
   async redirectToAuthorization(url: URL) {
     const html = await (await fetch(url, { headers: { cookie: this.cookie } })).text();
-    this.sawConsent = /Autoriser .* à demander des paiements à ton Flex/.test(html);
+    this.sawConsent = /Allow .* to request payments from your Flex/.test(html);
     const csrf = /name="csrf" value="([^"]+)"/.exec(html)?.[1];
     if (!csrf) throw new Error('no consent form');
     const consent = await fetch(url, { method: 'POST', redirect: 'manual', headers: { cookie: this.cookie, 'content-type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ csrf, decision: 'allow' }) });

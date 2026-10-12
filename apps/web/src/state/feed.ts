@@ -38,7 +38,7 @@ export function feedReducer(state: FeedState, e: FeedEvent): FeedState {
       if (e.message.type !== 'sign_payment') return state;
       const item: FeedItem = {
         id: e.id, at: e.at, stage: 'pending',
-        merchant: e.message.hint || 'Marchand',
+        merchant: e.message.hint || 'Merchant',
         amount: usdc(e.message.fields?.value),
         payee: (e.message.fields?.to ?? '').toLowerCase(),
       };

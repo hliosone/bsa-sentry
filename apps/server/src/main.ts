@@ -94,7 +94,7 @@ export async function startBsaServer(env: BsaServerEnv = process.env, opts: { po
       // The demo merchants the rules form offers by default. The bakery is deliberately left
       // out: it is the "unknown merchant" of the demo.
       const defaultPayees = [
-        ['Cafe Sat', env.MERCHANT_CAFE_ADDRESS], ['Cave du Coin', env.MERCHANT_CAVE_ADDRESS], ['Resto', env.MERCHANT_RESTO_ADDRESS],
+        ['Cafe Sat', env.MERCHANT_CAFE_ADDRESS], ['Corner Wines', env.MERCHANT_CAVE_ADDRESS], ['Restaurant', env.MERCHANT_RESTO_ADDRESS],
       ].filter(([, a]) => !!a).map(([label, address]) => ({ label, address: address!.toLowerCase() }));
       app.get('/api/config', (_req, res) => res.json({
         chainId: chain.chainId, chainName: chain.name, usdc: chain.usdc, explorer: chain.explorer,

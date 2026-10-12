@@ -13,27 +13,27 @@ export function Claude({ bsa }: { bsa: Bsa }) {
   const url = bsa.config?.mcpUrl ?? '';
   return (
     <section className="card">
-      <h2>Connecter Claude</h2>
+      <h2>Connect Claude</h2>
       <ol className="steps-howto">
-        <li>Sur <b>claude.ai</b> : Réglages → Connecteurs → <b>Ajouter un connecteur personnalisé</b>.</li>
-        <li>Colle cette adresse :
+        <li>In <b>Claude</b> (claude.ai or Claude Desktop): Settings → Connectors → <b>Add custom connector</b>.</li>
+        <li>Paste this URL:
           <div className="copy">
             <code data-testid="mcp-url">{url}</code>
-            <button className="ghost" onClick={() => { void navigator.clipboard?.writeText(url); setCopied(true); }}>{copied ? 'Copié' : 'Copier'}</button>
+            <button className="ghost" onClick={() => { void navigator.clipboard?.writeText(url); setCopied(true); }}>{copied ? 'Copied' : 'Copy'}</button>
           </div>
         </li>
-        <li>Claude ouvre une page BSA Sentry : clique <b>« Autoriser Claude à demander des paiements à ton Flex »</b>.</li>
-        <li>Demande-lui par exemple : <i>« Achète-moi un café »</i>.</li>
+        <li>Claude opens a BSA Sentry page: click <b>"Allow Claude to request payments from your Flex"</b>.</li>
+        <li>Then ask, for example: <i>"Buy me a coffee"</i>.</li>
       </ol>
-      <p>Claude peut seulement <b>demander</b>. Ton Flex signe seul ce qui respecte tes règles, te demande pour le reste, refuse ce qui est dangereux.</p>
+      <p>Claude can only <b>ask</b>. Your Flex signs on its own what fits your rules, asks you about the rest, and refuses what is dangerous.</p>
 
-      <h3>Accès accordés</h3>
-      {grants.length === 0 ? <p className="muted">Aucun pour l'instant.</p> : (
+      <h3>Granted access</h3>
+      {grants.length === 0 ? <p className="muted">None yet.</p> : (
         <ul className="grants">
           {grants.map((g) => (
             <li key={g.id}>
-              <span>{g.client_name ?? 'Client'} · depuis {new Date(g.created_at * 1000).toLocaleString('fr-CH')}</span>
-              <button className="danger" onClick={async () => { await api.revokeGrant(g.id); await load(); }}>Révoquer</button>
+              <span>{g.client_name ?? 'Client'} · since {new Date(g.created_at * 1000).toLocaleString('en-GB')}</span>
+              <button className="danger" onClick={async () => { await api.revokeGrant(g.id); await load(); }}>Revoke</button>
             </li>
           ))}
         </ul>

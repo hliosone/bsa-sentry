@@ -175,14 +175,14 @@ describe('18+', () => {
   it('asks the tab for credentials only when the merchant requires 18+', async () => {
     const d = deps({ relay: { signPayment: vi.fn(async () => ({ ok: true as const, signature: sig, credentials })) } },
       merchant({ required: ageRequired() }));
-    await x402Fetch('alice', { url: 'http://merchants/cave' }, d);
+    await x402Fetch('alice', { url: 'http://merchants/wine' }, d);
     expect((d.relay.signPayment as any).mock.calls[0][1].wantCredentials).toBe(true);
   });
 
   it('attaches them as extensions.bsaAge in the payment', async () => {
     const d = deps({ relay: { signPayment: vi.fn(async () => ({ ok: true as const, signature: sig, credentials })) } },
       merchant({ required: ageRequired() }));
-    await x402Fetch('alice', { url: 'http://merchants/cave' }, d);
+    await x402Fetch('alice', { url: 'http://merchants/wine' }, d);
     const payload = decodePaymentSignatureHeader(new Headers(d.m.calls[1]!.init?.headers).get('PAYMENT-SIGNATURE')!) as any;
     expect(payload.extensions.bsaAge).toEqual(credentials);
   });
@@ -190,7 +190,7 @@ describe('18+', () => {
   it('still sends the payment without credentials, and lets the facilitator refuse it', async () => {
     // The server must not decide on the facilitator's behalf: it forwards what it has.
     const d = deps({}, merchant({ required: ageRequired(), paidStatus: 402 }));
-    const r = await x402Fetch('alice', { url: 'http://merchants/cave' }, d);
+    const r = await x402Fetch('alice', { url: 'http://merchants/wine' }, d);
     const payload = decodePaymentSignatureHeader(new Headers(d.m.calls[1]!.init?.headers).get('PAYMENT-SIGNATURE')!) as any;
     expect(payload.extensions?.bsaAge).toBeUndefined();
     expect(r.kind).toBe('error');
@@ -226,7 +226,7 @@ describe('refusals and failures, in words the agent can repeat', () => {
   });
 
   it('reports the facilitator\'s reason when the merchant rejects the signed payment', async () => {
-    const r = await x402Fetch('alice', { url: 'http://merchants/cave' }, deps({}, merchant({ rejectReason: 'AGE_PROOF_REQUIRED' })));
+    const r = await x402Fetch('alice', { url: 'http://merchants/wine' }, deps({}, merchant({ rejectReason: 'AGE_PROOF_REQUIRED' })));
     expect(r).toMatchObject({ kind: 'error', amount: '3', payee: CAFE });
     expect(r.kind === 'error' && r.message).toMatch(/AGE_PROOF_REQUIRED/);
     // And it tells the agent what to do about it.

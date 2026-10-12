@@ -4,16 +4,16 @@ export function Session({ bsa }: { bsa: Bsa }) {
   const armed = bsa.bridgeStatus.session || !!bsa.device?.sessionArmed;
   return (
     <section className="card">
-      <h2>Démarrer l'agent sur le Flex</h2>
-      <p>Seul le Flex peut démarrer l'agent : aucun site, aucun serveur ne peut le faire à ta place. Un redémarrage de l'app l'arrête.</p>
+      <h2>Start the agent on the Flex</h2>
+      <p>Only the Flex can start the agent: no website and no server can do it for you. Restarting the app stops it.</p>
       <ol className="steps-howto">
-        <li>Sur l'écran d'accueil de BSA Sentry, touche l'icône réglages en haut à droite.</li>
-        <li>Active <b>Agent session</b>.</li>
+        <li>On the BSA Sentry home screen, tap the settings icon at the top right.</li>
+        <li>Turn on <b>Agent session</b>.</li>
       </ol>
       {armed ? (
-        <p className="ok" data-testid="session-on">Agent démarré.</p>
+        <p className="ok" data-testid="session-on">Agent started.</p>
       ) : (
-        <button className="primary" onClick={() => void bsa.refreshDevice()} data-testid="session-check">J'ai démarré l'agent</button>
+        <button className="primary" onClick={() => void bsa.refreshDevice()} data-testid="session-check">I started the agent</button>
       )}
     </section>
   );

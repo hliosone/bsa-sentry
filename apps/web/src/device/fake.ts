@@ -48,7 +48,7 @@ export function fakeSigner() {
         message: { from: agent.address, to: f.to, value: f.value, validAfter: f.validAfter, validBefore: f.validBefore, nonce: f.nonce },
       });
       spent += f.value; count += 1;
-      last = { label: policy.payees.find((p) => p.address === f.to)?.label ?? 'Marchand', value: f.value };
+      last = { label: policy.payees.find((p) => p.address === f.to)?.label ?? 'Merchant', value: f.value };
       return splitSignature(toWireSignature(sig));
     },
     signBind: async (m: { chainId: bigint; verifier: string; session: `0x${string}`; expiresAt: bigint }) =>
