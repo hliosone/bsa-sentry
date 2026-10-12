@@ -12,7 +12,7 @@ and refusing outright. The agent pays over x402 (USDC, EIP-3009) on Arc testnet.
 | Ledger primitive | How we used it | Verdict |
 |---|---|---|
 | **`ledger_device_sdk` (Rust) + `app-boilerplate-rust`** | The whole device app: 11 custom APDUs, EIP-712 digests computed on-device, NVM policy storage | Works, but most of our lost time is here |
-| **NBGL (via the `sys` C layout API)** | The 3-choice orange screen with a 60 s auto-refusal, which the safe wrappers cannot express | The single biggest gap |
+| **NBGL (via the `sys` C layout API)** | The 3-choice confirmation screen with a 60 s auto-refusal, which the safe wrappers cannot express | The single biggest gap |
 | **`cargo-ledger` + `ledger-app-builder` Docker image** | Building the Flex ELF | Good once configured; two sharp edges |
 | **`ledgerblue`** | Sideloading | Fine |
 | **Speculos** | Every device test in CI: 57 integration tests, simulated taps, screenshots | Very good, one undocumented API |
@@ -109,7 +109,7 @@ a finger can stop — that is a security property, not a cosmetic one.
 
 **What happened.** Our screen had one line too many for the Flex's 600 px. NBGL did not scroll,
 shrink or clip: it drew the extra line **behind the choice buttons**. The hidden line was
-`"Bar du coin" (non verifié)` — the agent's unverified claim about the payee, i.e. exactly the line a
+`"Corner bar" (unverified)` — the agent's unverified claim about the payee, i.e. exactly the line a
 user needs in order to distrust a payment. Every APDU-level test passed; only a `/screenshot` caught it.
 **What we tried.** Shortening strings twice; each time the text re-wrapped and the overflow moved.
 There is no "did this fit?" query, and `nbgl_layoutAddText` returns a handle, not a height.
@@ -124,7 +124,7 @@ security bug.
 
 **What happened.** The header text was drawn but taps on it did nothing; a narrow invisible strip on
 the left responded instead.
-**Fix.** `HEADER_RIGHT_TEXT` makes the whole header bar touchable. That is what our "Refuser" uses.
+**Fix.** `HEADER_RIGHT_TEXT` makes the whole header bar touchable. That is what our "Reject" uses.
 **Suggestion.** Name the constants after their touch target, or document the touchable region per
 header type. One screenshot per header constant in the docs would have saved an hour.
 

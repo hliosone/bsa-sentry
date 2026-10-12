@@ -133,7 +133,7 @@ Commands: `pnpm test` · `pnpm test:speculos` · `pnpm e2e` (Speculos + harness 
 - 3-choice review + 60 s timeout works with the **NBGL C layout API** + our own event loop counting
   **raw ticker events** (100 ms each, 600 = 60 s). NBGL's built-in 1 s ticker **pauses while the
   screen is touched** — don't use it. `HEADER_BACK_AND_TEXT` only makes its (undrawn) arrow
-  tappable → use `HEADER_RIGHT_TEXT` for "Refuser".
+  tappable → use `HEADER_RIGHT_TEXT` for "Reject".
 - Chunked APDUs: P1 `00` first / `01` next, P2 `80` more / `00` last. Max reassembly **1024 bytes**
   (`0xB004` if larger, `0xB00B` next-without-first). NVM via `AtomicStorage` survives app restart,
   **wiped on app reinstall**.
@@ -195,7 +195,7 @@ All arithmetic checked (no overflow). On Auto or approved Orange: `spent += valu
 payee** · Trust → add payee with the agent's hint as label (after it was shown on screen), sign.
 **Trust unavailable if the payee list is full or the reason is not UNKNOWN_PAYEE only.**
 60 s without input → `6985 TIMEOUT`.
-Demo values: auto_max **5**, hard_max **50**, budget **20**, max_count **10**, payees café/cave/resto.
+Demo values: auto_max **5**, hard_max **50**, budget **20**, max_count **10**, payees cafe/cave/resto.
 
 ### 5.3 EIP-712
 - Payment: USDC `TransferWithAuthorization(from,to,value,validAfter,validBefore,nonce)`,
@@ -233,7 +233,7 @@ Device UI: home = `BSA Sentry · <agent name> / Budget x.xx / 20.00 USDC / Last:
 USDC · Arc testnet · session on|off`. Menu: Start/Stop agent (session), My rules, Trusted merchants
 (view/remove), +20 USDC (reset spent, tap), Block agent (clear policy, tap).
 Orange screen: title, amount, "unknown merchant" or label, FULL address,
-"agent says: … (unverified)", reason, **Refuser / Une fois / Faire confiance**, countdown.
+"agent says: … (unverified)", reason, **Reject / Pay once / Trust merchant**, countdown.
 **Every screen shows token + chain.**
 
 ### 5.5 Relay messages (WS, zod in `types`)
@@ -284,4 +284,4 @@ Product **BSA Sentry** (BSA = EPFL Blockchain Student Association). Device app n
 `BSA Sentry`. Repo `bsa-sentry` (github.com/hliosone/bsa-sentry, private until submission).
 MCP server `bsa-sentry`, tools `x402_fetch`, `sentry_status`, `sentry_restore`.
 Signer kit `@bsa-sentry/sentry-signer`. Website title "BSA Sentry".
-Tagline: **"Your agent spends. Your Ledger decides."** Agent name on device: "Claude". UI French.
+Tagline: **"Your agent spends. Your Ledger decides."** Agent name on device: "Claude". **Everything in English** (device, website, server messages, docs) — the human asked; never French.

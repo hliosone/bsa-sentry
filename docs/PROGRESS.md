@@ -116,28 +116,28 @@ Follow from anywhere: this file is pushed to GitHub after every milestone.
 ### M3 — done (Sun 11 Oct 2026, 19:53 CEST) · first coffee settled on Arc
 - **`E2E=1 pnpm e2e:cafe` passes on the real Arc testnet**: agent API -> relay -> bridge harness
   -> Speculos signs with no tap -> x402 merchant -> our facilitator -> `transferWithAuthorization`
-  mined in 4.9 s. Exactly one USDC Transfer of 3 USDC from 0xAGENT to the café, balance checked
+  mined in 4.9 s. Exactly one USDC Transfer of 3 USDC from 0xAGENT to the cafe, balance checked
   at the receipt block, device budget 17/20.
   Tx: https://explorer.testnet.arc.io/tx/0x446f860eae50ad4d961991d27defe256ebeeefe1816615d8d1857aefe4077a27
 - Prompt injection: `/promo` -> `/evil/deposit` (400 USDC to a non-policy address) refused by the
   device as OVER_HARD_MAX; nothing spent, nothing on chain.
 - Facilitator 25 tests, relay 18, agent API 25, merchants 11 (real `@x402/express` 2.28).
-- `pnpm recycle` swept the café's 2.95 USDC back to the treasury.
+- `pnpm recycle` swept the cafe's 2.95 USDC back to the treasury.
 - `Dockerfile` + `docker-compose.yml` (server healthcheck gates the merchants).
 
 ### M4 — done (Sun 11 Oct 2026, 23:12 CEST) · "Claude" buys a coffee through MCP
 - **`E2E=1 pnpm e2e:mcp` passes locally AND through a public cloudflared tunnel** (19 checks).
   It plays claude.ai with the official MCP TS SDK client, which does the whole OAuth 2.1 flow
   itself (discovery, DCR, PKCE S256, token); the consent step is done headlessly behind a
-  Ledger session the Flex (Speculos) signed after a tap. Then: café silent · bakery orange ->
-  "Faire confiance" -> silent the second time · resto orange **without** the trust option ->
-  "Une fois" · /promo -> 400 USDC deposit refused OVER_HARD_MAX · sentry_status. All on Arc.
+  Ledger session the Flex (Speculos) signed after a tap. Then: cafe silent · bakery orange ->
+  "Trust merchant" -> silent the second time · restaurant confirmation **without** the trust option ->
+  "Pay once" · /promo -> 400 USDC deposit refused OVER_HARD_MAX · sentry_status. All on Arc.
 - Login 12 tests · OAuth 28 · MCP 14. `apps/server/src/main.ts` is the production wiring; the
   e2e runs exactly it.
 - `pnpm tunnel [port]` prints the public MCP URL for claude.ai (http2 + IPv4).
 
 ### M5 — done (Sun 11 Oct 2026, 23:25 CEST)
-- React + Vite site, French UI, same origin as the server (Vite proxies in dev; the server
+- React + Vite site (UI translated to English in Phase C), same origin as the server (Vite proxies in dev; the server
   serves `apps/web/dist` in prod): Connect + "Se connecter avec Ledger", Rules (pre-filled demo
   merchants, every device limit checked first), Session (only the device arms the agent),
   Connect Claude (public MCP URL, OAuth grants + revoke), Dashboard (budget gauge, live feed
@@ -147,7 +147,7 @@ Follow from anywhere: this file is pushed to GitHub after every milestone.
   absent from the production bundle.
 - `pnpm test:web`: Playwright (installed Chrome) runs the full onboarding against the real
   server, then has the agent API request payments: the 400 USDC injection raises the refusal
-  banner, a signed coffee the facilitator rejects shows "échec", the kill switch wipes the
+  banner, a signed coffee the facilitator rejects shows "failed", the kill switch wipes the
   rules. Screenshots of every page in `docs/screens/web/`, reviewed by eye (fixed a feed row
   that wrapped over four lines).
 - Logic tests: onboarding 5, rules 9, feed 6, status 3; bridge 23 (refresh/exclusive added).
@@ -171,15 +171,15 @@ Follow from anywhere: this file is pushed to GitHub after every milestone.
   device + the 18+ badge -> Key Ring backup (fake Key Ring: real AES-GCM) -> vault holds no
   readable rules -> Flex wiped (fresh NVM, same seed) -> restore, reviewed and approved on the
   device -> 4 merchants and the badge back (the device re-checked the badge is its own), fresh
-  budget, café paid on Arc, the trusted bakery pays with no tap.
+  budget, cafe paid on Arc, the trusted bakery pays with no tap.
 - Backup codec 7 tests · vault 10 · Key Ring + flows 13 · Playwright backup/wipe/restore 1.
 - Real Ledger Key Ring (LKRP 0.24.0, app id 17) wired as in the feasibility test; DMK
   open-app tried first, manual prompt as fallback. Hardware verification: Phase C M7-C.
 
 ### M8 — done (Sun 11 Oct 2026, 23:51 CEST; device home and menu added afterwards)
 - **`E2E=1 pnpm e2e` passes: the full demo, twice in a row, each from a clean reset** (wiped Flex,
-  recycled funds), on Speculos + the real Arc testnet: café silent · bakery "Faire confiance" · wine
-  with the 18+ badge verified · resto "Une fois" (no trust option) · the prompt-injected 400 USDC
+  recycled funds), on Speculos + the real Arc testnet: cafe silent · bakery "Trust merchant" · wine
+  with the 18+ badge verified · restaurant "Pay once" (no trust option) · the prompt-injected 400 USDC
   deposit refused · sentry_status. `scripts/demo.ts` is exactly `docs/DEMO.md`.
 - Docker image builds the website and serves it with the server (one container + the merchants);
   `docker-compose.prod.yml` adds Caddy for HTTPS; `scripts/deploy.sh` deploys to any Docker host
@@ -226,10 +226,10 @@ Speculos/fakes, and listed in `docs/PHASE_C_GUIDE.md`.
 - **M6: 18+ is computed from `birthdate`** (correction from the human, who tested the real
   wallet: the PID has no `age_over_18` claim). Only `birthdate` is requested (not the name the
   reference also asked for); it is used in memory for one comparison and never stored or logged.
-- **M4: the spec's "réserve le resto -> Faire confiance" contradicts its own §5.2.** "Faire
-  confiance" is only offered when the unknown payee is the *only* problem; the resto is a
+- **M4: the spec's "book the restaurant -> Trust merchant" contradicts its own §5.2.** "Trust
+  merchant" is only offered when the unknown payee is the *only* problem; the restaurant is a
   known payee 15 USDC over the auto limit, so trusting it would change nothing. The security
-  rule wins: the resto shows the orange screen with "Une fois" only. To still demo "trust once,
+  rule wins: the restaurant shows the confirmation screen with "Pay once" only. To still demo "trust once,
   silent after", a 5th merchant `/boulangerie` (2 USDC, not in the default rules) was added;
   its key is in `.env` (`MERCHANT_BOULANGERIE_*`).
 - **M4: no `ANTHROPIC_API_KEY`, so no automated real-Claude run.** The e2e drives the real MCP
@@ -256,7 +256,7 @@ Speculos/fakes, and listed in `docs/PHASE_C_GUIDE.md`.
 - **M1: the device proves a delegation is its own by re-signing and comparing**, rather than
   recovering a public key. ECDSA here is deterministic (RFC 6979), so only our own 0xMAIN can
   produce those exact 65 bytes - strictly stronger than a verify, and no DER plumbing on device.
-- **M1: a sixth line on the orange screen is drawn *under* the buttons by NBGL.** It hid the
+- **M1: a sixth line on the confirmation screen is drawn *under* the buttons by NBGL.** It hid the
   "(non verifie)" caveat. Every variable-length string is now clipped so the screen can never
   exceed five lines, and the token and chain ride in the title. See DX_NOTES §2.3.
 - **Contract additions during M1** (fixtures + both sides updated together): `chainId` leads the
@@ -271,16 +271,16 @@ Speculos/fakes, and listed in `docs/PHASE_C_GUIDE.md`.
 - **GitHub**: private `hliosone/bsa-sentry`, public at submission.
 - **Deploy**: no host credentials -> M8 writes `scripts/deploy.sh` + instructions, deploy moves to Phase C.
 - **No `ANTHROPIC_API_KEY`**: `scripts/e2e-mcp.ts` plays claude.ai with the MCP TS SDK instead.
-- **Agent name "Claude", device + website UI in French**, code and docs in English.
+- **Agent name "Claude". Everything in English** — device screens, website, server and MCP messages, docs. The UI was French until Phase C, when the human asked for English everywhere (merchant routes became `/wine`, `/restaurant`, `/bakery`).
 
 ## Cut (cut order)
 _Nothing cut._ (The device menu, deferred in M1, was built afterwards.)
 
 ## Known issues
-- A merchant trusted via "Faire confiance" gets the agent's hint as its label, clipped to the
+- A merchant trusted via "Trust merchant" gets the agent's hint as its label, clipped to the
   device's 16 bytes ("Boulangerie - croissant" -> "Boulangerie - cr"). By design (labels are
   display-only), but the demo merchants' descriptions could be shortened.
-- The status bar only refreshes the session state on a page action ("J'ai démarré l'agent") or a
+- The status bar only refreshes the session state on a page action ("I started the agent") or a
   relay message: the bridge deliberately runs no timers.
 - `scripts/setup-machine.sh` prints "Node v18.19.1" in its summary: it runs `su - $SUDO_USER`,
   which does not load nvm. The real toolchain in an interactive shell is Node 22.22.0. Cosmetic.

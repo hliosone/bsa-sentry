@@ -29,18 +29,18 @@ twice). Phase C proves the same on the real Flex, in Chrome, with claude.ai.
 | | |
 |---|---|
 | **You do** | BSA Sentry open on the Flex, then `SMOKE_TRANSPORT=hid pnpm smoke` (the USB transport is installed and was checked against your Flex in Phase B; if it ever fails to load, `pnpm rebuild -r`). Do what the script tells you on the Flex. Add `SMOKE_TIMEOUT=1` once to test the 60 s refusal. |
-| **You see** | Rules review (swipe, hold) like `docs/screens/speculos/` reviews; the coffee is signed with **nothing on screen**; orange screens like `05-orange-unknown-payee.png` and `06-orange-over-auto-max.png`. |
-| **Claude checks** | All 8 checks PASS: the signature recovers to your 0xAGENT, counters move, "Une fois" adds no payee, "Faire confiance" does, 400 USDC is OVER_HARD_MAX. |
-| **The 60 s test, done right** | While the orange screen counts down, **keep touching the screen** (not the buttons). It must still refuse at ~60 s: our timeout counts raw ticker events, which a finger cannot pause (the NBGL ticker can — DX_NOTES §2.2). |
+| **You see** | Rules review (swipe, hold) like `docs/screens/speculos/` reviews; the coffee is signed with **nothing on screen**; confirmation screens like `05-orange-unknown-payee.png` and `06-orange-over-auto-max.png`. |
+| **Claude checks** | All 8 checks PASS: the signature recovers to your 0xAGENT, counters move, "Pay once" adds no payee, "Trust merchant" does, 400 USDC is OVER_HARD_MAX. |
+| **The 60 s test, done right** | While the confirmation screen counts down, **keep touching the screen** (not the buttons). It must still refuse at ~60 s: our timeout counts raw ticker events, which a finger cannot pause (the NBGL ticker can — DX_NOTES §2.2). |
 | **Restart + menu** | **Quit app**, reopen BSA Sentry. The home must still show the budget (the rules survive in NVM — Speculos cannot test this, DX_NOTES §4.3) and **session off**. Tap the gear and swipe: session switch · rules · trusted merchants · **+20 USDC** / **Bloquer l'agent**. Remove a merchant once (the confirm shows its full address). |
-| **Photos** | One photo per distinct screen into `docs/screens/` (home, menu, rules review, orange unknown merchant, orange over limit). For the submission. |
+| **Photos** | One photo per distinct screen into `docs/screens/` (home, menu, rules review, confirmation for an unknown merchant, confirmation over the limit). For the submission. |
 | **Fallback** | `0x5515`: auto-lock (step 1). `0x6d02`: the app is not open. |
 
 ## 3. The things that could not be tested without hardware (≈15 min)
 
 | | |
 |---|---|
-| **3a. DMK app switching** | On the website, **Sauvegarde Key Ring → Sauvegarder maintenant**. Watch whether the Flex switches to **Ledger Sync by itself** (DMK `CloseAppCommand` + `OpenAppCommand`). If not, the page asks you to switch by hand — record which happened. |
+| **3a. DMK app switching** | On the website, **Key Ring backup → Back up now**. Watch whether the Flex switches to **Ledger Sync by itself** (DMK `CloseAppCommand` + `OpenAppCommand`). If not, the page asks you to switch by hand — record which happened. |
 | **3b. DMK and Key Ring in one tab** | Same flow: the page releases the DMK, opens the Key Ring transport, then reconnects the DMK without the device picker. Expected: the status bar goes back to green. |
 | **3c. RESTORE size** | Our maxima (8 merchants + a full badge) are 836 bytes, under the 1024-byte buffer; nothing to test unless limits change. |
 | **Claude checks** | Browser console errors, the server log, the vault row (ciphertext only). |
@@ -55,7 +55,7 @@ brings the merchants' takings back). The address is on the website's Connect pag
 
 | | |
 |---|---|
-| **You do** | `pnpm --filter @bsa-sentry/web build`, start the server (it serves the site), then the merchants. Open the site in **Google Chrome**. Left column top to bottom: **Brancher le Flex** (pick it in Chrome's picker) → **Se connecter avec Ledger** (the Flex shows the site; hold to sign) → **Définir les règles** (review every address in full on the Flex, hold) → **Démarrer l'agent** (Flex: settings → Agent session; then "J'ai démarré l'agent"). |
+| **You do** | `pnpm --filter @bsa-sentry/web build`, start the server (it serves the site), then the merchants. Open the site in **Google Chrome**. Left column top to bottom: **Plug in the Flex** (pick it in Chrome's picker) → **Log in with Ledger** (the Flex shows the site; hold to sign) → **Set your rules** (review every address in full on the Flex, hold) → **Start the agent on the Flex** (Flex: settings → Agent session; then "I started the agent"). |
 | **You see** | `docs/screens/web/01…07`; the status bar turns green only when everything is ready. |
 | **Claude checks** | Server log for each step; the dashboard budget equals GET_STATE on the device. |
 | **Fallback** | Empty picker: another tab or Ledger Live holds the Flex. |
@@ -64,8 +64,8 @@ brings the merchants' takings back). The address is on the website's Connect pag
 
 | | |
 |---|---|
-| **You do** | `pnpm tunnel 8787`, copy the URL, restart the server with `PUBLIC_API_URL=<that URL>`; reload the site and log in again. claude.ai → **Settings → Connectors → Add custom connector** → `<URL>/mcp`. On our consent page click **"Autoriser Claude à demander des paiements à ton Flex"**. |
-| **Then** | Run `docs/DEMO.md` steps 1, 2, 4, 5: café (silent), croissant (orange → **Faire confiance**, then silent), resto (orange, **only "Une fois"**), promo page (Claude tries the 400 USDC deposit; the Flex refuses with nothing on screen; Claude explains OVER_HARD_MAX). |
+| **You do** | `pnpm tunnel 8787`, copy the URL, restart the server with `PUBLIC_API_URL=<that URL>`; reload the site and log in again. claude.ai → **Settings → Connectors → Add custom connector** → `<URL>/mcp`. On our consent page click **"Allow Claude to request payments from your Flex"**. |
+| **Then** | Run `docs/DEMO.md` steps 1, 2, 4, 5: cafe (silent), croissant (confirmation → **Trust merchant**, then silent), restaurant (confirmation, **only "Pay once"**), promo page (Claude tries the 400 USDC deposit; the Flex refuses with nothing on screen; Claude explains OVER_HARD_MAX). |
 | **Claude checks** | `[facilitator] settle -> 0x…` lines, the Arc transactions, `sentry_status`. Then `pnpm recycle`. |
 | **Fallback** | "Couldn't connect": `PUBLIC_API_URL` does not match the tunnel. "Open the BSA Sentry tab": the tab is closed or logged out. Merchants only need to be reachable from the server (localhost is fine). |
 
@@ -73,7 +73,7 @@ brings the merchants' takings back). The address is on the website's Connect pag
 
 | | |
 |---|---|
-| **You do** | Restart the server with `EUDIW_MODE=live`. **Badge 18+ → Obtenir mon badge 18+**, scan with **Procivis One**, share the birthdate. **Lier à mon Ledger** (the Flex shows the verifier and the session) → **Autoriser Claude** (the Flex shows the agent name and your FULL 0xAGENT). Then in Claude: *« Et une bouteille de vin à `<merchants>/cave` »* → paid, no tap. |
+| **You do** | Restart the server with `EUDIW_MODE=live`. **18+ badge → Get my 18+ badge**, scan with **Procivis One**, share the birthdate. **Link to my Ledger** (the Flex shows the verifier and the session) → **Authorize Claude** (the Flex shows the agent name and your FULL 0xAGENT). Then in Claude: *"And a bottle of wine from `<merchants>/wine`"* → paid, no tap. |
 | **Negative** | Reinstall the app (`make load`), set the rules again (no badge), ask for the wine again → Claude reports **AGE_PROOF_REQUIRED** and suggests the badge. |
 | **Claude checks** | `/age` session pending → verified; `SELECT * FROM age_sessions` shows only status + evidence hash (no birthdate); `verify -> valid` then the Arc tx. |
 | **Fallback** | QR not recognised: `EUDIW_QR_SCHEME=haip-vp`. `rejected` / `IssuerCertificateIsNotTrusted`: the EUDI test CAs could not be fetched (network). Verifier down: `EUDIW_MODE=mock`, and say so (cut order item 3). |
@@ -82,9 +82,9 @@ brings the merchants' takings back). The address is on the website's Connect pag
 
 | | |
 |---|---|
-| **You do** | **Sauvegarde Key Ring → Sauvegarder** (Ledger Sync; confirm on the Flex the first time). Reinstall the app (`make load`: wipes it). Log in again. **Restaurer un Flex → Restaurer depuis la sauvegarde**: Ledger Sync (decrypt) → back to BSA Sentry → **review every restored rule and address on the Flex**, hold. Arm the session; ask Claude for a coffee. |
+| **You do** | **Key Ring backup → Back up now** (Ledger Sync; confirm on the Flex the first time). Reinstall the app (`make load`: wipes it). Log in again. **Restore a Flex → Restorer depuis la sauvegarde**: Ledger Sync (decrypt) → back to BSA Sentry → **review every restored rule and address on the Flex**, hold. Arm the session; ask Claude for a coffee. |
 | **You see** | The restore review like `docs/screens/speculos/14-restore-review.png`; the merchants you trusted (e.g. the bakery) and the badge are back. |
-| **Claude checks** | GET_STATE before/after (same merchants, badge present, fresh budget), the café on Arc. |
+| **Claude checks** | GET_STATE before/after (same merchants, badge present, fresh budget), the cafe on Arc. |
 | **Fallback** | As in step 3. Restore over a Flex that still has rules is refused on purpose: block the agent first. |
 
 ## 9. Deploy (optional, ≈20 min) — cut-order item 5

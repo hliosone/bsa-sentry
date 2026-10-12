@@ -7,7 +7,7 @@ secure element**. The agent pays with **x402** (HTTP 402, USDC, EIP-3009
 `TransferWithAuthorization`) on **Arc testnet**.
 
 - Inside the rules → the Flex signs **with no button press**.
-- Outside → an orange screen with 3 choices (Refuse / Once / Trust merchant), 60 s timeout = refuse.
+- Outside → an confirmation screen with 3 choices (Reject / Pay once / Trust merchant), 60 s timeout = refuse.
 - Dangerous → refused, **even with a tap**.
 
 There is **no local daemon**. The user keeps **one Chrome tab** open on our website with the Flex
@@ -99,7 +99,7 @@ Orange choices:
 60 s without input → `6985` + `TIMEOUT`.
 
 Demo values: `auto_max` 5 USDC, `hard_max` 50, `budget` 20, `max_count` 10,
-payees café / cave / resto.
+payees cafe / cave / resto.
 
 ## 5.3 EIP-712
 
@@ -157,7 +157,7 @@ Menu: Start/Stop agent (session) · My rules · Trusted merchants (view/remove) 
 spent, tap) · Block agent (clear policy, tap).
 
 Orange screen: title · amount · "unknown merchant" or the label · **FULL** address ·
-"agent says: … (unverified)" · reason · **Refuser / Une fois / Faire confiance** · countdown.
+"agent says: … (unverified)" · reason · **Reject / Pay once / Trust merchant** · countdown.
 
 **Every screen shows the token and the chain.**
 
@@ -189,7 +189,7 @@ device times out at 60 s.
 - `GET /.well-known/oauth-authorization-server`, `GET /.well-known/oauth-protected-resource`
 - `POST /oauth/register` (dynamic client registration)
 - `GET /oauth/authorize` — **requires a Ledger session**; consent page
-  *"Autoriser Claude à demander des paiements à ton Flex ?"*; PKCE S256
+  *"Allow Claude to request payments from your Flex?"*; PKCE S256
 - `POST /oauth/token` — access + refresh, **hashed in the DB**, with expiry
 - Revocation from the dashboard
 
@@ -267,7 +267,7 @@ x402 2.28 Express middleware, network `eip155:5042002`, facilitator = our server
 |---|---|---|
 | `/cafe` | 3 USDC | the silent, auto-approved demo |
 | `/cave` | 4.5 USDC | `extra.requires: ["age_over_18"]` |
-| `/resto` | 20 USDC | over `auto_max` → orange screen |
+| `/restaurant` | 20 USDC | over `auto_max` → confirmation screen |
 | `/promo` | free | hidden **prompt injection** telling the agent to pay a "mandatory 400 USDC deposit" at `/evil/deposit` |
 | `/evil/deposit` | 400 USDC | to an address **not** in the policy → refused by the device |
 

@@ -16,8 +16,8 @@ This is the whole product, enforced by a pure function in the device app
 
 | The payment… | The Flex… | Example from the demo |
 |---|---|---|
-| is to a merchant you trust, under your automatic limit, within budget | **signs with no button press** (~1 s) | "Achète-moi un café" — 3 USDC |
-| breaks a soft rule (unknown merchant, over the automatic limit, budget or count spent) | shows an **orange screen**: amount, full address, what the agent claims (marked *unverified*), why it is asking — **Refuser / Une fois / Faire confiance**; 60 s of silence = refused | the restaurant, 20 USDC; a new bakery |
+| is to a merchant you trust, under your automatic limit, within budget | **signs with no button press** (~1 s) | "Buy me a coffee" — 3 USDC |
+| breaks a soft rule (unknown merchant, over the automatic limit, budget or count spent) | shows a **confirmation screen**: amount, full address, what the agent claims (marked *unverified*), why it is asking — **Refuser / Une fois / Faire confiance**; 60 s of silence = refused | the restaurant, 20 USDC; a new bakery |
 | is above your absolute ceiling, on another chain or token, or the agent is not armed | **refuses outright** — a tap cannot override it | a prompt-injected "mandatory 400 USDC deposit" |
 
 The agent can only *request*. The server can only *relay*. Only the Flex signs, and it builds every
@@ -27,7 +27,7 @@ digest itself from the raw payment fields: there is no "sign this hash" command.
 
 | On the Flex | On the website |
 |---|---|
-| ![orange screen](docs/screens/speculos/05-orange-unknown-payee.png) | ![dashboard](docs/screens/web/07-dashboard-feed.png) |
+| ![confirmation screen](docs/screens/speculos/05-orange-unknown-payee.png) | ![dashboard](docs/screens/web/07-dashboard-feed.png) |
 
 Real settlements on Arc testnet, produced by the automated end-to-end runs:
 [first coffee](https://explorer.testnet.arc.io/tx/0x446f860eae50ad4d961991d27defe256ebeeefe1816615d8d1857aefe4077a27) ·
@@ -55,7 +55,7 @@ specification: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
 | Primitive | What we built with it |
 |---|---|
-| **Custom Flex app** (`ledger_device_sdk`, Rust) | 11 APDUs; the spending policy in NVM; EIP-712 digests computed on-device; the 3-choice orange screen with a 60 s deny-by-default on the NBGL C layout API |
+| **Custom Flex app** (`ledger_device_sdk`, Rust) | 11 APDUs; the spending policy in NVM; EIP-712 digests computed on-device; the 3-choice confirmation screen with a 60 s deny-by-default on the NBGL C layout API |
 | **Ledger signer over the DMK** (WebHID) | the browser bridge: one in-flight APDU, 120 s timeouts, click-free reconnect |
 | **Ledger Key Ring** (LKRP) | the rules and the 18+ badge backed up encrypted under the user's seed; a wiped Flex is restored with one review |
 | **Speculos** | 73 device integration tests and every e2e run, with simulated taps |
@@ -74,7 +74,7 @@ Details: [`docs/EUDIW.md`](docs/EUDIW.md).
 
 1. Rules change only through an on-device review and a tap.
 2. The device builds every digest from raw fields; no "sign this hash" command exists.
-3. Payees match on the address; labels are display-only; "Une fois" never adds a payee.
+3. Payees match on the address; labels are display-only; "Pay once" never adds a payee.
 4. Spend counters are persisted before a signature leaves the device.
 5. The identity key (`0xMAIN`) signs only Login, Bind and AgentDelegation, always with a tap.
 6. The server can only request; the facilitator re-verifies credentials and their link to the payer.
