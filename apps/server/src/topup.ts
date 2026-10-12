@@ -24,6 +24,22 @@ export function topupRouter(o: { secret: string; now?: () => number; deps: Settl
   const router = safeRouter();
   router.use(express.json({ limit: '8kb' }));
 
+  // The real USDC balances, read from the chain: the Flex has no network, so this is the only
+  // place the user can see how much money the agent actually holds.
+  router.get('/wallets', async (req, res) => {
+    const account = readSession(req, o.secret, now);
+    if (!account) return res.status(401).json({ error: 'log in with Ledger first' });
+    const agent = o.agentOf(account)?.toLowerCase();
+    const [m, a] = await Promise.all([
+      o.deps.reads.balanceOf(account as Hex),
+      agent ? o.deps.reads.balanceOf(agent as Hex) : Promise.resolve(null),
+    ]);
+    res.json({
+      main: { address: account.toLowerCase(), usdc: usdc(m) },
+      agent: agent && a !== null ? { address: agent, usdc: usdc(a) } : null,
+    });
+  });
+
   router.post('/', async (req, res) => {
     const account = readSession(req, o.secret, now);
     if (!account) return res.status(401).json({ error: 'log in with Ledger first' });

@@ -96,3 +96,28 @@ describe('POST /topup', () => {
     expect(r.status).toBe(502);
   });
 });
+
+describe('GET /topup/wallets', () => {
+  it('needs a Ledger login', async () => {
+    const { app } = setup();
+    expect((await request(app).get('/topup/wallets')).status).toBe(401);
+  });
+
+  it('returns the real USDC balances of the main account and the agent wallet', async () => {
+    const { app, deps } = setup();
+    deps.reads.balanceOf.mockImplementation(async (a: string) => (a.toLowerCase() === AGENT ? 56_490_000n : 5_000_000n));
+    const r = await request(app).get('/topup/wallets').set('Cookie', cookie());
+    expect(r.status).toBe(200);
+    expect(r.body).toEqual({
+      main: { address: main.address.toLowerCase(), usdc: '5' },
+      agent: { address: AGENT, usdc: '56.49' },
+    });
+  });
+
+  it('still returns the main account when the tab has not reported the agent yet', async () => {
+    const { app } = setup({ agent: undefined });
+    const r = await request(app).get('/topup/wallets').set('Cookie', cookie());
+    expect(r.body.agent).toBeNull();
+    expect(r.body.main.usdc).toBe('50');
+  });
+});

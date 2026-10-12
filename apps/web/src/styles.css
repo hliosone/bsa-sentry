@@ -103,3 +103,6 @@ ul.grants li { display: flex; justify-content: space-between; align-items: cente
 
 .topup { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
 .topup input { width: 7rem; }
+.wallet-list dt { margin-top: 0.6rem; color: #555; font-size: 0.9rem; }
+.wallet-list dd { margin: 0.2rem 0 0; display: flex; gap: 0.6rem; align-items: baseline; flex-wrap: wrap; }
+.wallet-list dd b { font-size: 1.3rem; }
