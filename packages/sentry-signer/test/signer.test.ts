@@ -311,6 +311,16 @@ describe('status reporting for the bridge', () => {
     expect(await signer.probe()).toMatchObject({ flex: 'app_closed' });
   });
 
+  it('names the cause when the DMK rejects with an error object that has no message', async () => {
+    // The DMK rejects with tagged objects ({ _tag, originalError }), not Error instances: the
+    // page once showed "the Flex did not answer: undefined".
+    const dmkStyle: Transport = { send: async () => { throw { _tag: 'DeviceBusyError', originalError: new Error('busy') }; } };
+    const e = await new SentrySigner(dmkStyle).getAddress('agent').catch((x) => x);
+    expect(e).toBeInstanceOf(TransportError);
+    expect(e.message).toContain('DeviceBusyError');
+    expect(e.message).not.toContain('undefined');
+  });
+
   it('maps a dead transport to disconnected', async () => {
     const dead: Transport = { send: async () => { throw new Error('device went away'); } };
     expect(await new SentrySigner(dead).probe()).toMatchObject({ flex: 'disconnected' });

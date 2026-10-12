@@ -272,7 +272,7 @@ export class SentrySigner {
       raw = await this.withTimeout(this.transport.send(apdu));
     } catch (e) {
       if (e instanceof TransportError) throw e;
-      throw new TransportError(`the Flex did not answer: ${(e as Error).message}`, e);
+      throw new TransportError(`the Flex did not answer: ${describe(e)}`, e);
     }
     if (raw.length < 2) throw new TransportError(`short APDU reply (${raw.length} bytes)`);
     const sw = (raw[raw.length - 2]! << 8) | raw[raw.length - 1]!;
@@ -319,4 +319,11 @@ export class SentrySigner {
       );
     });
   }
+}
+
+/** DMK errors are tagged objects ({ _tag, originalError }), not always Error instances. */
+function describe(e: unknown): string {
+  const o = e as { _tag?: string; message?: string; originalError?: { message?: string } } | null;
+  const parts = [o?._tag, o?.message, o?.originalError?.message].filter((x): x is string => typeof x === 'string' && x.length > 0);
+  return parts.length ? [...new Set(parts)].join(': ') : String(e);
 }
