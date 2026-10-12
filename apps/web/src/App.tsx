@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useBsa } from './useBsa.js';
 import { onboarding, type StepId } from './state/onboarding.js';
 import { statusLine } from './state/status.js';
+import { shortAddr } from './format.js';
 import { Connect } from './pages/Connect.js';
 import { Rules } from './pages/Rules.js';
 import { Session } from './pages/Session.js';
@@ -15,11 +16,27 @@ const ROUTES: Route[] = ['connect', 'rules', 'session', 'claude', 'dashboard', '
 const STEP_ROUTE: Record<StepId, Route> = {
   connect: 'connect', login: 'connect', rules: 'rules', session: 'session', claude: 'claude', badge: 'badge', backup: 'backup', done: 'dashboard',
 };
+// Day-to-day places, once set up. Setup-only steps (connect, session) live on the setup track.
+const TABS: { route: Route; label: string }[] = [
+  { route: 'dashboard', label: 'Dashboard' },
+  { route: 'rules', label: 'Rules' },
+  { route: 'claude', label: 'Claude' },
+  { route: 'badge', label: '18+ badge' },
+  { route: 'backup', label: 'Backup' },
+];
 
 const routeFromHash = (): Route | null => {
   const r = location.hash.replace(/^#\//, '') as Route;
   return ROUTES.includes(r) ? r : null;
 };
+
+/** The Flex, as a mark: the device is the product's authority. */
+const Mark = () => (
+  <svg width="22" height="28" viewBox="0 0 22 28" aria-hidden="true">
+    <rect x="1" y="1" width="20" height="26" rx="5" fill="none" stroke="currentColor" strokeWidth="2" />
+    <rect x="5" y="5" width="12" height="14" rx="2" fill="currentColor" />
+  </svg>
+);
 
 export function App() {
   const bsa = useBsa();
@@ -50,37 +67,71 @@ export function App() {
     policyActive: !!bsa.device?.policy.active,
   });
 
+  const settingUp = !bsa.account || flow.current !== 'done';
+  const showTrack = settingUp || current === 'connect' || current === 'session';
+  const required = flow.steps.filter((s) => !s.optional);
+  const optional = flow.steps.filter((s) => s.optional);
+
   return (
     <div className="app">
-      <header>
-        <div className="brand"><span className="logo">◆</span> BSA Sentry</div>
-        <div className="tagline">Your agent spends. Your Ledger decides.</div>
-        {bsa.account && <button className="ghost small" onClick={() => void bsa.logout()}>Log out</button>}
+      <header className="topbar">
+        <a className="wordmark" href="#/dashboard"><Mark /> BSA Sentry</a>
+        {bsa.account && (
+          <nav className="tabs" aria-label="Sections">
+            {TABS.map((t) => (
+              <a key={t.route} href={`#/${t.route}`} className={current === t.route ? 'active' : ''} aria-current={current === t.route ? 'page' : undefined}>{t.label}</a>
+            ))}
+          </nav>
+        )}
+        <div className="topbar-right">
+          <span className={`status is-${bsa.account ? status.level : 'warn'}`} data-testid="statusbar" role="status">
+            {bsa.account ? status.text : 'Connect your Flex, then log in with Ledger'}
+          </span>
+          {bsa.account && <span className="account"><code>{shortAddr(bsa.account)}</code></span>}
+          {bsa.account && <button className="ghost small" onClick={() => void bsa.logout()}>Log out</button>}
+        </div>
       </header>
-      <div className={`statusbar ${bsa.account ? status.level : 'warn'}`} data-testid="statusbar">
-        {bsa.account ? status.text : 'Connect your Flex, then log in with Ledger'}
-      </div>
 
-      <div className="layout">
-        <nav>
-          {flow.steps.map((s) => (
-            <a key={s.id} href={`#/${STEP_ROUTE[s.id]}`} className={`${s.done ? 'done' : ''} ${STEP_ROUTE[s.id] === current ? 'active' : ''}`}>
-              <span className="tick">{s.done ? '✓' : s.optional ? '○' : '•'}</span> {s.label}
-            </a>
-          ))}
-          <a href="#/dashboard" className={current === 'dashboard' ? 'active' : ''}><span className="tick">▸</span> Dashboard</a>
-          <a href="#/restore" className={current === 'restore' ? 'active' : ''}><span className="tick">↺</span> Restore a Flex</a>
-        </nav>
-
-        <main>
+      {(bsa.busy || bsa.prompt || bsa.error) && (
+        <div className="notices">
           {bsa.busy && <div className="device-prompt" data-testid="device-prompt"><span className="pulse" /> {bsa.busy}</div>}
           {bsa.prompt && (
             <div className="device-prompt" data-testid="user-step">
               <span className="pulse" /> {bsa.prompt.text}
-              <button className="primary small" onClick={bsa.prompt.resolve}>{bsa.prompt.button}</button>
+              <button className="small" onClick={bsa.prompt.resolve}>{bsa.prompt.button}</button>
             </div>
           )}
-          {bsa.error && <div className="error" role="alert">{bsa.error} <button className="ghost" onClick={bsa.clearError}>×</button></div>}
+          {bsa.error && <div className="error" role="alert">{bsa.error} <button className="ghost" onClick={bsa.clearError} aria-label="Dismiss">×</button></div>}
+        </div>
+      )}
+
+      <div className={showTrack ? 'with-track' : 'page'}>
+        {showTrack && (
+          <aside className="track" aria-label="Setup">
+            <h2>Set up your agent</h2>
+            <ol>
+              {required.map((s, i) => (
+                <li key={s.id}>
+                  <a href={`#/${STEP_ROUTE[s.id]}`} className={`${s.done ? 'done' : ''} ${STEP_ROUTE[s.id] === current ? 'active' : ''}`}>
+                    <span className="mark" aria-hidden={!s.done}>{s.done ? '✓' : i + 1}</span> {s.label}
+                  </a>
+                </li>
+              ))}
+            </ol>
+            <ol className="optional">
+              {optional.map((s) => (
+                <li key={s.id}>
+                  <a href={`#/${STEP_ROUTE[s.id]}`} className={`${s.done ? 'done' : ''} ${STEP_ROUTE[s.id] === current ? 'active' : ''}`}>
+                    <span className="mark" aria-hidden={!s.done}>{s.done ? '✓' : '+'}</span> {s.label}
+                  </a>
+                </li>
+              ))}
+            </ol>
+            <a className="aside-link" href="#/restore">Restoring a reset Flex?</a>
+          </aside>
+        )}
+
+        <main>
           {current === 'connect' && <Connect bsa={bsa} />}
           {current === 'rules' && <Rules bsa={bsa} />}
           {current === 'session' && <Session bsa={bsa} />}

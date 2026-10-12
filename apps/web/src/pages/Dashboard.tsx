@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import type { Bsa } from '../useBsa.js';
 import { shortAddr, time, usdc } from '../format.js';
 
+// Why the Flex refused, in the user's words.
 const REASONS: Record<string, string> = {
   OVER_HARD_MAX: 'above your hard limit — refused without even asking you',
   USER_REJECTED: 'you rejected it on the Flex (or 60 s without an answer)',
@@ -13,10 +14,14 @@ const REASONS: Record<string, string> = {
   APP_CLOSED: 'the BSA Sentry app was not open',
   DISCONNECTED: 'tab or Flex disconnected',
 };
-
-const STAGE: Record<string, string> = {
-  pending: 'waiting for the Flex', signed: 'signed by the Flex', refused: 'refused', settled: 'paid on Arc', failed: 'failed',
+const OUTCOME: Record<string, string> = {
+  pending: 'Waiting for your Flex', signed: 'Signed', refused: 'Refused', settled: 'Paid', failed: 'Failed',
 };
+
+type WalletsInfo = { main: { address: string; usdc: string }; agent: { address: string; usdc: string } | null };
+
+/** "17.00": the device shows the spending limit with cents, so the mirror does too. */
+const cents = (units: bigint) => `${units / 1_000_000n}.${((units % 1_000_000n) / 10_000n).toString().padStart(2, '0')}`;
 
 export function Dashboard({ bsa }: { bsa: Bsa }) {
   const d = bsa.device;
@@ -30,52 +35,122 @@ export function Dashboard({ bsa }: { bsa: Bsa }) {
   }, []);
   // Re-read after anything that can move money: a payment settling, the device state changing.
   useEffect(() => { if (bsa.account) void loadWallets(); }, [bsa.account, bsa.feed.items.length, d?.spent, loadWallets]);
+  const explorer = bsa.config?.explorer;
 
   return (
     <>
       {bsa.feed.banner && (
         <div className="banner" role="alert" data-testid="refusal-banner">
-          <b>Refused by your Flex:</b> {bsa.feed.banner.amount} USDC to {bsa.feed.banner.merchant} — {REASONS[bsa.feed.banner.reason] ?? bsa.feed.banner.reason}
+          <span><b>Refused by your Flex:</b> {bsa.feed.banner.amount} USDC to {bsa.feed.banner.merchant} — {REASONS[bsa.feed.banner.reason] ?? bsa.feed.banner.reason}</span>
           <button className="ghost" onClick={bsa.dismissBanner}>OK</button>
         </div>
       )}
-      <Wallets bsa={bsa} wallets={wallets} />
-      <TopUp bsa={bsa} mainUsdc={wallets?.main.usdc} onDone={() => void loadWallets()} />
-      <section className="card budget">
-        <h2>Spending limit</h2>
-        <p className="muted">A rule on your Flex: how much the agent may spend without asking you. It is not money (the money is in the agent wallet above). Reset it on the Flex: menu → +20 USDC.</p>
-        {p?.active ? (
-          <>
-            <div className="big" data-testid="budget-left">{usdc(left)} <small>/ {usdc(p.budget)} USDC</small></div>
-            <div className="gauge"><div style={{ width: `${pct}%` }} /></div>
-            <p className="muted">{d!.count} payment{d!.count === 1 ? '' : 's'} · automatic up to {usdc(p.autoMax)} USDC · never above {usdc(p.hardMax)} USDC</p>
-            {d!.lastPayment && <p>Last: <b>{d!.lastPayment.label}</b> {usdc(d!.lastPayment.value)} USDC</p>}
-          </>
-        ) : <p className="muted">No active rules on the Flex.</p>}
-      </section>
 
-      <section className="card">
-        <h2>Live</h2>
-        {bsa.feed.items.length === 0 ? <p className="muted">Claude's requests will show up here.</p> : (
+      <div className="overview">
+        <section className="sheet">
+          <div className="statement-head">
+            <h2>Wallets</h2>
+            <span className="muted">Balances on Arc testnet</span>
+          </div>
+
+          <div className="line primary-line">
+            <div className="line-name">Agent wallet</div>
+            <div className="amount" data-testid="agent-balance">{wallets?.agent ? wallets.agent.usdc : '…'}<small>USDC</small></div>
+            <div className="line-sub">
+              What Claude can spend.{' '}
+              {wallets?.agent && <><code>{shortAddr(wallets.agent.address)}</code> {explorer && <a href={`${explorer}/address/${wallets.agent.address}`} target="_blank" rel="noreferrer">View on Arc</a>}</>}
+              {wallets && !wallets.agent && 'Connect your Flex to see it.'}
+            </div>
+            <TopUp bsa={bsa} mainUsdc={wallets?.main.usdc} onDone={() => void loadWallets()} />
+          </div>
+
+          <div className="line">
+            <div className="line-name">Main account</div>
+            <div className="amount" data-testid="main-balance">{wallets ? wallets.main.usdc : '…'}<small>USDC</small></div>
+            <div className="line-sub">
+              Yours. Top-ups to the agent come from here.{' '}
+              {wallets && <><code>{shortAddr(wallets.main.address)}</code> {explorer && <a href={`${explorer}/address/${wallets.main.address}`} target="_blank" rel="noreferrer">View on Arc</a>}</>}
+            </div>
+          </div>
+
+          <div className="limit">
+            <h2>Spending limit</h2>
+            {p?.active ? (
+              <>
+                <div className="limit-figure">
+                  <b data-testid="budget-left">{usdc(left)}</b>
+                  <span className="muted">of {usdc(p.budget)} USDC left to spend without asking you</span>
+                </div>
+                <div className={`gauge ${pct < 25 ? 'low' : ''}`} role="img" aria-label={`${pct}% of the spending limit left`}><div style={{ width: `${pct}%` }} /></div>
+                <p>A rule kept on your Flex, not money. {d!.count} payment{d!.count === 1 ? '' : 's'} so far. Reset it on the Flex from the app menu (+20 USDC).</p>
+              </>
+            ) : <p>No active rules on the Flex. <a href="#/rules">Set your rules</a> to let the agent spend.</p>}
+          </div>
+        </section>
+
+        <aside className="mirror" aria-label="What your Flex enforces">
+          <div className="flex-device">
+            <div className="flex-screen" data-testid="flex-mirror">
+              <div className="crest" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 20 20"><path d="M10 2 3 5v5c0 4 3 7 7 8 4-1 7-4 7-8V5l-7-3Z" fill="none" stroke="#000" strokeWidth="1.8" /></svg>
+              </div>
+              <div className="app">BSA Sentry</div>
+              {p?.active ? (
+                <>
+                  <div className="tag">Budget {cents(left)} / {cents(p.budget)} USDC</div>
+                  {d!.lastPayment && <div className="tag">Last: {d!.lastPayment.label} {usdc(d!.lastPayment.value)} USDC</div>}
+                  <div className="tag">Arc testnet . session {d!.sessionArmed || bsa.bridgeStatus.session ? 'on' : 'off'}</div>
+                </>
+              ) : (
+                <>
+                  <div className="tag">No rules yet:</div>
+                  <div className="tag">set them on the website</div>
+                </>
+              )}
+              <div className="quit">Quit app</div>
+            </div>
+          </div>
+          <p className="mirror-caption">Your Flex's home screen. The rules below live on the device: this page only shows them.</p>
+          {p?.active && (
+            <ul className="mirror-rules">
+              <li><span>Paid without asking</span><span>up to {usdc(p.autoMax)} USDC</span></li>
+              <li><span>Hard limit, never paid</span><span>above {usdc(p.hardMax)} USDC</span></li>
+              <li><span>Trusted merchants</span><span>{p.payees.length ? p.payees.map((m) => m.label).join(', ') : 'none'}</span></li>
+              <li><span>Payments before asking</span><span>{d!.count} of {p.maxCount}</span></li>
+            </ul>
+          )}
+          <div className="mirror-actions">
+            <a href="#/rules"><button className="small">Edit rules</button></a>
+            <button className="danger small" disabled={!p?.active || !!bsa.busy} onClick={() => void bsa.clearRules()} data-testid="kill">Block the agent</button>
+          </div>
+        </aside>
+      </div>
+
+      <section className="sheet activity">
+        <div className="statement-head">
+          <h2>Activity</h2>
+          <span className="muted">Every request Claude sends to your Flex</span>
+        </div>
+        {bsa.feed.items.length === 0 ? (
+          <p className="empty">Nothing yet. When Claude asks your Flex to pay, it shows up here, with what the Flex decided.</p>
+        ) : (
           <ul className="feed" data-testid="feed">
             {bsa.feed.items.map((i) => (
               <li key={i.id} className={`stage-${i.stage}`}>
                 <span className="when">{time(i.at)}</span>
-                <div className="body">
-                  <div className="what"><b>{i.amount} USDC</b> · {i.merchant} <code>{shortAddr(i.payee)}</code></div>
-                  <div className="stage">{STAGE[i.stage]}{i.reason ? ` — ${REASONS[i.reason] ?? i.reason}` : ''}</div>
-                </div>
-                {i.txHash && bsa.config && <a href={`${bsa.config.explorer}/tx/${i.txHash}`} target="_blank" rel="noreferrer">view on Arc ↗</a>}
+                <span className="what">{i.merchant}<code>{shortAddr(i.payee)}</code></span>
+                <span className="sum">{i.amount} USDC</span>
+                <span className="outcome">{OUTCOME[i.stage]}</span>
+                {(i.reason || (i.txHash && explorer)) && (
+                  <span className="note">
+                    {i.reason ? (REASONS[i.reason] ?? i.reason) : null}
+                    {i.txHash && explorer && <a href={`${explorer}/tx/${i.txHash}`} target="_blank" rel="noreferrer">View transaction on Arc</a>}
+                  </span>
+                )}
               </li>
             ))}
           </ul>
         )}
-      </section>
-
-      <section className="card">
-        <h2>Emergency stop</h2>
-        <p>Erases the rules and trusted merchants from the Flex. The agent cannot pay anything until you set new rules.</p>
-        <button className="danger" disabled={!p?.active || !!bsa.busy} onClick={() => void bsa.clearRules()} data-testid="kill">Block the agent</button>
       </section>
     </>
   );
@@ -86,42 +161,20 @@ function TopUp({ bsa, mainUsdc, onDone }: { bsa: Bsa; mainUsdc?: string; onDone:
   const [amount, setAmount] = useState('5');
   const [done, setDone] = useState<{ txHash: string; amount: string } | null>(null);
   return (
-    <section className="card">
-      <h2>Top up the agent</h2>
-      <p>Move USDC from your main account (0xMAIN) to your agent wallet (0xAGENT). Your Flex shows the amount and both full addresses, and you hold to sign. The recipient is always your own agent: the Flex fills it in itself.{mainUsdc !== undefined && <> Your main account holds <b>{mainUsdc} USDC</b>.</>}</p>
-      <div className="topup">
-        <input value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal" aria-label="Amount in USDC" data-testid="topup-amount" /> USDC
-        <button className="primary" disabled={!bsa.signer || !!bsa.busy} onClick={async () => { setDone(null); const r = await bsa.topUp(amount); if (r) { setDone(r); onDone(); } }} data-testid="topup">Top up from my main account</button>
-      </div>
-      {done && (
-        <p className="ok" data-testid="topup-done">
-          Topped up {done.amount} USDC{bsa.config && <> · <a href={`${bsa.config.explorer}/tx/${done.txHash}`} target="_blank" rel="noreferrer">view on Arc ↗</a></>}
-        </p>
+    <div className="line-actions">
+      <input value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal" aria-label="Amount in USDC" data-testid="topup-amount" />
+      <button className="primary" disabled={!bsa.signer || !!bsa.busy} data-testid="topup"
+        onClick={async () => { setDone(null); const r = await bsa.topUp(amount); if (r) { setDone(r); onDone(); } }}>
+        Top up from main account
+      </button>
+      {done ? (
+        <span className="done" data-testid="topup-done">
+          Topped up {done.amount} USDC.{' '}
+          {bsa.config && <a href={`${bsa.config.explorer}/tx/${done.txHash}`} target="_blank" rel="noreferrer">View transaction</a>}
+        </span>
+      ) : (
+        <span className="muted">{mainUsdc !== undefined ? `${mainUsdc} USDC available. ` : ''}Your Flex shows both addresses before you sign.</span>
       )}
-    </section>
-  );
-}
-
-type WalletsInfo = { main: { address: string; usdc: string }; agent: { address: string; usdc: string } | null };
-
-/** The real money, read from Arc by the server: the Flex has no network to show it. */
-function Wallets({ bsa, wallets }: { bsa: Bsa; wallets: WalletsInfo | null }) {
-  const link = (a: string) => bsa.config && <a href={`${bsa.config.explorer}/address/${a}`} target="_blank" rel="noreferrer">view on Arc ↗</a>;
-  return (
-    <section className="card wallets">
-      <h2>Wallets</h2>
-      {!wallets ? <p className="muted">Reading balances from Arc…</p> : (
-        <dl className="wallet-list">
-          <dt>Agent wallet (0xAGENT) — what Claude can spend</dt>
-          <dd>
-            {wallets.agent
-              ? <><b data-testid="agent-balance">{wallets.agent.usdc} USDC</b> <code>{shortAddr(wallets.agent.address)}</code> {link(wallets.agent.address)}</>
-              : <span className="muted">connect your Flex to see it</span>}
-          </dd>
-          <dt>Main account (0xMAIN) — yours</dt>
-          <dd><b data-testid="main-balance">{wallets.main.usdc} USDC</b> <code>{shortAddr(wallets.main.address)}</code> {link(wallets.main.address)}</dd>
-        </dl>
-      )}
-    </section>
+    </div>
   );
 }

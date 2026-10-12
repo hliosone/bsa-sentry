@@ -5,7 +5,7 @@ export function Connect({ bsa }: { bsa: Bsa }) {
   const { signer, account, addresses } = bsa;
   return (
     <section className="card">
-      <h2>1. Connect your Flex</h2>
+      <h2>Connect your Flex</h2>
       <p>Plug in your Ledger Flex, unlock it and open the <b>BSA Sentry</b> app.</p>
       {!webHidAvailable() && <p className="warn">This browser has no WebHID. Use <b>Google Chrome</b>.</p>}
       {!signer ? (
@@ -17,7 +17,7 @@ export function Connect({ bsa }: { bsa: Bsa }) {
         </dl>
       )}
 
-      <h2>2. Log in with Ledger</h2>
+      <h2>Log in with Ledger</h2>
       {account ? (
         <p className="ok" data-testid="logged-in">Logged in as <code>{account}</code></p>
       ) : (

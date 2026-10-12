@@ -88,7 +88,7 @@ test('onboarding, then the dashboard follows what the agent does', async ({ page
   await page.evaluate(() => (window as any).__bsaFake.armSession(true));
   await page.getByTestId('session-check').click();
   await expect(page.getByTestId('session-on')).toBeVisible();
-  await expect(page.getByTestId('statusbar')).toContainText('agent active');
+  await expect(page.getByTestId('statusbar')).toContainText('Agent on');
   await shot(page, '04-session');
 
   // 5. Connect Claude: the MCP URL is the public one.
@@ -116,7 +116,7 @@ test('onboarding, then the dashboard follows what the agent does', async ({ page
   const coffee = await bsa.agent.fetch(account, { url: `${shop}/cafe` });
   expect(coffee.kind).toBe('error');
   await expect(page.getByTestId('feed').locator('li').first()).toContainText('3 USDC');
-  await expect(page.getByTestId('feed').locator('li').first()).toContainText('failed');
+  await expect(page.getByTestId('feed').locator('li').first()).toContainText('Failed');
   await page.getByRole('button', { name: 'OK' }).click();
   await expect(page.getByTestId('refusal-banner')).toHaveCount(0);
   await shot(page, '07-dashboard-feed');
