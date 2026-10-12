@@ -15,14 +15,13 @@ however the agent is tricked into asking.*
 |---|---|
 | ☐ | Flex: **auto-lock off** (Settings → Security), charged, BSA Sentry installed. |
 | ☐ | Laptop on AC, never sleeps (KDE power settings), Chrome only (WebHID). |
-| ☐ | `pnpm --filter @bsa-sentry/server start` **then** `pnpm --filter @bsa-sentry/merchants start` (server first). |
-| ☐ | `pnpm tunnel 8787` → restart the server with `PUBLIC_API_URL=<tunnel URL>` (or the deployed URL). |
+| ☐ | `pnpm demo:up` — a fresh public tunnel, the server and the shops (Docker) reconfigured for it; prints the links. Run it shortly before going on: free tunnels are dropped by Cloudflare after a disconnection. |
 | ☐ | Chrome tab open on the site, **logged in with Ledger**, status bar green. |
-| ☐ | claude.ai: connector `<URL>/mcp` added and authorised (Settings → Connectors). |
+| ☐ | claude.ai **in Chrome** (not Claude Code, not another browser): remove the old BSA Sentry connector, add `<URL>/mcp`, authorise. Then reopen the site tab — the consent step navigates away from it. |
 | ☐ | `pnpm balances`: your Flex's 0xAGENT holds ≥ 35 USDC (`pnpm fund <0xAGENT> 35`). |
 | ☐ | Rules set (demo values), **bakery NOT in the trusted merchants** (see Reset), badge 18+ done. |
 | ☐ | Agent session **armed on the Flex** (BSA Sentry → settings → Agent session). |
-| ☐ | Dashboard open on the projector: budget 20 / 20. |
+| ☐ | Dashboard open on the projector: budget 20 / 20. In the prompts below, `<merchants>` is `<URL>/shops`. |
 | ☐ | A browser tab with the merchant's `/promo` page, to show it looks harmless. |
 
 ## The script

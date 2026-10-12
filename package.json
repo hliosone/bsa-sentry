@@ -20,7 +20,8 @@
     "e2e:age": "tsx scripts/e2e-age.ts",
     "e2e:restore": "tsx scripts/e2e-restore.ts",
     "demo": "tsx scripts/demo.ts",
-    "e2e": "tsx scripts/e2e.ts"
+    "e2e": "tsx scripts/e2e.ts",
+    "demo:up": "bash scripts/demo-up.sh"
   },
   "devDependencies": {
     "@bsa-sentry/sentry-signer": "workspace:*",
