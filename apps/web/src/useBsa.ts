@@ -224,7 +224,10 @@ export function useBsa() {
       if (!(await c.switchApp('Ledger Sync'))) await ask('On your Flex, quit BSA Sentry and open the Ledger Sync app.', 'Ledger Sync is open');
       await c.disconnect();
       conn.current = null;
-      const { openLedgerKeyRing } = await import('./keyring/ledger.js');
+      // A tab opened before a redeploy asks for a file the new build no longer has.
+      const { openLedgerKeyRing } = await import('./keyring/ledger.js').catch(() => {
+        throw new Error('The website was updated since this tab opened: reload it (Ctrl+Shift+R) and try again.');
+      });
       const kr = await openLedgerKeyRing((on) => setBusy(on ? 'Confirm on your Flex (Ledger Sync)…' : 'Encrypting…'));
       try {
         return await fn(kr);

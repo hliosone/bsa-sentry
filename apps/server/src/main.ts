@@ -112,7 +112,7 @@ export async function startBsaServer(env: BsaServerEnv = process.env, opts: { po
       const dist = resolve(env.WEB_DIST ?? resolve(import.meta.dirname, '../../web/dist'));
       if (existsSync(dist)) {
         app.use(express.static(dist, { index: 'index.html' }));
-        app.get(/^\/(?!auth|oauth|mcp|x402|events|api|age|vault|relay|health|\.well-known).*/, (_req, res) => res.sendFile(resolve(dist, 'index.html')));
+        app.get(/^\/(?!auth|oauth|mcp|x402|events|api|age|vault|relay|health|topup|shops|assets\/|\.well-known).*/, (_req, res) => res.sendFile(resolve(dist, 'index.html')));
       }
     },
   });
