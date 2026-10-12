@@ -8,6 +8,8 @@ services:
     environment:
       PORT: 8787
       DB_PATH: /data/bsa-sentry.sqlite
+      # The demo shops, also served at <PUBLIC_API_URL>/shops/* (one tunnel for the whole demo).
+      SHOPS_UPSTREAM: http://merchants:4021
     ports: ["8787:8787"]
     volumes: ["bsa-data:/data"]
     healthcheck:
