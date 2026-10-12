@@ -58,6 +58,14 @@ export function createServer(opts: ServerOptions) {
 
   const app = express();
   app.disable('x-powered-by');
+  // One line per request, for debugging live runs. Path only: query strings carry OAuth codes.
+  app.use((req, res, next) => {
+    const t0 = Date.now();
+    res.on('finish', () => {
+      if (req.path !== '/health') log(`[http] ${req.method} ${req.path} ${res.statusCode} ${Date.now() - t0}ms`);
+    });
+    next();
+  });
   app.get('/health', (_req, res) => res.json({ ok: true, chainId: opts.chain.chainId }));
   app.use('/x402', facilitatorRouter(deps, (m) => log(`[facilitator] ${m}`)));
   opts.extend?.(app, { relay, agent });
