@@ -64,7 +64,7 @@ test('onboarding, then the dashboard follows what the agent does', async ({ page
 
   // 1-2. Connect the (fake) Flex, then "Log in with Ledger" against the real server.
   await page.getByTestId('connect').click();
-  await expect(page.locator('dl.addresses')).toContainText('0x');
+  await expect(page.locator('.hero-steps li.done')).toContainText('0x');
   await page.getByTestId('login').click();
   // The app moves on to the next onboarding step by itself once logged in.
   await expect(page.getByRole('button', { name: 'Log out' })).toBeVisible();
@@ -220,3 +220,4 @@ test('Key Ring backup, a wiped Flex, and a one-tap restore', async ({ page }) =>
   await page.getByTestId('restore').click();
   await expect(page.getByTestId('restore-result')).toContainText('already has rules');
 });
+

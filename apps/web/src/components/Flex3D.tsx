@@ -2,7 +2,7 @@
 // the console: the device is the authority, so it sits at the centre. Loaded lazily; the flat
 // replica stands in when WebGL is missing, and the motion stops for prefers-reduced-motion.
 import { useEffect, useMemo, useRef } from 'react';
-import { Canvas, useFrame } from '@react-three/fiber';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { ContactShadows, OrbitControls, RoundedBox } from '@react-three/drei';
 import * as THREE from 'three';
 
@@ -39,6 +39,9 @@ function paint(ctx: CanvasRenderingContext2D, s: ScreenLines) {
 
 function Device({ screen, still }: { screen: ScreenLines; still: boolean }) {
   const group = useRef<THREE.Group>(null);
+  // Fit the device to its frame: a narrow tile shrinks it instead of cropping it.
+  const aspect = useThree((st) => st.size.width / Math.max(1, st.size.height));
+  const fit = Math.min(1, aspect / 0.72);
   const canvas = useMemo(() => Object.assign(document.createElement('canvas'), { width: W, height: H }), []);
   const texture = useMemo(() => {
     const t = new THREE.CanvasTexture(canvas);
@@ -62,7 +65,7 @@ function Device({ screen, still }: { screen: ScreenLines; still: boolean }) {
   });
 
   return (
-    <group ref={group} rotation={[-0.06, -0.2, 0]}>
+    <group ref={group} rotation={[-0.06, -0.2, 0]} scale={fit}>
       {/* The body: matte black, softly rounded. */}
       <RoundedBox args={[2.72, 3.42, 0.3]} radius={0.24} smoothness={8}>
         <meshStandardMaterial color="#141414" roughness={0.38} metalness={0.35} />

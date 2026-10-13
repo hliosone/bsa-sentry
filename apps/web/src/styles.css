@@ -1,18 +1,20 @@
 /* BSA Sentry — a console for the Flex that guards an AI agent's money.
  *
- * Tokens: E Ink paper and true black (the device's own look), one white statement sheet, and
- * exactly three accent colours, each meaning an outcome the Flex decided. Inter is the face the
- * Flex renders, so the site and the device read as one product. */
+ * Dark, like Ledger's own world: a black stage where the Flex's paper-white E Ink screen is the
+ * brightest thing on the page, glass panels around it, and exactly three accent colours, each
+ * meaning an outcome the Flex decided. Inter is the face the Flex renders. */
 
 :root {
-  --paper: #f2f3f0;
-  --sheet: #ffffff;
-  --ink: #000000;
-  --graphite: #5d636b;
-  --hairline: #d9dcd6;
-  --signed: #1e7f50;
-  --asked: #9a6b00;
-  --refused: #b3261e;
+  --paper: #050506;
+  --sheet: #101113;
+  --ink: #f4f5f2;
+  --graphite: #9aa1a9;
+  --hairline: rgba(255, 255, 255, 0.1);
+  --well: rgba(255, 255, 255, 0.06);
+  --glass: rgba(255, 255, 255, 0.035);
+  --signed: #34d399;
+  --asked: #fbbf24;
+  --refused: #f87171;
 
   --sans: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --mono: 'IBM Plex Mono', ui-monospace, monospace;
@@ -30,7 +32,13 @@
 html, body { margin: 0; }
 
 body {
-  background: var(--paper);
+  background:
+    radial-gradient(1100px 620px at 78% -8%, rgba(132, 146, 170, 0.2), transparent 62%),
+    radial-gradient(900px 500px at -10% 40%, rgba(90, 100, 120, 0.12), transparent 60%),
+    var(--paper);
+  background-attachment: fixed;
+  min-height: 100vh;
+  color-scheme: dark;
   color: var(--ink);
   font-family: var(--sans);
   font-size: var(--s-15);
@@ -55,7 +63,8 @@ code, .mono { font-family: var(--mono); font-size: 0.86em; }
   gap: 2rem;
   padding: 0 2rem;
   height: 64px;
-  background: var(--sheet);
+  background: rgba(5, 5, 6, 0.72);
+  backdrop-filter: blur(14px);
   border-bottom: 1px solid var(--hairline);
   position: sticky;
   top: 0;
@@ -118,7 +127,7 @@ code, .mono { font-family: var(--mono); font-size: 0.86em; }
   color: var(--paper);
 }
 .device-prompt button { margin-left: auto; }
-.error { background: #fbeceb; color: var(--refused); border: 1px solid #efc5c2; }
+.error { background: rgba(248, 113, 113, 0.12); color: var(--refused); border: 1px solid rgba(248, 113, 113, 0.35); }
 .error button { margin-left: auto; color: var(--refused); }
 .pulse {
   flex: none;
@@ -176,7 +185,8 @@ code, .mono { font-family: var(--mono); font-size: 0.86em; }
 /* ---------------------------------------------------------------- sheets */
 
 .card, .sheet {
-  background: var(--sheet);
+  background: var(--glass);
+  backdrop-filter: blur(16px);
   border: 1px solid var(--hairline);
   border-radius: 14px;
   padding: 1.75rem;
@@ -207,7 +217,7 @@ button {
 button:hover:not(:disabled) { border-color: var(--ink); }
 button:disabled { opacity: 0.45; cursor: not-allowed; }
 button.primary { background: var(--ink); border-color: var(--ink); color: var(--sheet); }
-button.primary:hover:not(:disabled) { background: #2b2b2b; }
+button.primary:hover:not(:disabled) { background: #ffffff; box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.12); }
 button.danger { background: var(--sheet); border-color: var(--refused); color: var(--refused); }
 button.danger:hover:not(:disabled) { background: var(--refused); color: var(--sheet); }
 button.ghost { background: transparent; border-color: transparent; padding: 0.4rem 0.6rem; }
@@ -219,7 +229,7 @@ input {
   padding: 0.6rem 0.75rem;
   border: 1px solid var(--hairline);
   border-radius: 10px;
-  background: var(--sheet);
+  background: var(--well);
   color: var(--ink);
   min-width: 0;
 }
@@ -229,7 +239,8 @@ input:focus { outline: none; border-color: var(--ink); box-shadow: 0 0 0 1px var
 
 .bento { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 16px; }
 .tile {
-  background: var(--sheet);
+  background: var(--glass);
+  backdrop-filter: blur(16px);
   border: 1px solid var(--hairline);
   border-radius: 20px;
   padding: 22px 24px;
@@ -248,8 +259,7 @@ input:focus { outline: none; border-color: var(--ink); box-shadow: 0 0 0 1px var
   grid-row: span 3;
   padding: 0;
   overflow: hidden;
-  background: radial-gradient(90% 70% at 50% 38%, #3a3d42 0%, #16171a 55%, #000 100%);
-  border-color: #000;
+  background: radial-gradient(90% 70% at 50% 38%, #34373c 0%, #121315 55%, #000 100%);
   color: #fff;
 }
 .stage-view { flex: 1; min-height: 440px; position: relative; }
@@ -270,7 +280,7 @@ input:focus { outline: none; border-color: var(--ink); box-shadow: 0 0 0 1px var
 .figure { font-size: 3.5rem; font-weight: 700; letter-spacing: -0.035em; line-height: 1.05; margin: 0.15rem 0; }
 .figure small { font-size: var(--s-15); font-weight: 500; color: var(--graphite); letter-spacing: 0; margin-left: 0.45rem; }
 .small-figure { font-size: 2.125rem; }
-.gauge { height: 8px; border-radius: 4px; background: var(--paper); margin: 0.4rem 0 0.3rem; overflow: hidden; }
+.gauge { height: 8px; border-radius: 4px; background: var(--well); margin: 0.4rem 0 0.3rem; overflow: hidden; }
 .gauge > div { height: 100%; background: var(--ink); border-radius: 4px; }
 .gauge.low > div { background: var(--asked); }
 
@@ -308,7 +318,8 @@ input:focus { outline: none; border-color: var(--ink); box-shadow: 0 0 0 1px var
 
 /* The one bold element: what the Flex itself shows and enforces. */
 .flex-device {
-  background: var(--ink);
+  background: #000;
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 26px;
   padding: 14px 14px 22px;
   box-shadow: 0 1px 0 rgba(255, 255, 255, 0.08) inset;
@@ -351,8 +362,8 @@ input:focus { outline: none; border-color: var(--ink); box-shadow: 0 0 0 1px var
   padding: 0.9rem 1.1rem;
   margin-bottom: 1.25rem;
   border-radius: 12px;
-  background: #fbeceb;
-  border: 1px solid #efc5c2;
+  background: rgba(248, 113, 113, 0.12);
+  border: 1px solid rgba(248, 113, 113, 0.35);
   color: var(--refused);
 }
 .banner button { margin-left: auto; color: var(--refused); }
@@ -387,7 +398,7 @@ input:focus { outline: none; border-color: var(--ink); box-shadow: 0 0 0 1px var
 .addresses dt { color: var(--graphite); }
 .addresses dd { margin: 0; overflow-wrap: anywhere; }
 .copy { display: flex; gap: 0.6rem; align-items: center; margin: 0.5rem 0; flex-wrap: wrap; }
-.copy code { background: var(--paper); padding: 0.5rem 0.7rem; border-radius: 8px; overflow-wrap: anywhere; }
+.copy code { background: var(--well); padding: 0.5rem 0.7rem; border-radius: 8px; overflow-wrap: anywhere; }
 .grants { list-style: none; padding: 0; }
 .grants li { display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding: 0.6rem 0; border-top: 1px solid var(--hairline); }
 
@@ -439,7 +450,7 @@ input:focus { outline: none; border-color: var(--ink); box-shadow: 0 0 0 1px var
   padding: 0.9rem 1rem;
   border: 1px solid var(--hairline);
   border-radius: 12px;
-  background: var(--sheet);
+  background: var(--glass);
 }
 .rights:not(.choose) .right { grid-template-columns: 52px 1fr; }
 .right input { width: 18px; height: 18px; accent-color: var(--ink); }
@@ -464,7 +475,7 @@ input:focus { outline: none; border-color: var(--ink); box-shadow: 0 0 0 1px var
 
 /* Services: one card per place the agent can pay. */
 .services { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; margin-top: 1.25rem; }
-.service { border: 1px solid var(--hairline); border-radius: 16px; padding: 18px 20px; display: flex; flex-direction: column; gap: 0.5rem; }
+.service { background: var(--glass); border: 1px solid var(--hairline); border-radius: 16px; padding: 18px 20px; display: flex; flex-direction: column; gap: 0.5rem; }
 .service-head { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; }
 .service-head h3 { margin: 0; font-size: var(--s-19); }
 .price { font-weight: 700; white-space: nowrap; }
@@ -476,4 +487,63 @@ input:focus { outline: none; border-color: var(--ink); box-shadow: 0 0 0 1px var
 .facts li.ask::before { background: var(--asked); }
 .facts li.bad::before { background: var(--refused); }
 .prompt { margin-top: auto; padding-top: 0.6rem; display: flex; align-items: center; gap: 0.5rem; }
-.prompt span { flex: 1; min-width: 0; background: var(--paper); border-radius: 8px; padding: 0.5rem 0.7rem; font-size: var(--s-13); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.prompt span { flex: 1; min-width: 0; background: var(--well); border-radius: 8px; padding: 0.5rem 0.7rem; font-size: var(--s-13); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ---------------------------------------------------------------- first screen */
+
+.hero {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 3rem 2rem 4rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+  gap: 3rem;
+  align-items: center;
+  min-height: calc(100vh - 64px);
+}
+.hero h1 { font-size: clamp(2.6rem, 5.2vw, 4.4rem); font-weight: 700; letter-spacing: -0.045em; line-height: 1.02; }
+.lede { font-size: var(--s-19); color: var(--graphite); line-height: 1.5; margin: 1.4rem 0 2rem; max-width: 34rem; }
+.hero-steps { list-style: none; padding: 0; margin: 0; display: grid; gap: 0.75rem; max-width: 34rem; counter-reset: s; }
+.hero-steps li {
+  counter-increment: s;
+  display: grid;
+  grid-template-columns: 34px 1fr auto;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--hairline);
+  border-radius: 16px;
+  background: var(--glass);
+  backdrop-filter: blur(16px);
+}
+.hero-steps li::before {
+  content: counter(s);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--hairline);
+  display: grid;
+  place-items: center;
+  font-weight: 600;
+  font-size: var(--s-13);
+}
+.hero-steps li.done::before { content: '✓'; background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.hero-steps b { display: block; }
+.hero-steps span { display: block; font-size: var(--s-13); color: var(--graphite); }
+.hero-points { list-style: none; padding: 0; margin: 2.5rem 0 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; max-width: 40rem; }
+.hero-points li { border-top: 1px solid var(--hairline); padding-top: 0.75rem; }
+.hero-points b { display: block; font-size: var(--s-15); }
+.hero-points span { font-size: var(--s-13); color: var(--graphite); }
+.hero-stage {
+  position: relative;
+  height: min(78vh, 680px);
+  border-radius: 28px;
+  background: radial-gradient(70% 60% at 50% 42%, rgba(160, 170, 190, 0.22), transparent 70%);
+}
+.hero-stage .flex-device { width: min(70%, 320px); margin: 12% auto 0; }
+
+@media (max-width: 960px) {
+  .hero { grid-template-columns: 1fr; padding-top: 2rem; min-height: 0; }
+  .hero-stage { height: 440px; order: -1; }
+  .hero-points { grid-template-columns: 1fr; }
+}

@@ -11,6 +11,7 @@ import { Dashboard } from './pages/Dashboard.js';
 import { Badge } from './pages/Badge.js';
 import { Backup, Restore } from './pages/Backup.js';
 import { Services } from './pages/Services.js';
+import { Landing } from './pages/Landing.js';
 
 type Route = 'connect' | 'rules' | 'session' | 'claude' | 'dashboard' | 'badge' | 'backup' | 'restore' | 'services';
 const ROUTES: Route[] = ['connect', 'rules', 'session', 'claude', 'dashboard', 'badge', 'backup', 'restore', 'services'];
@@ -107,6 +108,7 @@ export function App() {
         </div>
       )}
 
+      {!bsa.account ? <Landing bsa={bsa} /> : (
       <div className={showTrack ? 'with-track' : 'page'}>
         {showTrack && (
           <aside className="track" aria-label="Setup">
@@ -145,6 +147,7 @@ export function App() {
           {current === 'services' && <Services bsa={bsa} />}
         </main>
       </div>
+      )}
     </div>
   );
 }

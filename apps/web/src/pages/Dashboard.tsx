@@ -1,11 +1,9 @@
-import { Component, lazy, Suspense, useCallback, useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { Credentials } from '@bsa-sentry/types';
 import type { Bsa } from '../useBsa.js';
 import { shortAddr, time, usdc } from '../format.js';
 import { describeRight } from './Badge.js';
-import type { ScreenLines } from '../components/Flex3D.js';
-
-const Flex3D = lazy(() => import('../components/Flex3D.js'));
+import { FlexView, type ScreenLines } from '../components/FlexView.js';
 
 // Why the Flex refused, in the user's words.
 const REASONS: Record<string, string> = {
@@ -27,30 +25,6 @@ type WalletsInfo = { main: { address: string; usdc: string }; agent: { address: 
 
 /** "17.00": the device shows the spending limit with cents, so the replica does too. */
 const cents = (units: bigint) => `${units / 1_000_000n}.${((units % 1_000_000n) / 10_000n).toString().padStart(2, '0')}`;
-
-const webgl = () => {
-  try { return !!document.createElement('canvas').getContext('webgl2'); } catch { return false; }
-};
-
-/** Stands in for the 3D view if WebGL fails at runtime. */
-class Fallback extends Component<{ fallback: ReactNode; children: ReactNode }, { failed: boolean }> {
-  state = { failed: false };
-  static getDerivedStateFromError() { return { failed: true }; }
-  render() { return this.state.failed ? this.props.fallback : this.props.children; }
-}
-
-/** The flat replica of the Flex home screen, for no-WebGL browsers and while the 3D loads. */
-function FlatFlex({ screen }: { screen: ScreenLines }) {
-  return (
-    <div className="flex-device">
-      <div className="flex-screen" data-testid="flex-mirror">
-        <div className="app">{screen.title}</div>
-        {screen.lines.map((l) => <div className="tag" key={l}>{l}</div>)}
-        <div className="quit">Quit app</div>
-      </div>
-    </div>
-  );
-}
 
 export function Dashboard({ bsa }: { bsa: Bsa }) {
   const d = bsa.device;
@@ -99,11 +73,7 @@ export function Dashboard({ bsa }: { bsa: Bsa }) {
       <div className="bento">
         <section className="tile stage" aria-label="Your Flex">
           <div className="stage-view">
-            {webgl() ? (
-              <Fallback fallback={<FlatFlex screen={screen} />}>
-                <Suspense fallback={<FlatFlex screen={screen} />}><Flex3D screen={screen} /></Suspense>
-              </Fallback>
-            ) : <FlatFlex screen={screen} />}
+            <FlexView screen={screen} />
           </div>
           <div className="stage-caption">
             <b>Enforced by your Flex</b>
