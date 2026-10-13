@@ -169,18 +169,27 @@ const server = createServer(async (req, res) => {
       nonces.delete(claims.nonce);
       tokens.delete(token);
 
-      const disclose = (name: string, value: unknown) => json64([rand(16), name, value]);
-      const disclosures = [
+      // Shaped by the PID type metadata (urn:eudi:pid:1, eudi-srv-pid-issuer vct/pid_v1.4.json),
+      // which the EU verifier enforces: every personal claim is selectively disclosable ("sd":
+      // "always"), nationalities element by element, and place_of_birth is mandatory.
+      const all: string[] = [];
+      const dg = (d: string) => createHash('sha256').update(d, 'ascii').digest('base64url');
+      const disclose = (name: string, value: unknown) => { const d = json64([rand(16), name, value]); all.push(d); return dg(d); };
+      const element = (value: unknown) => { const d = json64([rand(16), value]); all.push(d); return { '...': dg(d) }; };
+      const top = [
         disclose('given_name', person.given_name), disclose('family_name', person.family_name),
-        disclose('birthdate', person.birthdate), disclose('nationalities', [person.nationality]),
+        disclose('birthdate', person.birthdate),
+        disclose('place_of_birth', { _sd: [disclose('country', person.nationality)].sort() }),
+        disclose('nationalities', [element(person.nationality)]),
+        disclose('issuing_country', person.nationality), disclose('issuing_authority', 'BSA Sentry Test Issuer'),
       ];
+      const disclosures = all;
       const now = Math.floor(Date.now() / 1000);
       const { kty, crv, x, y } = jwk;
       const payload = {
         iss: ISS, iat: now, exp: now + 60 * 24 * 3600, vct: VCT,
-        issuing_country: 'CH', issuing_authority: 'BSA Sentry Test Issuer',
         cnf: { jwk: { kty, crv, x, y } },
-        _sd: disclosures.map((d) => createHash('sha256').update(d, 'ascii').digest('base64url')).sort(),
+        _sd: top.sort(),
         _sd_alg: 'sha-256',
       };
       const signingInput = `${json64({ alg: 'ES256', typ: 'dc+sd-jwt', x5c: leaf.x5c })}.${json64(payload)}`;
