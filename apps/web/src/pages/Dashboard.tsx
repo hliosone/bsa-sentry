@@ -67,7 +67,7 @@ export function Dashboard({ bsa }: { bsa: Bsa }) {
     lines: p?.active
       ? [
           ...(held ? [`Agent: ${held.delegation.agentName}`] : []),
-          `Budget ${cents(left)} / ${cents(p.budget)} USDC`,
+          `Limit left ${cents(left)} USDC`,
           ...(d!.lastPayment ? [`Last: ${d!.lastPayment.label} ${usdc(d!.lastPayment.value)} USDC`] : []),
           `Arc testnet . session ${armed ? 'on' : 'off'}`,
         ]

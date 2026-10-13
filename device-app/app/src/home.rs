@@ -82,13 +82,13 @@ fn s(strings: &mut Vec<CString>, text: &str) -> *const c_char {
     strings.last().unwrap().as_ptr()
 }
 
-/// "17.00": the home screen shows the budget with cents, like a bank balance.
+/// "17.00": the home screen shows the limit left with cents.
 fn usdc2(units: u64) -> String {
     format!("{}.{:02}", units / 1_000_000, (units % 1_000_000) / 10_000)
 }
 
 /// At most four short lines: NBGL wraps anything longer than ~28 characters, and a fifth line
-/// pushes the text into the "Quit app" bar. The token is on the budget line, so the last line
+/// pushes the text into the "Quit app" bar. The token is on the limit line, so the last line
 /// only needs the network.
 fn tagline(policy: &bsa_sentry_core::Policy, counters: &Counters, last: (u64, &[u8]), armed: bool, agent_name: Option<String>) -> String {
     let status = format!("{} . session {}", fmt::chain_name(policy.chain_id), if armed { "on" } else { "off" });
@@ -100,7 +100,9 @@ fn tagline(policy: &bsa_sentry_core::Policy, counters: &Counters, last: (u64, &[
     if let Some(name) = agent_name {
         out.push_str(&format!("Agent: {}\n", fmt::clip(&name, 18)));
     }
-    out.push_str(&format!("Budget {} / {} USDC\n", usdc2(left), usdc2(policy.budget)));
+    // What the agent may still spend before the Flex asks you: a rule, not the wallet balance
+    // (the Flex cannot see the chain), so it says "limit", not "budget".
+    out.push_str(&format!("Limit left {} USDC\n", usdc2(left)));
     if last.0 > 0 {
         out.push_str(&format!("Last: {} {}\n", fmt::clip(&fmt::untrusted_text(last.1), 10), fmt::amount_usdc(last.0)));
     }

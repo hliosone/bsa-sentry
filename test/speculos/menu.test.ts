@@ -43,24 +43,24 @@ beforeAll(() => restart(true));
 describe('the home screen', () => {
   beforeEach(async () => { await install(); await goHome(); });
 
-  it('shows the budget, the chain and token, and the session state', async () => {
+  it('shows the limit left, the chain and token, and the session state', async () => {
     await setSession(false);
     await goHome();
     const t = await screenText();
     expect(t).toMatch(/BSA Sentry/);
-    expect(t).toMatch(/20(\.00)? \/ 20(\.00)? USDC/);
+    expect(t).toMatch(/Limit left 20(\.00)? USDC/);
     expect(t).toMatch(/Arc testnet/);
     expect(t).toMatch(/session off/i);
     await screenshot('15-home-with-rules');
   });
 
-  it('updates after a payment: remaining budget and the last payment', async () => {
+  it('updates after a payment: the limit left and the last payment', async () => {
     await setSession(true);
     const data = payPayload({ chainId: 5042002n, token: TOKEN, to: CAFE, value: 3n * USDC, hint: 'Cafe Sat', nonce: `0x${'71'.repeat(32)}` });
     expect((await apdu(Uint8Array.from([0xe0, INS.PAY, 0, 0, data.length, ...data]))).sw).toBe(SW.OK);
     await goHome();
     const t = await screenText();
-    expect(t).toMatch(/17(\.00)? \/ 20(\.00)? USDC/);
+    expect(t).toMatch(/Limit left 17(\.00)? USDC/);
     expect(t).toMatch(/Cafe Sat 3/);
     expect(t).toMatch(/session on/i);
     await screenshot('16-home-after-coffee');
