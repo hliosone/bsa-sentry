@@ -9,6 +9,10 @@ its boundary.
 
 Built by the EPFL Blockchain Student Association for the Ledger N3XT Hackathon @ OP3N 2026.
 
+**Live:** https://server-production-423c.up.railway.app (website, MCP server at `/mcp`, facilitator at
+`/x402`, demo shops at `/shops/*`, Shopify store at `/shops/shopify`). Using it needs a Ledger Flex
+running the BSA Sentry app, in Chrome.
+
 ## The three parts
 
 ### 1. Our own Ledger app is the agent's wallet

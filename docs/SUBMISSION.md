@@ -88,6 +88,8 @@ agent on the device, carried inside x402 payments and checked by the facilitator
 
 **Repository:** https://github.com/hliosone/bsa-sentry
 
+**Live deployment:** https://server-production-423c.up.railway.app (Railway: server, website, MCP, facilitator, shops)
+
 **Video:** `<link>`
 
 **Team:** BSA (EPFL Blockchain Student Association): `<names>`
