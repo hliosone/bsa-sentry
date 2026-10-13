@@ -1,0 +1,9 @@
+.env
+.env.*
+!.env.example
+.run/
+node_modules/
+**/node_modules/
+target/
+docs/screens/
+*.log

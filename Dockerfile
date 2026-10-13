@@ -28,4 +28,6 @@ COPY apps/web/src/bridge ./apps/web/src/bridge
 RUN pnpm install --frozen-lockfile --ignore-scripts --filter @bsa-sentry/server... --filter @bsa-sentry/merchants...
 COPY --from=web /app/apps/web/dist ./apps/web/dist
 ENV NODE_ENV=production WEB_DIST=/app/apps/web/dist
-CMD ["pnpm", "--filter", "@bsa-sentry/server", "start"]
+# One image, two roles: BSA_ROLE=merchants runs the demo shops (Railway sets it per service;
+# docker-compose passes its own command instead).
+CMD ["sh", "-c", "if [ \"$BSA_ROLE\" = merchants ]; then exec pnpm --filter @bsa-sentry/merchants start; else exec pnpm --filter @bsa-sentry/server start; fi"]
