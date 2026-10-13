@@ -87,7 +87,7 @@ export async function startBsaServer(env: BsaServerEnv = process.env, opts: { po
 
       // The same events, kept: the activity survives a reload.
       recordActivity(db, relay.events);
-      app.use('/activity', activityRouter({ db, secret, now }));
+      app.use('/activity', activityRouter({ db, secret, now, chain: { explorer: chain.explorer, usdc: chain.usdc, agentOf: (a) => relay.status(a).agent } }));
 
       // The dashboard's live feed: status changes, requests and answers for THIS account only.
       app.get('/events', (req, res) => {

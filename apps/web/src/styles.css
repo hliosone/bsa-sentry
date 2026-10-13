@@ -270,12 +270,9 @@ input:focus { outline: none; border-color: var(--ink); box-shadow: 0 0 0 1px var
 .stage-caption b { color: #fff; font-size: var(--s-15); }
 
 .wallet { grid-column: span 7; }
-.limit { grid-column: span 4; }
-.session { grid-column: span 3; }
-.identity { grid-column: span 4; }
-.main { grid-column: span 3; }
-.activity { grid-column: span 8; }
-.rules-tile { grid-column: span 4; }
+.activity { grid-column: span 7; grid-row: span 2; }
+.limit, .session, .identity, .main { grid-column: span 3; }
+.rules-tile { grid-column: span 12; }
 
 .figure { font-size: 3.5rem; font-weight: 700; letter-spacing: -0.035em; line-height: 1.05; margin: 0.15rem 0; }
 .figure small { font-size: var(--s-15); font-weight: 500; color: var(--graphite); letter-spacing: 0; margin-left: 0.45rem; }
@@ -388,6 +385,30 @@ input:focus { outline: none; border-color: var(--ink); box-shadow: 0 0 0 1px var
 .stage-settled .outcome, .stage-signed .outcome { color: var(--signed); }
 .stage-pending .outcome { color: var(--asked); }
 .stage-refused .outcome, .stage-failed .outcome { color: var(--refused); }
+/* The activity ledger: one line per money movement or decision, like a bank statement. */
+.ledger { list-style: none; margin: 0.5rem 0 0; padding: 0; max-height: 380px; overflow-y: auto; }
+.ledger li {
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr) auto;
+  gap: 0 0.9rem;
+  align-items: center;
+  padding: 0.7rem 0;
+  border-top: 1px solid var(--hairline);
+}
+.ledger-mark { width: 10px; height: 10px; border-radius: 50%; background: var(--graphite); }
+.kind-paid .ledger-mark, .kind-signed .ledger-mark { background: var(--signed); }
+.kind-topup .ledger-mark, .kind-received .ledger-mark { background: var(--ink); }
+.kind-pending .ledger-mark { background: var(--asked); }
+.kind-refused .ledger-mark, .kind-failed .ledger-mark { background: var(--refused); }
+.ledger-what { display: grid; gap: 0.1rem; min-width: 0; }
+.ledger-what b { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ledger-meta { display: flex; flex-wrap: wrap; gap: 0 0.9rem; font-size: var(--s-13); color: var(--graphite); }
+.ledger-meta a { color: var(--graphite); }
+.kind-refused .ledger-meta span:nth-child(2), .kind-failed .ledger-meta span:nth-child(2) { color: var(--refused); }
+.ledger-sum { font-weight: 600; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.ledger-sum small { font-weight: 500; color: var(--graphite); }
+.kind-topup .ledger-sum, .kind-received .ledger-sum { color: var(--signed); }
+.kind-refused .ledger-sum, .kind-failed .ledger-sum { color: var(--graphite); text-decoration: line-through; }
 .empty { padding: 1.5rem 0 0.5rem; color: var(--graphite); border-top: 1px solid var(--hairline); margin-top: 0.75rem; }
 
 /* ---------------------------------------------------------------- other pages */
@@ -418,8 +439,9 @@ input:focus { outline: none; border-color: var(--ink); box-shadow: 0 0 0 1px var
 @media (max-width: 1100px) {
   .stage { grid-column: span 12; grid-row: auto; }
   .stage-view { min-height: 360px; }
-  .wallet, .activity { grid-column: span 12; }
-  .limit, .session, .identity, .main, .rules-tile { grid-column: span 6; }
+  .wallet, .activity, .rules-tile { grid-column: span 12; }
+  .activity { grid-row: auto; }
+  .limit, .session, .identity, .main { grid-column: span 6; }
 }
 
 @media (max-width: 900px) {

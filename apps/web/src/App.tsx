@@ -23,7 +23,7 @@ const TABS: { route: Route; label: string }[] = [
   { route: 'dashboard', label: 'Dashboard' },
   { route: 'services', label: 'Services' },
   { route: 'rules', label: 'Rules' },
-  { route: 'claude', label: 'Claude' },
+  { route: 'claude', label: 'Agent' },
   { route: 'badge', label: 'Agent identity' },
   { route: 'backup', label: 'Backup' },
 ];

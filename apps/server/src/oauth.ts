@@ -128,7 +128,7 @@ export function oauthRouter(opts: OAuthOptions) {
   router.get('/oauth/authorize', (req, res) => {
     const check = checkAuthorize(req.query as Record<string, unknown>);
     // An invalid client or redirect is shown here, never redirected to (RFC 6749 §4.1.2.1).
-    if (typeof check === 'string') return res.status(400).type('html').send(page('Demande invalide', `<p>${esc(check)}</p>`));
+    if (typeof check === 'string') return res.status(400).type('html').send(page('Invalid request', `<p>${esc(check)}</p>`));
 
     const query = new URLSearchParams(req.query as Record<string, string>).toString();
     const account = readSession(req, opts.secret, now);
@@ -149,14 +149,14 @@ export function oauthRouter(opts: OAuthOptions) {
       </ul>
       <form method="post" action="/oauth/authorize?${esc(query)}">
         <input type="hidden" name="csrf" value="${esc(csrfFor(account, query))}">
-        <button name="decision" value="allow" class="btn">Allow Claude to request payments from your Flex</button>
+        <button name="decision" value="allow" class="btn">Allow ${esc(check.c.client_name ?? 'this agent')} to request payments from your Flex</button>
         <button name="decision" value="deny" class="btn secondary">Deny</button>
       </form>`));
   });
 
   router.post('/oauth/authorize', ...body, (req, res) => {
     const check = checkAuthorize(req.query as Record<string, unknown>);
-    if (typeof check === 'string') return res.status(400).type('html').send(page('Demande invalide', `<p>${esc(check)}</p>`));
+    if (typeof check === 'string') return res.status(400).type('html').send(page('Invalid request', `<p>${esc(check)}</p>`));
     const account = readSession(req, opts.secret, now);
     if (!account) return res.status(401).type('html').send(page('Login required', '<p>Session expired.</p>'));
     const query = new URLSearchParams(req.query as Record<string, string>).toString();

@@ -30,7 +30,7 @@ export function Services({ bsa }: { bsa: Bsa }) {
   return (
     <section className="card">
       <h2>Services</h2>
-      <p>Places your agent can pay, with what each one asks for. Copy a prompt into Claude: your Flex decides every payment.</p>
+      <p>Places your agent can pay, with what each one asks for. Copy a prompt into your agent: your Flex decides every payment.</p>
       <div className="services">
         {SERVICES.map((s) => {
           const url = `${base}${s.path}`;
@@ -53,7 +53,7 @@ export function Services({ bsa }: { bsa: Bsa }) {
                 )}
                 {s.requires.map((r) => (
                   <li key={r} className={missing.includes(r) ? 'bad' : 'good'}>
-                    Requires: {describeRequirement(r)} — {missing.includes(r) ? <a href="#/badge">not granted yet</a> : 'your agent can prove it'}
+                    Requires: {describeRequirement(r)}: {missing.includes(r) ? <a href="#/badge">not granted yet</a> : 'your agent can prove it'}
                   </li>
                 ))}
                 {s.note && <li className="good">{s.note}</li>}

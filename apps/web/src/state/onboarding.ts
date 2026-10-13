@@ -19,7 +19,7 @@ const REQUIRED: { id: StepId; label: string; fact: keyof Facts }[] = [
   { id: 'login', label: 'Log in with Ledger', fact: 'loggedIn' },
   { id: 'rules', label: 'Set your rules', fact: 'policyActive' },
   { id: 'session', label: 'Start the agent on the Flex', fact: 'sessionArmed' },
-  { id: 'claude', label: 'Connect Claude', fact: 'claudeConnected' },
+  { id: 'claude', label: 'Connect your agent', fact: 'claudeConnected' },
 ];
 
 const OPTIONAL: { id: StepId; label: string; fact: keyof Facts }[] = [

@@ -11,15 +11,15 @@ export function Backup({ bsa }: { bsa: Bsa }) {
   const [result, setResult] = useState('');
   const go = () => bsa.run('Backing up…', async () => {
     const r = await runBackup(bsa.flowDeps((s) => setResult(STAGES[s!] ?? '')));
-    setResult(r === 'backed_up' ? 'Backed up: your rules and your badge, encrypted by your Ledger seed.' : 'No active rules to back up.');
+    setResult(r === 'backed_up' ? 'Backed up: your rules, trusted merchants and agent identity rights, encrypted by your Ledger seed.' : 'No active rules to back up.');
   });
   return (
     <section className="card">
       <h2>Key Ring backup</h2>
-      <p>Your rules, trusted merchants and 18+ badge are encrypted <b>by your Ledger seed</b> (Ledger Key Ring) before they leave this browser. The server only keeps ciphertext: it cannot read it.</p>
-      <p>If your Flex is reset or you reinstall the app, you restore them with one approval.</p>
+      <p>Everything your Flex holds for your agent: the spending rules, the trusted merchants, and the agent identity rights you granted (18 or older, jurisdiction). It is encrypted <b>by your Ledger seed</b> (Ledger Key Ring) before it leaves this browser. The server only keeps ciphertext and cannot read it.</p>
+      <p>If your Flex is reset or you reinstall the app, you get it all back with one approval on the Flex.</p>
       <ol className="steps-howto">
-        <li>The website reads your rules on the Flex (BSA Sentry app).</li>
+        <li>The website reads your rules and rights from the Flex (BSA Sentry app).</li>
         <li>Your Flex switches to the <b>Ledger Sync</b> app to encrypt (confirmation the first time).</li>
         <li>Back to BSA Sentry.</li>
       </ol>
@@ -36,7 +36,7 @@ export function Restore({ bsa }: { bsa: Bsa }) {
     const r = await runRestore(bsa.flowDeps((s) => setResult(STAGES[s!] ?? '')));
     await bsa.refreshDevice();
     setResult({
-      restored: 'Restored: your rules are back on the Flex. Start the agent in the app settings.',
+      restored: 'Restored: your rules and agent identity rights are back on the Flex. Start the agent in the app settings.',
       device_not_empty: 'This Flex already has rules: block the agent first if you want to replace them.',
       no_backup: 'No backup for this account.',
     }[r]);
@@ -44,7 +44,7 @@ export function Restore({ bsa }: { bsa: Bsa }) {
   return (
     <section className="card">
       <h2>Restore</h2>
-      <p>For a reset Flex or a reinstalled app: the backup is decrypted by your seed (Ledger Sync), then your Flex shows you <b>every</b> restored rule before accepting them.</p>
+      <p>For a reset Flex or a reinstalled app: the backup is decrypted by your seed (Ledger Sync), then your Flex shows you <b>every</b> restored rule and right before accepting them.</p>
       <button className="primary" disabled={!bsa.account || !!bsa.busy} onClick={() => void go()} data-testid="restore">Restore from backup</button>
       {result && <p data-testid="restore-result">{result}</p>}
     </section>

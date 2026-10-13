@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { Credentials } from '@bsa-sentry/types';
 import type { Bsa } from '../useBsa.js';
-import { shortAddr, time, usdc } from '../format.js';
+import { shortAddr, usdc } from '../format.js';
+import { activityRows, whenText, type ChainTransfer } from '../state/activity.js';
 import { describeRight } from './Badge.js';
 import { FlexView, type ScreenLines } from '../components/FlexView.js';
 
 // Why the Flex refused, in the user's words.
 const REASONS: Record<string, string> = {
-  OVER_HARD_MAX: 'above your hard limit — refused without even asking you',
+  OVER_HARD_MAX: 'above your hard limit, refused without asking you',
   USER_REJECTED: 'you rejected it on the Flex (or 60 s without an answer)',
   NO_SESSION: 'the agent was not started on the Flex',
   NO_POLICY: 'no rules on the Flex',
@@ -16,9 +17,6 @@ const REASONS: Record<string, string> = {
   FLEX_LOCKED: 'Flex locked',
   APP_CLOSED: 'the BSA Sentry app was not open',
   DISCONNECTED: 'tab or Flex disconnected',
-};
-const OUTCOME: Record<string, string> = {
-  pending: 'Waiting for your Flex', signed: 'Signed', refused: 'Refused', settled: 'Paid', failed: 'Failed',
 };
 
 type WalletsInfo = { main: { address: string; usdc: string }; agent: { address: string; usdc: string } | null };
@@ -39,8 +37,18 @@ export function Dashboard({ bsa }: { bsa: Bsa }) {
     const r = await fetch('/topup/wallets', { credentials: 'same-origin' }).catch(() => null);
     if (r?.ok) setWallets(await r.json());
   }, []);
+  // The agent wallet's history, from the chain: payments and top-ups, even from before this tab.
+  const [transfers, setTransfers] = useState<ChainTransfer[]>([]);
+  const loadHistory = useCallback(async () => {
+    const r = await fetch('/activity/chain', { credentials: 'same-origin' }).catch(() => null);
+    if (r?.ok) setTransfers((await r.json()).transfers ?? []);
+  }, []);
   // Re-read after anything that can move money: a payment settling, the device state changing.
+  const settledCount = bsa.feed.items.filter((i) => i.stage === 'settled').length;
   useEffect(() => { if (bsa.account) void loadWallets(); }, [bsa.account, bsa.feed.items.length, d?.spent, loadWallets]);
+  useEffect(() => { if (bsa.account) void loadHistory(); }, [bsa.account, settledCount, d?.spent, wallets?.agent?.address, loadHistory]);
+  const [, tick] = useState(0);
+  useEffect(() => { const t = setInterval(() => tick((n) => n + 1), 60_000); return () => clearInterval(t); }, []);
 
   // The rights the agent holds, read from the Flex itself.
   const [held, setHeld] = useState<Credentials | null>(null);
@@ -48,6 +56,10 @@ export function Dashboard({ bsa }: { bsa: Bsa }) {
     if (!bsa.signer || !d?.hasCredentials) { setHeld(null); return; }
     void bsa.onDevice((s) => s.getCredentials()).then((c) => setHeld((c as Credentials) ?? null)).catch(() => setHeld(null));
   }, [bsa.signer, d?.hasCredentials]);
+
+  const labels: Record<string, string> = {};
+  for (const m of [...(bsa.config?.defaultPayees ?? []), ...(p?.payees ?? [])]) labels[m.address.toLowerCase()] = m.label;
+  const rows = activityRows(bsa.feed.items, transfers, { agent: wallets?.agent?.address, main: wallets?.main.address, labels, reasons: REASONS });
 
   const screen: ScreenLines = {
     title: 'BSA Sentry',
@@ -65,7 +77,7 @@ export function Dashboard({ bsa }: { bsa: Bsa }) {
     <>
       {bsa.feed.banner && (
         <div className="banner" role="alert" data-testid="refusal-banner">
-          <span><b>Refused by your Flex:</b> {bsa.feed.banner.amount} USDC to {bsa.feed.banner.merchant} — {REASONS[bsa.feed.banner.reason] ?? bsa.feed.banner.reason}</span>
+          <span><b>Refused by your Flex:</b> {bsa.feed.banner.amount} USDC to {bsa.feed.banner.merchant}: {REASONS[bsa.feed.banner.reason] ?? bsa.feed.banner.reason}</span>
           <button className="ghost" onClick={bsa.dismissBanner}>OK</button>
         </div>
       )}
@@ -85,11 +97,38 @@ export function Dashboard({ bsa }: { bsa: Bsa }) {
           <h2>Agent wallet</h2>
           <div className="figure" data-testid="agent-balance">{wallets?.agent ? wallets.agent.usdc : '…'}<small>USDC</small></div>
           <p className="sub">
-            What Claude can spend, on Arc testnet.{' '}
+            What your agent can spend, on Arc testnet.{' '}
             {wallets?.agent && <><code>{shortAddr(wallets.agent.address)}</code> {explorer && <a href={`${explorer}/address/${wallets.agent.address}`} target="_blank" rel="noreferrer">View on Arc</a>}</>}
             {wallets && !wallets.agent && 'Connect your Flex to see it.'}
           </p>
           <TopUp bsa={bsa} mainUsdc={wallets?.main.usdc} onDone={() => void loadWallets()} />
+        </section>
+
+        <section className="tile activity">
+          <div className="tile-head">
+            <h2>Activity</h2>
+            {wallets?.agent && explorer && <a className="sub" href={`${explorer}/address/${wallets.agent.address}`} target="_blank" rel="noreferrer">All agent transactions on Arc</a>}
+          </div>
+          {rows.length === 0 ? (
+            <p className="empty">Nothing yet. When your agent pays a merchant, or you top it up, it shows up here with what your Flex decided.</p>
+          ) : (
+            <ul className="ledger" data-testid="feed">
+              {rows.map((r) => (
+                <li key={r.key} className={`kind-${r.kind}`}>
+                  <span className="ledger-mark" aria-hidden="true" />
+                  <div className="ledger-what">
+                    <b>{r.title}</b>
+                    <span className="ledger-meta">
+                      <span>{whenText(r.at)}</span>
+                      {r.detail && <span>{r.detail}</span>}
+                      {r.txHash && explorer && <a href={`${explorer}/tx/${r.txHash}`} target="_blank" rel="noreferrer">View on Arc</a>}
+                    </span>
+                  </div>
+                  <span className="ledger-sum">{r.sign === '-' ? '\u2212' : r.sign}{r.amount} <small>USDC</small></span>
+                </li>
+              ))}
+            </ul>
+          )}
         </section>
 
         <section className="tile limit">
@@ -107,7 +146,7 @@ export function Dashboard({ bsa }: { bsa: Bsa }) {
           <h2>Agent session</h2>
           <div className="session-state">{armed ? 'On' : 'Off'}</div>
           <p className="sub">{armed
-            ? 'Claude can ask your Flex to pay. Quitting the app turns it off.'
+            ? 'Your agent can ask your Flex to pay. Quitting the app turns it off.'
             : 'Turn it on from your Flex: gear icon, then Agent session. Only the device can do it.'}</p>
         </section>
 
@@ -130,32 +169,6 @@ export function Dashboard({ bsa }: { bsa: Bsa }) {
           <p className="sub">Yours. Top-ups come from here.{wallets && <> <code>{shortAddr(wallets.main.address)}</code></>}</p>
         </section>
 
-        <section className="tile activity">
-          <div className="tile-head">
-            <h2>Activity</h2>
-            <span className="sub">Every request Claude sends to your Flex</span>
-          </div>
-          {bsa.feed.items.length === 0 ? (
-            <p className="empty">Nothing yet. When Claude asks your Flex to pay, it shows up here with what the Flex decided.</p>
-          ) : (
-            <ul className="feed" data-testid="feed">
-              {bsa.feed.items.map((i) => (
-                <li key={i.id} className={`stage-${i.stage}`}>
-                  <span className="when">{time(i.at)}</span>
-                  <span className="what">{i.merchant}<code>{shortAddr(i.payee)}</code></span>
-                  <span className="sum">{i.amount} USDC</span>
-                  <span className="outcome">{OUTCOME[i.stage]}</span>
-                  {(i.reason || (i.txHash && explorer)) && (
-                    <span className="note">
-                      {i.reason ? (REASONS[i.reason] ?? i.reason) : null}
-                      {i.txHash && explorer && <a href={`${explorer}/tx/${i.txHash}`} target="_blank" rel="noreferrer">View transaction on Arc</a>}
-                    </span>
-                  )}
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
 
         <section className="tile rules-tile">
           <h2>Rules on your Flex</h2>
