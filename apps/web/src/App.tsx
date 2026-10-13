@@ -21,7 +21,7 @@ const TABS: { route: Route; label: string }[] = [
   { route: 'dashboard', label: 'Dashboard' },
   { route: 'rules', label: 'Rules' },
   { route: 'claude', label: 'Claude' },
-  { route: 'badge', label: '18+ badge' },
+  { route: 'badge', label: 'Agent identity' },
   { route: 'backup', label: 'Backup' },
 ];
 

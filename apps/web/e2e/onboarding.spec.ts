@@ -74,7 +74,7 @@ test('onboarding, then the dashboard follows what the agent does', async ({ page
 
   // 3. Rules: the form is pre-filled with the demo merchants; an invalid value is caught first.
   await page.goto(`${web}/?fakeDevice=1#/rules`);
-  await expect(page.locator('.payee')).toHaveCount(3);
+  await expect(page.locator('.payee')).toHaveCount(4);
   await page.getByTestId('autoMax').fill('60');
   await page.getByTestId('send-rules').click();
   await expect(page.locator('.err').first()).toContainText('hard limit');
@@ -198,7 +198,7 @@ test('Key Ring backup, a wiped Flex, and a one-tap restore', async ({ page }) =>
   await expect(page.getByTestId('restore-result')).toContainText('Restored');
   const restored = await page.evaluate(() => (window as any).__bsaFake.getState());
   expect(restored.policy.active).toBe(true);
-  expect(restored.policy.payees.map((p: any) => p.label)).toEqual(['Cafe Sat', 'Corner Wines', 'Restaurant']);
+  expect(restored.policy.payees.map((p: any) => p.label)).toEqual(['Cafe Sat', 'Corner Wines', 'Restaurant', 'Token Presale']);
   await shot(page, '12-restore');
 
   // Restoring over live rules is refused rather than silent.

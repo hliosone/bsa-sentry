@@ -11,7 +11,7 @@ import {
   decodePaymentRequiredHeader, decodePaymentResponseHeader, encodePaymentSignatureHeader,
 } from '@x402/core/http';
 import { getAddress, isAddress, type Hex } from 'viem';
-import { CLAIM_AGE_OVER_18, type BridgeReason, type PaymentFields } from '@bsa-sentry/types';
+import { describeRequirement, type BridgeReason, type PaymentFields } from '@bsa-sentry/types';
 import type { RelayAnswer } from '../relay/relay.js';
 
 export type AgentDeps = {
@@ -162,7 +162,9 @@ export async function x402Fetch(
     validBefore: BigInt(deps.now() + validity),
     nonce: deps.randomNonce?.() ?? (`0x${randomBytes(32).toString('hex')}` as Hex),
   };
-  const wantCredentials = Array.isArray(offer.extra?.requires) && offer.extra!.requires!.includes(CLAIM_AGE_OVER_18);
+  // Any requirement (18+, a nationality) is proven with the credentials stored on the Flex.
+  const requires = Array.isArray(offer.extra?.requires) ? offer.extra!.requires!.filter((r): r is string => typeof r === 'string') : [];
+  const wantCredentials = requires.length > 0;
 
   // ---------------------------------------------------------------- ask the Flex
   const answer = await deps.relay.signPayment(account, {
@@ -208,7 +210,7 @@ export async function x402Fetch(
     const why = reason ?? (await readContent(paid)).slice(0, 300);
     return {
       kind: 'error',
-      message: `${url.host} rejected the signed payment (HTTP ${paid.status})${why && why !== '{}' ? `: ${why}` : ''}${hintForReason(reason)}`,
+      message: `${url.host} rejected the signed payment (HTTP ${paid.status})${why && why !== '{}' ? `: ${why}` : ''}${hintForReason(reason, requires)}`,
       ...signed,
     };
   }
@@ -229,10 +231,11 @@ export async function x402Fetch(
 }
 
 /** A next step the agent can pass on, for the facilitator reasons a user can act on. */
-function hintForReason(reason: string | undefined): string {
+function hintForReason(reason: string | undefined, requires: string[] = []): string {
   if (!reason) return '';
   if (reason === 'AGE_PROOF_REQUIRED' || reason.startsWith('DELEGATION_') || reason.startsWith('ATTESTATION_') || reason === 'SUBJECT_MISMATCH') {
-    return '. This merchant requires the 18+ badge: the user can add it on the BSA Sentry website (18+ badge, then authorize the agent).';
+    const what = requires.length ? requires.map(describeRequirement).join(' and ') : 'a verified credential';
+    return `. This merchant requires proof of: ${what}. The user can add it on the BSA Sentry website (Agent identity, then authorize the agent on the Flex).`;
   }
   if (reason === 'insufficient_funds') return '. The agent account has not enough USDC on Arc testnet.';
   return '';

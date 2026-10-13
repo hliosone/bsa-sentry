@@ -67,7 +67,7 @@ describe('mock mode', () => {
     const { app } = setup();
     const s = (await request(app).post('/age/sessions').set('Cookie', cookie())).body;
     const st = await request(app).get(`/age/sessions/${s.sessionId}`);
-    expect(st.body).toEqual({ sessionId: s.sessionId, status: 'verified', mode: 'mock' });
+    expect(st.body).toEqual({ sessionId: s.sessionId, status: 'verified', mode: 'mock', claims: ['age_over_18', 'nationality:FR'] });
   });
 
   it('binds once, and returns an AgeAttestation signed by our issuer for this 0xMAIN', async () => {
@@ -77,7 +77,7 @@ describe('mock mode', () => {
     const r = await request(app).post(`/age/sessions/${s.sessionId}/bind`).send({ address: user.address, signature: await signBind(s.bind) });
     expect(r.status).toBe(200);
     const a = r.body.attestation;
-    expect(a).toMatchObject({ subject: user.address.toLowerCase(), claim: 'age_over_18', issuedAt: String(clock.t), expiresAt: String(clock.t + 30 * 86400) });
+    expect(a).toMatchObject({ subject: user.address.toLowerCase(), claim: 'age_over_18,nationality:FR', issuedAt: String(clock.t), expiresAt: String(clock.t + 30 * 86400) });
     expect(a.evidence).toBe(keccak256(stringToHex(`mock-${s.sessionId}`)));
     const signer = await recoverTypedDataAddress({
       domain: verifierDomain(CHAIN), types: { AgeAttestation: EIP712_TYPES.AgeAttestation }, primaryType: 'AgeAttestation',

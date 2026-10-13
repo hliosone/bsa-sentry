@@ -17,6 +17,7 @@ const payTo = {
   resto: '0xd4e15888844c2df59cf371917c11a99267917af5',
   evil: '0xdd70bd3cde251346c0ddfc7a4db3056bb26f1e50',
   boulangerie: '0x1111111111111111111111111111111111111b0b',
+  presale: '0x2222222222222222222222222222222222222a1e',
 } as const;
 
 let facilitator: Server;
@@ -59,6 +60,13 @@ describe('prices and payees', () => {
     expect(r.accepts[0].extra.requires).toEqual(['age_over_18']);
   });
 
+  it('the token presale is 5 USDC and is not open to US nationals', async () => {
+    const r = await required('/presale');
+    expect(r.accepts[0]).toMatchObject({ amount: '5000000' });
+    expect(r.accepts[0].payTo.toLowerCase()).toBe(payTo.presale);
+    expect(r.accepts[0].extra.requires).toEqual(['nationality_not:US']);
+  });
+
   it('the restaurant is 20 USDC, above the demo auto limit', async () => {
     const r = await required('/restaurant');
     expect(r.accepts[0]).toMatchObject({ amount: '20000000' });
@@ -78,7 +86,7 @@ describe('prices and payees', () => {
   });
 
   it('every merchant pays to a distinct address', () => {
-    expect(new Set(Object.values(payTo)).size).toBe(5);
+    expect(new Set(Object.values(payTo)).size).toBe(6);
   });
 
   it('describes each resource, which becomes the device hint', async () => {
@@ -115,7 +123,7 @@ describe('the promo page (the prompt injection)', () => {
 describe('the catalogue', () => {
   it('lists every merchant with its price, for the website and the demo script', () => {
     expect(MERCHANTS.map((m) => [m.path, m.price])).toEqual([
-      ['/cafe', '$3'], ['/wine', '$4.5'], ['/restaurant', '$20'], ['/evil/deposit', '$400'], ['/bakery', '$2'],
+      ['/cafe', '$3'], ['/wine', '$4.5'], ['/restaurant', '$20'], ['/evil/deposit', '$400'], ['/bakery', '$2'], ['/presale', '$5'],
     ]);
   });
 

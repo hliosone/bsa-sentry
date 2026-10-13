@@ -125,3 +125,27 @@ describe('every link in the chain', () => {
     expect(r.ok).toBe(false);
   });
 });
+
+describe('nationality rights', () => {
+  const both = { attestation: { claim: 'age_over_18,nationality:FR' }, delegation: { claims: ['age_over_18', 'nationality:FR'] } };
+
+  it('accepts a delegated nationality right that meets the merchant requirement', async () => {
+    expect(await verify(await proof(both), payer, ['nationality_not:US'])).toEqual({ ok: true });
+    expect(await verify(await proof(both), payer, ['age_over_18', 'nationality_not:US'])).toEqual({ ok: true });
+  });
+
+  it('refuses when the nationality does not meet it', async () => {
+    const us = { attestation: { claim: 'nationality:US' }, delegation: { claims: ['nationality:US'] } };
+    expect(await verify(await proof(us), payer, ['nationality_not:US'])).toEqual({ ok: false, reason: 'DELEGATION_MISSING_CLAIM' });
+  });
+
+  it('refuses a right the user attested but did not delegate to this agent', async () => {
+    const ageOnly = { attestation: { claim: 'age_over_18,nationality:FR' }, delegation: { claims: ['age_over_18'] } };
+    expect(await verify(await proof(ageOnly), payer, ['nationality_not:US'])).toEqual({ ok: false, reason: 'DELEGATION_MISSING_CLAIM' });
+  });
+
+  it('refuses a delegation claiming more than the attestation says', async () => {
+    const inflated = { attestation: { claim: 'age_over_18' }, delegation: { claims: ['age_over_18', 'nationality:FR'] } };
+    expect(await verify(await proof(inflated), payer, ['nationality_not:US'])).toEqual({ ok: false, reason: 'ATTESTATION_WRONG_CLAIM' });
+  });
+});

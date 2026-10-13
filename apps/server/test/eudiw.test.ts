@@ -3,7 +3,7 @@
 // the age boolean, and read nothing but the age boolean back.
 import { describe, expect, it, vi } from 'vitest';
 import { createHash } from 'node:crypto';
-import { buildPresentationRequest, qrUrl, pollTransaction, readAgeOver18, createTransaction } from '../src/age/eudiw.js';
+import { buildPresentationRequest, qrUrl, pollTransaction, readAgeOver18, readIdentity, identityClaims, createTransaction } from '../src/age/eudiw.js';
 
 const b64u = (o: unknown) => Buffer.from(typeof o === 'string' ? o : JSON.stringify(o)).toString('base64url');
 const digest = (disclosure: string) => createHash('sha256').update(disclosure, 'ascii').digest('base64url');
@@ -25,11 +25,12 @@ describe('the request', () => {
     expect(body.dcql_query.credentials[0]).toMatchObject({ format: 'dc+sd-jwt', meta: { vct_values: ['urn:eudi:pid:1'] } });
   });
 
-  it('asks for the birthdate and nothing else (the PID has no age_over_18 claim)', () => {
+  it('asks for the birthdate and the nationality, nothing else, the nationality being optional', () => {
     const cred = body.dcql_query.credentials[0]!;
-    expect(cred.claims).toEqual([{ path: ['birthdate'] }]);
-    expect(cred).not.toHaveProperty('claim_sets');
-    expect(JSON.stringify(body)).not.toMatch(/given_name|family_name|address|nationalit|age_over/);
+    expect(cred.claims).toEqual([{ id: 'birthdate', path: ['birthdate'] }, { id: 'nationalities', path: ['nationalities'] }]);
+    // A wallet whose PID has no nationality still answers with the birthdate alone.
+    expect(cred.claim_sets).toEqual([['birthdate', 'nationalities'], ['birthdate']]);
+    expect(JSON.stringify(body)).not.toMatch(/given_name|family_name|address|age_over/);
   });
 
   it('omits issuer_chain when none is given', () => {
@@ -144,5 +145,24 @@ describe('reading the answer: over 18 computed from the birthdate', () => {
   it('survives garbage', () => {
     expect(readAgeOver18({ pid: ['not an sd-jwt'] }, NOW)).toBe(false);
     expect(readAgeOver18(null, NOW)).toBe(false);
+  });
+});
+
+describe('reading the answer: the rights it proves', () => {
+  const NOW = Date.UTC(2026, 9, 11) / 1000;
+  const token = (claims: Record<string, unknown>) => {
+    const ds = Object.entries(claims).map(([k, v]) => b64u(['salt', k, v]));
+    return { pid: [sdJwt({ _sd: ds.map(digest), _sd_alg: 'sha-256', vct: 'urn:eudi:pid:1' }, ds)] };
+  };
+
+  it('reads the age and the nationalities, nothing else', () => {
+    expect(readIdentity(token({ birthdate: '1990-01-15', nationalities: ['FR', 'DE'] }), NOW)).toEqual({ ageOver18: true, nationalities: ['FR', 'DE'] });
+    expect(readIdentity(token({ birthdate: '2015-01-15' }), NOW)).toEqual({ ageOver18: false, nationalities: [] });
+  });
+
+  it('turns them into rights: 18+ if adult, and the first nationality (one fits in the attestation)', () => {
+    expect(identityClaims({ ageOver18: true, nationalities: ['fr', 'DE'] })).toEqual(['age_over_18', 'nationality:FR']);
+    expect(identityClaims({ ageOver18: false, nationalities: ['FR'] })).toEqual(['nationality:FR']);
+    expect(identityClaims({ ageOver18: false, nationalities: ['France'] })).toEqual([]);
   });
 });

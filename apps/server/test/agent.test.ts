@@ -187,6 +187,17 @@ describe('18+', () => {
     expect(payload.extensions.bsaAge).toEqual(credentials);
   });
 
+  it('asks for credentials for a nationality requirement too, and names it when they are missing', async () => {
+    const presale = () => paymentRequired([requirement({ amount: '5000000', extra: { name: 'USDC', version: '2', requires: ['nationality_not:US'] } })]);
+    const d = deps({ relay: { signPayment: vi.fn(async () => ({ ok: true as const, signature: sig, credentials })) } }, merchant({ required: presale() }));
+    await x402Fetch('alice', { url: 'http://merchants/presale' }, d);
+    expect((d.relay.signPayment as any).mock.calls[0][1].wantCredentials).toBe(true);
+
+    const r = await x402Fetch('alice', { url: 'http://merchants/presale' }, deps({}, merchant({ required: presale(), rejectReason: 'AGE_PROOF_REQUIRED' })));
+    expect(r.kind === 'error' && r.message).toMatch(/not a US national/);
+    expect(r.kind === 'error' && r.message).toMatch(/Agent identity/);
+  });
+
   it('still sends the payment without credentials, and lets the facilitator refuse it', async () => {
     // The server must not decide on the facilitator's behalf: it forwards what it has.
     const d = deps({}, merchant({ required: ageRequired(), paidStatus: 402 }));
@@ -230,7 +241,7 @@ describe('refusals and failures, in words the agent can repeat', () => {
     expect(r).toMatchObject({ kind: 'error', amount: '3', payee: CAFE });
     expect(r.kind === 'error' && r.message).toMatch(/AGE_PROOF_REQUIRED/);
     // And it tells the agent what to do about it.
-    expect(r.kind === 'error' && r.message).toMatch(/18\+|badge/i);
+    expect(r.kind === 'error' && r.message).toMatch(/Agent identity/);
   });
 
   it('reports an unreachable merchant', async () => {

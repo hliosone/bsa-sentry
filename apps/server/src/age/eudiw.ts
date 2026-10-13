@@ -7,6 +7,7 @@
 // Signatures are not re-checked here: a "Wallet response posted" transaction has already been
 // verified by the backend (issuer signature, KB-JWT, nonce).
 import { createHash } from 'node:crypto';
+import { CLAIM_AGE_OVER_18, nationalityClaim } from '@bsa-sentry/types';
 
 export const PID_VCT = 'urn:eudi:pid:1';
 
@@ -23,8 +24,10 @@ export function buildPresentationRequest(o: { nonce: string; intendedUseId: stri
         id: 'pid',
         format: 'dc+sd-jwt',
         meta: { vct_values: [PID_VCT] },
-        // Data minimisation: the birthdate alone, from which "18 or older" is computed.
-        claims: [{ path: ['birthdate'] }],
+        // Data minimisation: the birthdate (for "18 or older") and the nationality (for the
+        // jurisdiction right), nothing else. A PID without a nationality still answers.
+        claims: [{ id: 'birthdate', path: ['birthdate'] }, { id: 'nationalities', path: ['nationalities'] }],
+        claim_sets: [['birthdate', 'nationalities'], ['birthdate']],
       }],
     },
     nonce: o.nonce,
@@ -80,17 +83,39 @@ export async function pollTransaction(fetchImpl: typeof fetch, backend: string, 
  * non-leap year (the conservative reading).
  */
 export function readAgeOver18(vpToken: unknown, nowSeconds = Math.floor(Date.now() / 1000)): boolean {
+  return readIdentity(vpToken, nowSeconds).ageOver18;
+}
+
+/**
+ * The two facts we derive from a verified presentation: "18 or older", and the nationalities
+ * (ISO codes). The birthdate never leaves this function; nothing here is stored.
+ */
+export function readIdentity(vpToken: unknown, nowSeconds = Math.floor(Date.now() / 1000)): { ageOver18: boolean; nationalities: string[] } {
+  let ageOver18 = false;
+  const nationalities: string[] = [];
   try {
     for (const presentations of Object.values((vpToken ?? {}) as Record<string, unknown>)) {
       for (const p of ([] as unknown[]).concat(presentations)) {
         if (typeof p !== 'string' || !p.includes('~')) continue;
-        if (isAtLeast18(resolveSdJwt(p).birthdate, nowSeconds)) return true;
+        const claims = resolveSdJwt(p);
+        if (isAtLeast18(claims.birthdate, nowSeconds)) ageOver18 = true;
+        for (const n of ([] as unknown[]).concat(claims.nationalities ?? [])) {
+          if (typeof n === 'string' && !nationalities.includes(n)) nationalities.push(n);
+        }
       }
     }
   } catch {
     /* malformed: treated as "not proven" */
   }
-  return false;
+  return { ageOver18, nationalities };
+}
+
+/** The rights to attest: 18+ if adult, and the first valid nationality (one fits in 32 bytes). */
+export function identityClaims(i: { ageOver18: boolean; nationalities: string[] }): string[] {
+  const out: string[] = i.ageOver18 ? [CLAIM_AGE_OVER_18] : [];
+  const n = i.nationalities.find((c) => /^[a-zA-Z]{2}$/.test(c));
+  if (n) out.push(nationalityClaim(n));
+  return out;
 }
 
 function isAtLeast18(birthdate: unknown, nowSeconds: number): boolean {

@@ -12,11 +12,11 @@ import { Router, json } from 'express';
 import { getAddress, isAddress, keccak256, recoverTypedDataAddress, stringToHex, type Hex } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import {
-  CLAIM_AGE_OVER_18, EIP712_TYPES, sentryDomain, toViemSignature, toWireSignature, verifierDomain,
+  CLAIM_AGE_OVER_18, EIP712_TYPES, joinClaims, nationalityClaim, sentryDomain, toViemSignature, toWireSignature, verifierDomain,
 } from '@bsa-sentry/types';
 import type { Db } from '../db.js';
 import { readSession } from '../auth.js';
-import { buildPresentationRequest, createTransaction, eudiTestCas, pollTransaction, qrUrl, readAgeOver18 } from './eudiw.js';
+import { buildPresentationRequest, createTransaction, eudiTestCas, identityClaims, pollTransaction, qrUrl, readIdentity } from './eudiw.js';
 import { safeRouter } from '../safe-router.js';
 
 const BIND_WINDOW_S = 15 * 60;
@@ -82,6 +82,18 @@ export function ageRouter(o: AgeOptions) {
     res.json({ sessionId: id, mode: o.mode, status: 'pending', qr, bind: { verifier, session: id, expiresAt } });
   });
 
+  // The rights a verified session proves. Re-read from the EU verifier each time rather than
+  // stored: the nationality only ever exists in the signed attestation on the user's Flex.
+  const claimsFor = async (row: { mode: string; transaction_id: string | null }): Promise<string[]> => {
+    if (row.mode === 'mock') return [CLAIM_AGE_OVER_18, nationalityClaim('FR')];
+    try {
+      const r = await pollTransaction(fetchImpl, o.backend, row.transaction_id!);
+      return r.state === 'verified' ? identityClaims(readIdentity(r.vpToken, now())) : [];
+    } catch {
+      return [];
+    }
+  };
+
   router.get('/sessions/:id', async (req, res) => {
     const row = get(req.params.id);
     if (!row) return res.status(404).json({ error: 'unknown session' });
@@ -93,7 +105,7 @@ export function ageRouter(o: AgeOptions) {
         try {
           const r = await pollTransaction(fetchImpl, o.backend, row.transaction_id!);
           // The birthdate is read for one comparison and dropped here; it is never stored or logged.
-          if (r.state === 'verified') status = readAgeOver18(r.vpToken, now()) ? 'verified' : 'not_over_18';
+          if (r.state === 'verified') status = identityClaims(readIdentity(r.vpToken, now())).length > 0 ? 'verified' : 'not_over_18';
           else if (r.state !== 'pending') status = r.state;
         } catch {
           /* backend hiccup: stay pending, the page polls again */
@@ -104,7 +116,7 @@ export function ageRouter(o: AgeOptions) {
         o.db.prepare('UPDATE age_sessions SET status = ?, evidence = ? WHERE id = ?').run(status, evidence, row.id);
       }
     }
-    res.json({ sessionId: row.id, status, mode: row.mode });
+    res.json({ sessionId: row.id, status, mode: row.mode, ...(status === 'verified' ? { claims: await claimsFor(row) } : {}) });
   });
 
   router.post('/sessions/:id/bind', async (req, res) => {
@@ -138,10 +150,12 @@ export function ageRouter(o: AgeOptions) {
     const claimed = o.db.prepare('UPDATE age_sessions SET bound_to = ? WHERE id = ? AND bound_to IS NULL').run(address.toLowerCase(), row.id);
     if (claimed.changes !== 1) return res.status(409).json({ error: 'this session was already used' });
 
+    const claims = await claimsFor(row);
+    if (claims.length === 0) return res.status(409).json({ error: 'the wallet presentation is no longer available: start a new verification' });
     const issuedAt = now();
     const attestation = {
       subject: address.toLowerCase() as Hex,
-      claim: CLAIM_AGE_OVER_18,
+      claim: joinClaims(claims),
       issuedAt: BigInt(issuedAt),
       expiresAt: BigInt(issuedAt + ATTESTATION_TTL_S),
       evidence: row.evidence as Hex,

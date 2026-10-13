@@ -23,7 +23,7 @@ const REQUIRED: { id: StepId; label: string; fact: keyof Facts }[] = [
 ];
 
 const OPTIONAL: { id: StepId; label: string; fact: keyof Facts }[] = [
-  { id: 'badge', label: '18+ badge (optional)', fact: 'hasCredentials' },
+  { id: 'badge', label: 'Agent identity (optional)', fact: 'hasCredentials' },
   { id: 'backup', label: 'Key Ring backup (optional)', fact: 'hasBackup' },
 ];
 

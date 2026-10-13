@@ -7,7 +7,7 @@
 // Pure functions with injected chain access, so every failure path is unit-tested; the
 // Express routes and the real viem clients are wired in routes.ts.
 import { getAddress, isAddress, parseEventLogs, parseGwei, recoverTypedDataAddress, type Hex, type Log } from 'viem';
-import { CLAIM_AGE_OVER_18, EIP712_TYPES, paymentDomain } from '@bsa-sentry/types';
+import { EIP712_TYPES, paymentDomain } from '@bsa-sentry/types';
 import { USDC_ABI } from '../chain.js';
 
 /** Arc's mempool silently drops anything below this. */
@@ -28,7 +28,7 @@ export type FacilitatorDeps = {
   reads: ChainReads;
   now: () => number;
   /** Checks `extensions.bsaAge` against the payer. Absent until the 18+ module is wired. */
-  verifyAge?: (proof: unknown, payer: Hex) => Promise<AgeVerdict>;
+  verifyAge?: (proof: unknown, payer: Hex, requires: string[]) => Promise<AgeVerdict>;
 };
 
 export type SettleDeps = FacilitatorDeps & {
@@ -114,13 +114,14 @@ export async function verifyPayment(body: any, deps: FacilitatorDeps): Promise<V
   }
   if (getAddress(recovered) !== auth.from) return fail('invalid_signature', undefined, auth.from);
 
-  // 18+: required by the merchant -> a proof must be attached and must verify. Fail closed.
-  const requires: unknown[] = Array.isArray(req.extra?.requires) ? req.extra.requires : [];
-  if (requires.includes(CLAIM_AGE_OVER_18)) {
+  // Rights required by the merchant (18+, a nationality) -> a proof must be attached and must
+  // verify against every requirement. Fail closed.
+  const requires: string[] = Array.isArray(req.extra?.requires) ? req.extra.requires.filter((r: unknown): r is string => typeof r === 'string') : [];
+  if (requires.length > 0) {
     const proof = payload.extensions?.bsaAge;
     if (!proof) return fail('AGE_PROOF_REQUIRED', undefined, auth.from);
     if (!deps.verifyAge) return fail('AGE_PROOF_REQUIRED', 'age verification is not configured', auth.from);
-    const verdict = await deps.verifyAge(proof, auth.from);
+    const verdict = await deps.verifyAge(proof, auth.from, requires);
     if (!verdict.ok) return fail(verdict.reason, undefined, auth.from);
   }
 

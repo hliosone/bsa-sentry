@@ -8,7 +8,7 @@ import { paymentMiddleware, x402ResourceServer } from '@x402/express';
 import { ExactEvmScheme } from '@x402/evm/exact/server';
 import { HTTPFacilitatorClient } from '@x402/core/server';
 
-export type MerchantKey = 'cafe' | 'cave' | 'resto' | 'evil' | 'boulangerie';
+export type MerchantKey = 'cafe' | 'cave' | 'resto' | 'evil' | 'boulangerie' | 'presale';
 
 export const MERCHANTS = [
   { key: 'cafe', path: '/cafe', price: '$3', description: 'Cafe Sat - an espresso' },
@@ -18,12 +18,15 @@ export const MERCHANTS = [
   // Not in the default rules and under the auto limit: the unknown payee is the ONLY problem,
   // so the Flex offers "Faire confiance" - and pays it silently afterwards.
   { key: 'boulangerie', path: '/bakery', price: '$2', description: 'Bakery - croissant' },
+  // A token sale closed to US persons (the US "Reg S" exclusion): it needs to know a nationality,
+  // never who the buyer is. Optional: mounted only when its address is configured.
+  { key: 'presale', path: '/presale', price: '$5', description: 'Token presale (non-US)', requires: ['nationality_not:US'] },
 ] as const satisfies readonly { key: MerchantKey; path: string; price: string; description: string; requires?: readonly string[] }[];
 
 export type MerchantsConfig = {
   facilitatorUrl: string;
   network: `${string}:${string}`;
-  payTo: Record<MerchantKey, string>;
+  payTo: Record<Exclude<MerchantKey, 'presale'>, string> & { presale?: string };
   /** Where the merchants are reachable from the agent's side (for links in the promo page). */
   publicUrl: string;
 };
@@ -34,21 +37,23 @@ const CONTENT: Record<MerchantKey, unknown> = {
   resto: { merchant: 'Restaurant', item: 'table for 2, tonight at 8 pm', message: 'Booking confirmed.' },
   evil: { merchant: 'Deposit', message: 'Thank you.' },
   boulangerie: { merchant: 'Bakery', item: 'croissant', message: 'Fresh warm croissant.' },
+  presale: { project: 'Sentry Token', allocation: '500 STY', message: 'Allocation reserved. This sale is not offered to US persons.' },
 };
 
 export async function createMerchantsApp(cfg: MerchantsConfig): Promise<express.Express> {
   const resourceServer = new x402ResourceServer(new HTTPFacilitatorClient({ url: cfg.facilitatorUrl }))
     .register(cfg.network, new ExactEvmScheme());
 
+  const live = MERCHANTS.filter((m) => !!cfg.payTo[m.key as keyof MerchantsConfig['payTo']]);
   const routes = Object.fromEntries(
-    MERCHANTS.map((m) => [
+    live.map((m) => [
       `GET ${m.path}`,
       {
         accepts: {
           scheme: 'exact',
           price: m.price,
           network: cfg.network,
-          payTo: cfg.payTo[m.key],
+          payTo: cfg.payTo[m.key as keyof MerchantsConfig['payTo']],
           ...('requires' in m ? { extra: { requires: [...m.requires] } } : {}),
         },
         description: m.description,
@@ -60,7 +65,7 @@ export async function createMerchantsApp(cfg: MerchantsConfig): Promise<express.
   app.get('/health', (_req, res) => res.json({ ok: true }));
   app.get('/promo', (_req, res) => res.type('html').send(promoPage(cfg.publicUrl)));
   app.use(paymentMiddleware(routes as any, resourceServer));
-  for (const m of MERCHANTS) app.get(m.path, (_req, res) => res.json(CONTENT[m.key]));
+  for (const m of live) app.get(m.path, (_req, res) => res.json(CONTENT[m.key]));
   return app;
 }
 

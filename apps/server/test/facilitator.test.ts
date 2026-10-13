@@ -171,7 +171,7 @@ describe('verify: 18+', () => {
     (body.paymentPayload as any).extensions = { bsaAge: { attestation: '0x01' } };
     const verifyAge = vi.fn(async () => ({ ok: false as const, reason: 'DELEGATION_WRONG_AGENT' }));
     expect(await verifyPayment(body, deps({ verifyAge }))).toMatchObject({ isValid: false, invalidReason: 'DELEGATION_WRONG_AGENT' });
-    expect(verifyAge).toHaveBeenCalledWith({ attestation: '0x01' }, payer.address);
+    expect(verifyAge).toHaveBeenCalledWith({ attestation: '0x01' }, payer.address, ['age_over_18']);
 
     const accept = vi.fn(async () => ({ ok: true as const }));
     expect(await verifyPayment(body, deps({ verifyAge: accept }))).toMatchObject({ isValid: true });

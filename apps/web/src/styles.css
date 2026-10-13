@@ -380,3 +380,34 @@ input:focus { outline: none; border-color: var(--ink); box-shadow: 0 0 0 1px var
 @media (prefers-reduced-motion: reduce) {
   .pulse { animation: none; }
 }
+
+/* Agent identity: each right as a tile with a mark (18+, a flag). */
+.rights { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 0.75rem; margin-top: 1rem; }
+.right {
+  display: grid;
+  grid-template-columns: auto 52px 1fr;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--hairline);
+  border-radius: 12px;
+  background: var(--sheet);
+}
+.rights:not(.choose) .right { grid-template-columns: 52px 1fr; }
+.right input { width: 18px; height: 18px; accent-color: var(--ink); }
+.right.on { border-color: var(--ink); }
+.right-mark {
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  background: var(--ink);
+  color: var(--sheet);
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: var(--s-19);
+}
+.right b { display: block; }
+.right span:not(.right-mark) { display: block; font-size: var(--s-13); color: var(--graphite); }
+.rights-foot { grid-column: 1 / -1; font-size: var(--s-13); margin: 0.25rem 0 0; }
+.choose { cursor: pointer; }

@@ -19,7 +19,7 @@ export type ServerOptions = {
   authenticateSocket(req: IncomingMessage): Promise<string | null> | string | null;
   /** Allowed Origin for the relay socket (the website). Unset only in tests. */
   webOrigin?: string;
-  verifyAge?: (proof: unknown, payer: Hex) => Promise<AgeVerdict>;
+  verifyAge?: (proof: unknown, payer: Hex, requires: string[]) => Promise<AgeVerdict>;
   relayTimeoutMs?: number;
   log?: (m: string) => void;
   /** Lets M4 mount auth, OAuth and MCP routes before the server starts listening. */

@@ -36,7 +36,7 @@ function setup(over: { balance?: bigint; agent?: string | undefined; receiptLogs
   const write = vi.fn(async () => '0xfeed' as Hex);
   const deps = {
     chainId: CHAIN, usdc: USDC as Hex, now: () => NOW,
-    reads: { balanceOf: vi.fn(async () => over.balance ?? 50_000_000n), authorizationState: vi.fn(async () => false) },
+    reads: { balanceOf: vi.fn(async (_a: string) => over.balance ?? 50_000_000n), authorizationState: vi.fn(async () => false) },
     estimateFees: async () => ({ maxFeePerGas: 1n, maxPriorityFeePerGas: 1n }),
     writeTransferWithAuthorization: write,
     waitForReceipt: async () => ({ status: 'success' as const, logs: over.receiptLogs ? over.receiptLogs([]) : [transferLog(main.address, AGENT, 20_000_000n)] }),
