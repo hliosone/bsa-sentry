@@ -11,8 +11,8 @@ import { CLAIM_AGE_OVER_18, jurisdictionClaim } from '@bsa-sentry/types';
 
 export const PID_VCT = 'urn:eudi:pid:1';
 
-/** The PID field read as the person's jurisdiction: their nationality, as disclosed by the wallet. */
-export const DEFAULT_COUNTRY_PATH = ['nationalities'];
+/** The PID fields read as the person's jurisdiction, in order: nationality, then issuing country. Disclosed values only. */
+const COUNTRY_SOURCES = [['nationalities'], ['issuing_country']];
 
 /** Procivis' trial EUDI issuer chains to these; the public backend does not trust them by default. */
 export const EUDI_TEST_CAS = [
@@ -27,10 +27,15 @@ export function buildPresentationRequest(o: { nonce: string; intendedUseId: stri
         id: 'pid',
         format: 'dc+sd-jwt',
         meta: { vct_values: [PID_VCT] },
-        // Data minimisation: the birthdate (for "18 or older") and the nationality (for the
-        // jurisdiction right), nothing else. Plain paths: Procivis answered "credential missing"
-        // to claim_sets.
-        claims: [{ path: ['birthdate'] }, { path: o.countryPath ?? DEFAULT_COUNTRY_PATH }],
+        // Data minimisation: the birthdate (for "18 or older") and the nationality / issuing
+        // country (for the jurisdiction right), nothing else. Both are mandatory in a PID.
+        // [nationalities, null] = every element: asking for the array alone let Paradym disclose
+        // it without its per-element disclosures. Plain paths: Procivis answered "credential
+        // missing" to claim_sets.
+        claims: [
+          { path: ['birthdate'] as (string | null)[] },
+          ...(o.countryPath ? [{ path: o.countryPath as (string | null)[] }] : [{ path: ['nationalities', null] }, { path: ['issuing_country'] }]),
+        ],
       }],
     },
     nonce: o.nonce,
@@ -91,11 +96,12 @@ export function readAgeOver18(vpToken: unknown, nowSeconds = Math.floor(Date.now
 
 /**
  * The two facts we derive from a verified presentation: "18 or older" from the disclosed
- * birthdate, and the jurisdiction (ISO code) from the disclosed field at `countryPath` (the
- * nationality). Only selectively disclosed values count, never a plain payload field or the
- * issuer's certificate. The birthdate never leaves this function; nothing here is stored.
+ * birthdate, and the jurisdiction (ISO code) from the disclosed nationality, else the disclosed
+ * issuing country (or the field at `countryPath` when configured). Only selectively disclosed
+ * values count, never a plain payload field or the issuer's certificate. The birthdate never
+ * leaves this function; nothing here is stored.
  */
-export function readIdentity(vpToken: unknown, nowSeconds = Math.floor(Date.now() / 1000), countryPath = DEFAULT_COUNTRY_PATH): { ageOver18: boolean; country: string | null } {
+export function readIdentity(vpToken: unknown, nowSeconds = Math.floor(Date.now() / 1000), countryPath?: string[]): { ageOver18: boolean; country: string | null } {
   let ageOver18 = false;
   let country: string | null = null;
   try {
@@ -104,16 +110,32 @@ export function readIdentity(vpToken: unknown, nowSeconds = Math.floor(Date.now(
         if (typeof p !== 'string' || !p.includes('~')) continue;
         const claims = resolveSdJwt(p, { disclosedOnly: true });
         if (isAtLeast18(claims.birthdate, nowSeconds)) ageOver18 = true;
-        let v: unknown = claims;
-        for (const seg of countryPath) v = (v as Record<string, unknown> | undefined)?.[seg];
-        const first = ([] as unknown[]).concat(v ?? []).find((x) => typeof x === 'string');
-        if (!country && typeof first === 'string') country = first;
+        for (const path of countryPath ? [countryPath] : COUNTRY_SOURCES) {
+          let v: unknown = claims;
+          for (const seg of path) v = (v as Record<string, unknown> | undefined)?.[seg];
+          const first = ([] as unknown[]).concat(v ?? []).find((x) => typeof x === 'string');
+          if (!country && typeof first === 'string') country = first;
+        }
       }
     }
   } catch {
     /* malformed: treated as "not proven" */
   }
   return { ageOver18, country };
+}
+
+/** The names of the claims the wallet disclosed (arrays with their element count), never the values: for the log. */
+export function disclosedNames(vpToken: unknown): string[] {
+  const names = new Set<string>();
+  try {
+    for (const presentations of Object.values((vpToken ?? {}) as Record<string, unknown>)) {
+      for (const p of ([] as unknown[]).concat(presentations)) {
+        if (typeof p !== 'string' || !p.includes('~')) continue;
+        for (const [k, v] of Object.entries(resolveSdJwt(p, { disclosedOnly: true }))) names.add(Array.isArray(v) ? `${k}[${v.length}]` : k);
+      }
+    }
+  } catch { /* malformed */ }
+  return [...names].sort();
 }
 
 /** The rights to attest: 18+ if adult, and the jurisdiction if it is an ISO country code. */

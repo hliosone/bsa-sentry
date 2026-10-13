@@ -16,7 +16,7 @@ import {
 } from '@bsa-sentry/types';
 import type { Db } from '../db.js';
 import { readSession } from '../auth.js';
-import { buildPresentationRequest, createTransaction, eudiTestCas, identityClaims, pollTransaction, qrUrl, readIdentity } from './eudiw.js';
+import { buildPresentationRequest, createTransaction, disclosedNames, eudiTestCas, identityClaims, pollTransaction, qrUrl, readIdentity } from './eudiw.js';
 import { safeRouter } from '../safe-router.js';
 import { delegationHash } from '../facilitator/age.js';
 
@@ -138,7 +138,10 @@ export function ageRouter(o: AgeOptions) {
         try {
           const r = await pollTransaction(fetchImpl, o.backend, row.transaction_id!);
           // The birthdate is read for one comparison and dropped here; it is never stored or logged.
-          if (r.state === 'verified') status = identityClaims(readIdentity(r.vpToken, now(), o.countryPath)).length > 0 ? 'verified' : 'not_over_18';
+          if (r.state === 'verified') {
+            console.log(`[age] wallet disclosed: ${disclosedNames(r.vpToken).join(', ')}`);
+            status = identityClaims(readIdentity(r.vpToken, now(), o.countryPath)).length > 0 ? 'verified' : 'not_over_18';
+          }
           else if (r.state !== 'pending') status = r.state;
         } catch {
           /* backend hiccup: stay pending, the page polls again */

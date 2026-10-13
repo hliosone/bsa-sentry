@@ -3,7 +3,7 @@
 // the age boolean, and read nothing but the age boolean back.
 import { describe, expect, it, vi } from 'vitest';
 import { createHash } from 'node:crypto';
-import { buildPresentationRequest, qrUrl, pollTransaction, readAgeOver18, readIdentity, identityClaims, createTransaction } from '../src/age/eudiw.js';
+import { buildPresentationRequest, disclosedNames, qrUrl, pollTransaction, readAgeOver18, readIdentity, identityClaims, createTransaction } from '../src/age/eudiw.js';
 
 const b64u = (o: unknown) => Buffer.from(typeof o === 'string' ? o : JSON.stringify(o)).toString('base64url');
 const digest = (disclosure: string) => createHash('sha256').update(disclosure, 'ascii').digest('base64url');
@@ -25,9 +25,11 @@ describe('the request', () => {
     expect(body.dcql_query.credentials[0]).toMatchObject({ format: 'dc+sd-jwt', meta: { vct_values: ['urn:eudi:pid:1'] } });
   });
 
-  it('asks for the birthdate and the nationalities, nothing else, as plain paths (no claim_sets)', () => {
+  it('asks for the birthdate, every nationality and the issuing country, nothing else, as plain paths (no claim_sets)', () => {
     const cred = body.dcql_query.credentials[0]!;
-    expect(cred.claims).toEqual([{ path: ['birthdate'] }, { path: ['nationalities'] }]);
+    // [nationalities, null] = every element: asking for the array alone lets a wallet disclose it
+    // without its per-element disclosures (seen with Paradym).
+    expect(cred.claims).toEqual([{ path: ['birthdate'] }, { path: ['nationalities', null] }, { path: ['issuing_country'] }]);
     // The country field is configurable, nested paths included.
     const alt = buildPresentationRequest({ nonce: 'n', intendedUseId: 'TEST-01', countryPath: ['address', 'country'] });
     expect(alt.dcql_query.credentials[0]!.claims).toEqual([{ path: ['birthdate'] }, { path: ['address', 'country'] }]);
@@ -161,8 +163,21 @@ describe('reading the answer: the rights it proves', () => {
   it('reads the age and the disclosed nationality, nothing else', () => {
     expect(readIdentity(token({ birthdate: '1990-01-15', nationalities: ['FR', 'CH'] }), NOW)).toEqual({ ageOver18: true, country: 'FR' });
     expect(readIdentity(token({ birthdate: '2015-01-15' }), NOW)).toEqual({ ageOver18: false, country: null });
-    // A configured field instead of nationalities.
+    // No nationality disclosed: the disclosed issuing country.
+    expect(readIdentity(token({ birthdate: '1990-01-15', issuing_country: 'IT' }), NOW)).toEqual({ ageOver18: true, country: 'IT' });
+    expect(readIdentity(token({ birthdate: '1990-01-15', nationalities: ['FR'], issuing_country: 'IT' }), NOW)).toEqual({ ageOver18: true, country: 'FR' });
+    // A configured field instead.
     expect(readIdentity(token({ birthdate: '1990-01-15', address: { country: 'DE' } }), NOW, ['address', 'country'])).toEqual({ ageOver18: true, country: 'DE' });
+  });
+
+  it('names what the wallet disclosed, never the values', () => {
+    const el = b64u(['salt', 'CH']);
+    const arr = b64u(['salt', 'nationalities', [{ '...': digest(el) }]]);
+    const bd = b64u(['salt', 'birthdate', '1990-01-15']);
+    const vp = { pid: [sdJwt({ _sd: [digest(bd), digest(arr)], _sd_alg: 'sha-256', vct: 'urn:eudi:pid:1' }, [bd, arr, el])] };
+    expect(disclosedNames(vp)).toEqual(['birthdate', 'nationalities[1]']);
+    const bare = { pid: [sdJwt({ _sd: [digest(bd), digest(arr)], _sd_alg: 'sha-256', vct: 'urn:eudi:pid:1' }, [bd, arr])] };
+    expect(disclosedNames(bare)).toEqual(['birthdate', 'nationalities[0]']);
   });
 
   it('never takes the jurisdiction from anything the wallet did not disclose', () => {

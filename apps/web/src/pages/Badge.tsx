@@ -172,7 +172,7 @@ export function Badge({ bsa }: { bsa: Bsa }) {
         <h2>{held ? 'Renew or change the rights' : 'Verify with your EU wallet'}</h2>
         {stage === 'start' && (
           <>
-            <p>We ask your wallet for two things only: your date of birth (for "18 or older") and your nationality (your jurisdiction). The EU verifier checks the issuer's signature. Neither is stored: they become signed rights on your Flex.</p>
+            <p>We ask your wallet for your date of birth (for "18 or older") and your nationality and the country that issued your ID (your jurisdiction), nothing else. The EU verifier checks the issuer's signature. Neither is stored: they become signed rights on your Flex.</p>
             <button className="primary" disabled={!bsa.account} onClick={() => void start()} data-testid="badge-start">Scan with my EU wallet</button>
           </>
         )}
