@@ -179,7 +179,7 @@ Commands: `pnpm test` · `pnpm test:speculos` · `pnpm e2e` (Speculos + harness 
 ```
 Policy { active, chain_id: u64, token: [u8;20], auto_max: u64, hard_max: u64, budget: u64,
          max_count: u16, payees: [{ addr: [u8;20], label: ≤16 chars }; ≤8] }   // 6-dp base units
-Counters { spent: u64, count: u16 }    Session { armed: bool }   // RAM only, armed from device menu
+Counters { spent: u64, count: u16 }    Session { armed: bool }   // NVM since Oct 13 (the human's decision), armed only from the device menu, off on kill switch
 
 decide(policy, counters, session, payment{chain_id, token, to, value}) -> Decision
   1. no active policy                                      -> Refuse(NO_POLICY)

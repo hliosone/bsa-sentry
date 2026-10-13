@@ -32,7 +32,7 @@ twice). Phase C proves the same on the real Flex, in Chrome, with claude.ai.
 | **You see** | Rules review (swipe, hold) like `docs/screens/speculos/` reviews; the coffee is signed with **nothing on screen**; confirmation screens like `05-orange-unknown-payee.png` and `06-orange-over-auto-max.png`. |
 | **Claude checks** | All 8 checks PASS: the signature recovers to your 0xAGENT, counters move, "Pay once" adds no payee, "Trust merchant" does, 400 USDC is OVER_HARD_MAX. |
 | **The 60 s test, done right** | While the confirmation screen counts down, **keep touching the screen** (not the buttons). It must still refuse at ~60 s: our timeout counts raw ticker events, which a finger cannot pause (the NBGL ticker can — DX_NOTES §2.2). |
-| **Restart + menu** | **Quit app**, reopen BSA Sentry. The home must still show the budget (the rules survive in NVM — Speculos cannot test this, DX_NOTES §4.3) and **session off**. Tap the gear and swipe: session switch · rules · trusted merchants · **+20 USDC** / **Bloquer l'agent**. Remove a merchant once (the confirm shows its full address). |
+| **Restart + menu** | **Quit app**, reopen BSA Sentry. The home must still show the budget (the rules survive in NVM — Speculos cannot test this, DX_NOTES §4.3) and the **session as you left it** (the switch is saved in NVM since Oct 13). Tap the gear and swipe: session switch · rules · trusted merchants · **+20 USDC** / **Bloquer l'agent**. Remove a merchant once (the confirm shows its full address). |
 | **Photos** | One photo per distinct screen into `docs/screens/` (home, menu, rules review, confirmation for an unknown merchant, confirmation over the limit). For the submission. |
 | **Fallback** | `0x5515`: auto-lock (step 1). `0x6d02`: the app is not open. |
 

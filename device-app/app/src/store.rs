@@ -1,5 +1,5 @@
-//! Device state: the policy and credentials in NVM, the session and the in-flight payment
-//! in RAM.
+//! Device state: the policy, credentials and agent session switch in NVM, the in-flight
+//! payment in RAM.
 //!
 //! All buffers are fixed-size zero-initialised statics: Ledger's link script requires an
 //! empty `.data` section, so no `Vec` and no non-zero static initialiser.
@@ -33,6 +33,11 @@ static mut COUNTERS_NVM: NVMData<AtomicStorage<[u8; 2 + 8 + 2 + 8 + 1 + MAX_LABE
 static mut CREDENTIALS_NVM: NVMData<AtomicStorage<[u8; CREDENTIALS_MAX + 2]>> =
     NVMData::new(AtomicStorage::new(&[0u8; CREDENTIALS_MAX + 2]));
 
+/// The agent session switch: 1 = on. Only the device menu turns it on (no APDU can), and it
+/// stays on across app restarts until the menu or the kill switch turns it off.
+#[link_section = ".nvm_data"]
+static mut SESSION_NVM: NVMData<AtomicStorage<[u8; 1]>> = NVMData::new(AtomicStorage::new(&[0u8; 1]));
+
 /// Reassembly buffer for the chunked commands. One at a time, by design.
 static mut REASSEMBLER: Reassembler = Reassembler::new();
 
@@ -47,16 +52,17 @@ impl Runtime {
     }
 }
 
-/// The agent session: armed from the device menu, never stored. A restart, a crash or an
-/// app switch always disarms the agent, because RAM does not survive any of them.
-static mut SESSION_ARMED: bool = false;
-
 pub fn session() -> Session {
-    Session { armed: unsafe { SESSION_ARMED } }
+    let cell = &raw const SESSION_NVM;
+    Session { armed: unsafe { (*cell).get_ref() }.get_ref()[0] == 1 }
 }
 
 pub fn set_session(armed: bool) {
-    unsafe { SESSION_ARMED = armed };
+    if session().armed == armed {
+        return;
+    }
+    let cell = &raw mut SESSION_NVM;
+    unsafe { (*cell).get_mut() }.update(&[armed as u8]);
 }
 
 pub fn reassembler() -> &'static mut Reassembler {
@@ -89,10 +95,11 @@ pub fn save_policy(p: &Policy) -> Result<(), ()> {
     Ok(())
 }
 
-/// Clears the policy and the counters. The kill switch, and what SET_POLICY starts from.
+/// The kill switch: clears the policy and the counters, and ends the agent session.
 pub fn clear_policy() {
     let _ = save_policy(&Policy::empty());
     save_counters(&Counters::default(), 0, &[]);
+    set_session(false);
 }
 
 // ----------------------------------------------------------------------- counters

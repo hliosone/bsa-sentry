@@ -75,7 +75,7 @@ Policy { active, chain_id: u64, token: [u8;20], auto_max: u64, hard_max: u64, bu
          max_count: u16, payees: [{ addr: [u8;20], label: ≤16 chars }; ≤8] }
          // amounts in USDC base units (6 dp)
 Counters { spent: u64, count: u16 }
-Session  { armed: bool }    // RAM only, armed from the device menu
+Session  { armed: bool }    // NVM, turned on only from the device menu; off from the menu or the kill switch
 
 decide(policy, counters, session, payment{chain_id, token, to, value}) -> Decision
   1. no active policy                                     -> Refuse(NO_POLICY)

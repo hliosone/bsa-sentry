@@ -233,7 +233,7 @@ td.k{font-weight:600;white-space:nowrap}
 
 <div class="c dev"><h3>Flex app <small>device-app/app, device-app/core</small></h3><dl>
 <dt>Does</dt><dd>Runs <code>decide()</code> on every payment, shows every review, makes every signature.</dd>
-<dt>Holds</dt><dd>0xMAIN and 0xAGENT, never exported. NVM: rules, counters, last payment, credentials. RAM only: the agent session.</dd>
+<dt>Holds</dt><dd>0xMAIN and 0xAGENT, never exported. NVM: rules, counters, last payment, credentials, the agent session switch.</dd>
 <dt>Refuses</dt><dd>Host-supplied hashes (it rebuilds each EIP-712 digest from raw fields), delegations to a foreign agent, bundles its own 0xMAIN did not sign.</dd>
 <dt>Talks to</dt><dd>The website: APDU over WebHID, one command at a time. <code>core</code> is the pure <code>no_std</code> logic, tested on the host.</dd>
 </dl></div>
@@ -437,7 +437,7 @@ td.k{font-weight:600;white-space:nowrap}
 <text class="l" x="650" y="260" text-anchor="start">4 session on, budget left</text>
 </svg></div>
 <ol class="steps">
-<li><b>On the Flex only.</b> Settings, "Agent session" on. No APDU arms it (shipped build). It lives in RAM: a restart, crash or app switch disarms it.</li>
+<li><b>On the Flex only.</b> Settings, "Agent session" on. No APDU arms it (shipped build). It is saved on the device and stays on across app restarts until you turn it off there; blocking the agent turns it off too.</li>
 <li><b>Read back.</b> <code>sentry_status</code> makes the relay ask the tab for a fresh <code>GET_STATE</code>.</li>
 <li><b>Report.</b> The tab sends the session flag and the state blob.</li>
 <li><b>Tell the agent.</b> Session, budget left, limits. Session off: every <code>PAY</code> is <code>NO_SESSION</code>.</li>

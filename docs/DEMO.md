@@ -58,7 +58,7 @@ Timing: 1 and 3 take ~5 s each end to end; 2 and 4 wait for your tap; 5 is insta
    to 20/20 **and removes the bakery** from the trusted merchants (the list is replaced).
 4. The 18+ badge survives a rules change (it is stored separately). To demo it from scratch, reinstall
    the app (`make load`) or restore without credentials.
-5. Re-arm the agent session on the Flex (setting rules does not, a restart always disarms).
+5. Turn the agent session on, on the Flex, if it is off. It stays on until you turn it off; "Block the agent" and a reinstall turn it off.
 6. Dashboard: reload to clear the feed.
 
 On Speculos: `E2E=1 pnpm e2e` does all of this itself (wiped Flex, recycle, fund) before each run.

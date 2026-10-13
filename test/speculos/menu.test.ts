@@ -122,7 +122,8 @@ describe('the menu', () => {
     expect(s.policy.active, 'the rules themselves are untouched').toBe(true);
   });
 
-  it('blocks the agent from the device itself: rules and merchants wiped after a confirmation', async () => {
+  it('blocks the agent from the device itself: rules and merchants wiped, session off, after a confirmation', async () => {
+    await setSession(true);
     await openMenuPage(/Block agent/);
     await screenshot('19-menu-actions');
     await tapText(/Block agent/);
@@ -133,19 +134,21 @@ describe('the menu', () => {
     const s = await state();
     expect(s.policy.active).toBe(false);
     expect(s.policy.payees).toEqual([]);
+    expect(s.sessionArmed, 'blocking the agent also ends its session').toBe(false);
     // And payments are refused from now on.
     const data = payPayload({ chainId: 5042002n, token: TOKEN, to: CAFE, value: USDC, nonce: `0x${'73'.repeat(32)}` });
     const r = await apdu(Uint8Array.from([0xe0, INS.PAY, 0, 0, data.length, ...data]));
     expect(r.sw).toBe(SW.DENY);
   });
 
-  it('the agent session switch still arms and disarms, RAM only', async () => {
+  it('the agent session switch arms and disarms from the device', async () => {
     await setSession(true);
     expect((await state()).sessionArmed).toBe(true);
-    // Speculos cannot keep a Rust app's NVM across a restart ("not yet implemented for Rust
-    // apps"), so that the rules survive is checked on the Flex in Phase C, not here.
-    restart(false);
-    expect((await state()).sessionArmed, 'a restart always disarms').toBe(false);
+    await setSession(false);
+    expect((await state()).sessionArmed).toBe(false);
+    // The switch is saved in NVM, so it survives quitting the app. Speculos cannot keep a Rust
+    // app's NVM across a restart ("not yet implemented for Rust apps"), so that part is checked
+    // on the Flex (docs/PHASE_C_GUIDE.md), like the rules surviving a restart.
   });
 });
 

@@ -142,7 +142,7 @@ blocking, retry" rather than the generic `CmdNotAccepted`.
 the agent. `NbglHomeAndSettings::settings()` drives switches straight from an NVM slot, and there is
 no hook to observe a toggle.
 **Fix.** First, zero the slot at every app start. In the end we dropped the wrapper (§2.7) and
-keep the session in a RAM static toggled by our own callback.
+keep the session in a RAM static toggled by our own callback. (Oct 13: after using it daily we moved the switch back to NVM, so it survives quitting the app; our own callback still drives it.)
 **Suggestion.** Let `settings()` take an in-memory backing store, and expose an
 `on_setting_changed(token, value)` callback. Right now a setting can only be a persisted boolean,
 which rules out anything session-scoped.

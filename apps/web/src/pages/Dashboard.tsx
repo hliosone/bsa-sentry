@@ -148,7 +148,7 @@ export function Dashboard({ bsa }: { bsa: Bsa }) {
           <h2>Agent session</h2>
           <div className="session-state">{armed ? 'On' : 'Off'}</div>
           <p className="sub">{armed
-            ? 'Your agent can ask your Flex to pay. Quitting the app turns it off.'
+            ? 'Your agent can ask your Flex to pay. It stays on until you turn it off on the Flex.'
             : 'Turn it on from your Flex: gear icon, then Agent session. Only the device can do it.'}</p>
         </section>
 
