@@ -53,3 +53,25 @@ Normal npm / crates.io dependencies, used as published: `@ledgerhq/device-manage
 `@ledgerhq/hw-transport-webhid`, `@x402/*` 2.28, `@modelcontextprotocol/sdk`, `viem`, `zod`,
 `express`, `react`, `vite`, `vitest`, `playwright`, `ledger_device_sdk`, `ledgerblue`, Speculos
 and the Ledger app builder Docker images.
+
+## 5. The Shopify integration's design (team's Sept 26 bsa-gate plugin, ETHGlobal Tokyo)
+
+The design of `apps/merchants/src/shopify.ts` (see `docs/SHOPIFY.md`) follows the team's own
+Shopify pay plugin for **bsa-gate**, written on Sept 26, 2026 for ETHGlobal Tokyo
+(`../../EthGlobalTokyo2026/bsa-gate/plugins/shopify/`): settle a USDC EIP-3009 payment through a
+facilitator, then write it back into Shopify with Admin API calls (draft order, completed as
+paid, tx hash in the order note), with per-product requirements and a DRY_RUN mode.
+
+That code was read for its design only. **The code here is newly written on Oct 13, 2026**, with
+tests first; nothing was copied. What differs:
+
+- **The buyer is an AI agent, not a person on a pay page.** The product URL is an x402 resource
+  (402, then a paid retry from the agent's MCP `x402_fetch`), signed by the user's Ledger Flex
+  within its on-device rules. There is no checkout session and no browser wallet.
+- **Know-Your-Agent per product from tags** (`bsa:age_over_18`, `bsa:jurisdiction_not:US`, ...),
+  sent as x402 `extra.requires` and enforced by BSA Sentry's facilitator against the agent's
+  delegated credentials. bsa-gate read a product metafield of attestations.
+- **Arc testnet** (USDC, chainId 5042002) instead of Ethereum, through BSA Sentry's own facilitator.
+- **The catalog comes from Shopify** (Admin GraphQL `products`), and the order is created from the
+  product variant after settlement; bsa-gate paid an amount for an existing order id.
+- Supports Shopify's Dev Dashboard apps (client credentials grant) as well as Admin API tokens.

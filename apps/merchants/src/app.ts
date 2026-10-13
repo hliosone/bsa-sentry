@@ -7,6 +7,7 @@ import express from 'express';
 import { paymentMiddleware, x402ResourceServer } from '@x402/express';
 import { ExactEvmScheme } from '@x402/evm/exact/server';
 import { HTTPFacilitatorClient } from '@x402/core/server';
+import { createShopifyRouter, type ShopifyConfig } from './shopify.js';
 
 export type MerchantKey = 'cafe' | 'cave' | 'resto' | 'evil' | 'boulangerie' | 'presale';
 
@@ -29,6 +30,8 @@ export type MerchantsConfig = {
   payTo: Record<Exclude<MerchantKey, 'presale'>, string> & { presale?: string };
   /** Where the merchants are reachable from the agent's side (for links in the promo page). */
   publicUrl: string;
+  /** A Shopify store (or its DRY_RUN demo catalog) under /shopify. See docs/SHOPIFY.md. */
+  shopify?: ShopifyConfig;
 };
 
 const CONTENT: Record<MerchantKey, unknown> = {
@@ -64,6 +67,9 @@ export async function createMerchantsApp(cfg: MerchantsConfig): Promise<express.
   const app = express();
   app.get('/health', (_req, res) => res.json({ ok: true }));
   app.get('/promo', (_req, res) => res.type('html').send(promoPage(cfg.publicUrl)));
+  if (cfg.shopify) {
+    app.use('/shopify', createShopifyRouter({ ...cfg.shopify, facilitatorUrl: cfg.facilitatorUrl, network: cfg.network, publicUrl: cfg.publicUrl }));
+  }
   app.use(paymentMiddleware(routes as any, resourceServer));
   for (const m of live) app.get(m.path, (_req, res) => res.json(CONTENT[m.key]));
   return app;
