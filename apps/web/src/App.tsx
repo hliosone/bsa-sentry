@@ -81,11 +81,16 @@ export function App() {
     <div className="app">
       <header className="topbar">
         <a className="wordmark" href="#/dashboard"><Mark /> BSA Sentry</a>
-        {bsa.account && (
+        {bsa.account ? (
           <nav className="tabs" aria-label="Sections">
             {TABS.map((t) => (
               <a key={t.route} href={`#/${t.route}`} className={current === t.route ? 'active' : ''} aria-current={current === t.route ? 'page' : undefined}>{t.label}</a>
             ))}
+          </nav>
+        ) : (
+          <nav className="tabs" aria-label="Sections">
+            <a href="#/" className={current !== 'how' ? 'active' : ''} aria-current={current !== 'how' ? 'page' : undefined}>Home</a>
+            <a href="#/how" className={current === 'how' ? 'active' : ''} aria-current={current === 'how' ? 'page' : undefined}>How it works</a>
           </nav>
         )}
         <div className="topbar-right">
@@ -110,7 +115,7 @@ export function App() {
         </div>
       )}
 
-      {!bsa.account ? <Landing bsa={bsa} /> : (
+      {!bsa.account ? (current === 'how' ? <div className="page"><main><HowItWorks bsa={bsa} /></main></div> : <Landing bsa={bsa} />) : (
       <div className={showTrack ? 'with-track' : 'page'}>
         {showTrack && (
           <aside className="track" aria-label="Setup">

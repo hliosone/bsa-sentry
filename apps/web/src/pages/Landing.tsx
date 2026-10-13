@@ -19,7 +19,8 @@ export function Landing({ bsa }: { bsa: Bsa }) {
             BSA Sentry gives your AI agent a mandate held by your Ledger. Our own Flex app is the agent's wallet: it
             pays trusted shops on its own and asks you only at the boundary. Your EU Digital Identity Wallet proves what
             a shop needs to know (18 or older, a jurisdiction), never who you are. Payments settle in USDC on Arc
-            through x402 rails that any agent and any shop can use.
+            through x402 rails that any MCP agent and any x402 shop can use, and our Shopify connector lets a Shopify
+            store sell to agents: a product tag sets the rights, and the paid order lands in the Shopify admin.
           </p>
 
           <ol className="hero-steps">

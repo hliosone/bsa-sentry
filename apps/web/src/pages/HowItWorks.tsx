@@ -1,4 +1,4 @@
-// The logged-in overview: the three parts of BSA Sentry, how each one works step by step, how a
+// The overview, public and logged in: the three parts of BSA Sentry, how each one works step by step, how a
 // shop adds BSA Sentry payments, how an agent connects, and the live demo shops.
 // It only reads `bsa.config`, so it renders the same before and after setup.
 import type { Bsa } from '../useBsa.js';
@@ -52,6 +52,7 @@ export const SHOPS = [
   { path: '/restaurant', name: 'Restaurant', what: 'A table for two, 20 USDC', note: 'Above the automatic limit: your Flex asks you.' },
   { path: '/wine', name: 'Corner Wines', what: 'A bottle, 4.5 USDC', note: 'Requires 18 or older.' },
   { path: '/presale', name: 'Token Presale', what: '500 STY, 5 USDC', note: 'Requires: not a US person.' },
+  { path: '/shopify', name: 'BSA Shop (Shopify)', what: 'A real Shopify store', note: 'Coffee beans, wine (18 or older), a token drop (not a US person). The paid order lands in the Shopify admin.' },
   { path: '/promo', name: 'Deals page', what: 'Free', note: 'Hides a 400 USDC "deposit" aimed at agents: your Flex refuses it.' },
 ] as const;
 
@@ -67,7 +68,7 @@ export function HowItWorks({ bsa }: { bsa: Bsa }) {
     <>
       <section className="card">
         <h2>How BSA Sentry works</h2>
-        <p>BSA Sentry gives an AI agent a mandate held by your Ledger. Our own Flex app is its wallet and enforces its spending limits, your EU Digital Identity Wallet supplies the rights shops ask for, and x402 rails let any agent pay any shop. The agent acts on its own inside the mandate; you decide only at its boundary, on the Flex.</p>
+        <p>BSA Sentry gives an AI agent a mandate held by your Ledger. Our own Flex app is its wallet and enforces its spending limits, your EU Digital Identity Wallet supplies the rights shops ask for, and x402 rails let any agent pay any shop, Shopify stores included. The agent acts on its own inside the mandate; you decide only at its boundary, on the Flex.</p>
         <Pillars />
       </section>
 
@@ -111,6 +112,8 @@ export function HowItWorks({ bsa }: { bsa: Bsa }) {
           <li>Your Flex decides. The signed USDC authorization, with the proof of rights if asked, goes back to the shop.</li>
           <li>The shop's x402 middleware asks our facilitator. It checks the signature, payee, amount, rights and balance, then settles on Arc testnet.</li>
         </ol>
+        <h3>Shopify stores</h3>
+        <p>Our Shopify connector makes a Shopify store shoppable by agents. It reads the catalog from the Shopify Admin API, and a product tag sets the rights it requires: <code>bsa:age_over_18</code> or <code>bsa:jurisdiction_not:US</code>. Once the payment settles, the order appears in the Shopify admin as paid, with the Arc transaction hash in its note.</p>
       </section>
 
       <section className="card" data-testid="how-merchants">
