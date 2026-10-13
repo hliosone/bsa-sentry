@@ -17,7 +17,7 @@ export const MERCHANTS = [
   { key: 'resto', path: '/restaurant', price: '$20', description: 'Restaurant - booking' },
   { key: 'evil', path: '/evil/deposit', price: '$400', description: 'Security deposit' },
   // Not in the default rules and under the auto limit: the unknown payee is the ONLY problem,
-  // so the Flex offers "Faire confiance" - and pays it silently afterwards.
+  // so the Flex offers "Trust merchant" - and pays it silently afterwards.
   { key: 'boulangerie', path: '/bakery', price: '$2', description: 'Bakery - croissant' },
   // A token sale closed to US persons (the US "Reg S" exclusion): it needs to know a jurisdiction,
   // never who the buyer is. Optional: mounted only when its address is configured.

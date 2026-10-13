@@ -54,7 +54,7 @@ Timing: 1 and 3 take ~5 s each end to end; 2 and 4 wait for your tap; 5 is insta
 
 1. `pnpm recycle` — sweeps the merchants' takings back to the treasury.
 2. `pnpm fund <0xAGENT> 35` if `pnpm balances` shows less.
-3. **Rules page → Envoyer au Flex** (review + hold): sending the demo rules again resets the budget
+3. **Rules page → Send to the Flex for approval** (review + hold): sending the demo rules again resets the budget
    to 20/20 **and removes the bakery** from the trusted merchants (the list is replaced).
 4. The 18+ badge survives a rules change (it is stored separately). To demo it from scratch, reinstall
    the app (`make load`) or restore without credentials.

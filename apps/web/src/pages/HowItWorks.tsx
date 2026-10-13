@@ -72,7 +72,7 @@ export function HowItWorks({ bsa }: { bsa: Bsa }) {
       </section>
 
       <section className="card" data-testid="how-rules">
-        <h2>1. Spending rules on your Flex</h2>
+        <h2>1. Your own Ledger app</h2>
         <ol className="ov-flow">
           <li>You set the rules: trusted merchants, an automatic limit, a ceiling, a budget and a number of payments. The Flex shows them in full and you approve them on the device.</li>
           <li>You start the agent on the Flex itself (Agent session): no website or server can do it. Keep this site open in Chrome with the Flex plugged in.</li>
@@ -89,7 +89,7 @@ export function HowItWorks({ bsa }: { bsa: Bsa }) {
 
       <section className="card" data-testid="how-identity">
         <div className="ov-head">
-          <h2>2. Agent identity from your EU wallet</h2>
+          <h2>2. Know Your Agent, from your EU wallet</h2>
           <EudiMark height={48} />
         </div>
         <ol className="ov-flow">
@@ -104,7 +104,7 @@ export function HowItWorks({ bsa }: { bsa: Bsa }) {
       </section>
 
       <section className="card" data-testid="how-rails">
-        <h2>3. Open x402 rails for any agent and any shop</h2>
+        <h2>3. Agentic commerce rails</h2>
         <ol className="ov-flow">
           <li>Your agent calls <code>x402_fetch</code> on a shop's URL through the BSA Sentry MCP server.</li>
           <li>The shop answers HTTP 402 with its price and, if it wants, the rights it requires.</li>

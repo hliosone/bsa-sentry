@@ -14,7 +14,7 @@ export function Landing({ bsa }: { bsa: Bsa }) {
     <>
       <section className="hero">
         <div className="hero-copy">
-          <h1>Your agent spends.<br />Your Ledger decides.</h1>
+          <h1>Know Your Agent,<br />enforced by your Ledger.</h1>
           <p className="lede">
             BSA Sentry gives your AI agent a mandate held by your Ledger. Our own Flex app is the agent's wallet: it
             pays trusted shops on its own and asks you only at the boundary. Your EU Digital Identity Wallet proves what
@@ -44,7 +44,7 @@ export function Landing({ bsa }: { bsa: Bsa }) {
         </div>
 
         <div className="hero-stage">
-          <FlexView screen={{ title: 'BSA Sentry', lines: ['Your agent spends.', 'Your Ledger decides.'] }} />
+          <FlexView screen={{ title: 'BSA Sentry', lines: ['Know Your Agent,', 'enforced by your Ledger.'] }} />
         </div>
       </section>
 
