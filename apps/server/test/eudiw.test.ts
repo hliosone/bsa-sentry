@@ -178,6 +178,17 @@ describe('reading the answer: the rights it proves', () => {
     expect(readIdentity(token({ birthdate: '1990-01-15', address: { country: 'DE' } }), NOW, ['address', 'country'])).toEqual({ ageOver18: true, country: 'DE' });
   });
 
+  it('reads nationalities whose elements are disclosed one by one (the EU reference PID)', () => {
+    const el = b64u(['salt', 'CH']);
+    const arr = b64u(['salt', 'nationalities', [{ '...': digest(el) }]]);
+    const bd = b64u(['salt', 'birthdate', '1990-01-15']);
+    const vp = { pid: [sdJwt({ _sd: [digest(bd), digest(arr)], _sd_alg: 'sha-256', vct: 'urn:eudi:pid:1' }, [bd, arr, el])] };
+    expect(readIdentity(vp, NOW, ['nationalities'])).toEqual({ ageOver18: true, country: 'CH' });
+    // An element whose disclosure is missing is simply absent.
+    const hidden = { pid: [sdJwt({ _sd: [digest(bd), digest(arr)], _sd_alg: 'sha-256', vct: 'urn:eudi:pid:1' }, [bd, arr])] };
+    expect(readIdentity(hidden, NOW, ['nationalities'])).toEqual({ ageOver18: true, country: null });
+  });
+
   it('turns them into rights: 18+ if adult, and the first nationality (one fits in the attestation)', () => {
     expect(identityClaims({ ageOver18: true, country: 'fr' })).toEqual(['age_over_18', 'jurisdiction:FR']);
     expect(identityClaims({ ageOver18: false, country: 'FR' })).toEqual(['jurisdiction:FR']);

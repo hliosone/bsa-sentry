@@ -171,7 +171,15 @@ function resolveSdJwt(token: string): Record<string, unknown> {
     } catch { /* the trailing KB-JWT, or junk */ }
   }
   const resolve = (node: unknown): unknown => {
-    if (Array.isArray(node)) return node.map(resolve);
+    // Array elements can be disclosed one by one: { "...": digest } -> [salt, value].
+    if (Array.isArray(node)) {
+      return node.flatMap((el) => {
+        const dg = el && typeof el === 'object' && !Array.isArray(el) ? (el as Record<string, unknown>)['...'] : undefined;
+        if (typeof dg !== 'string') return [resolve(el)];
+        const d = byDigest.get(dg);
+        return d && d.length === 2 ? [resolve(d[1])] : [];
+      });
+    }
     if (node && typeof node === 'object') {
       const out: Record<string, unknown> = {};
       for (const [k, v] of Object.entries(node)) if (k !== '_sd' && k !== '_sd_alg') out[k] = resolve(v);
