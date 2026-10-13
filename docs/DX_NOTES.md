@@ -15,7 +15,7 @@ and refusing outright. The agent pays over x402 (USDC, EIP-3009) on Arc testnet.
 | **NBGL (via the `sys` C layout API)** | The 3-choice confirmation screen with a 60 s auto-refusal, which the safe wrappers cannot express | The single biggest gap |
 | **`cargo-ledger` + `ledger-app-builder` Docker image** | Building the Flex ELF | Good once configured; two sharp edges |
 | **`ledgerblue`** | Sideloading | Fine |
-| **Speculos** | Every device test in CI: 57 integration tests, simulated taps, screenshots | Very good, one undocumented API |
+| **Speculos** | Every device test in CI: 79 integration tests, simulated taps, screenshots | Very good, one undocumented API |
 | **DMK + `device-transport-kit-web-hid`** | Browser bridge over WebHID | Works well in the browser, not in Node |
 | **Ledger Key Ring Protocol (LKRP)** | Encrypted backup of rules + credentials under the user's seed | See §6 |
 
@@ -200,11 +200,21 @@ Expected once you know it, and it is *why* Key Ring backup matters, but `ledgerb
 says nothing. **Suggestion:** print "this will erase the app's stored data" before installing over an
 existing app.
 
+### 3.4 Any app update erases the user's data
+
+**What happened.** On the last day we renamed one line of the home screen ("Budget" became
+"Limit left", because users read it as their balance). Shipping that meant reinstalling the app,
+which erased every user's rules, trusted merchants and credentials. They have to restore from the
+Key Ring backup afterwards.
+**Suggestion.** Document the recommended way to keep or migrate NVM across an app update (store apps
+face the same problem), or offer an update path that keeps `.nvm_data` when the app name and
+signing key are unchanged.
+
 ---
 
 ## 4. Speculos: the best part of the stack
 
-57 of our device tests run against Speculos in CI: simulated taps, screen assertions, screenshots,
+79 of our device tests run against Speculos in CI: simulated taps, screen assertions, screenshots,
 a wiped-NVM restart between suites. It derives the same addresses as hardware from the same seed,
 which let us build the entire product with the Flex unplugged. Two notes:
 
@@ -286,6 +296,18 @@ the README.
 
 ---
 
+### 5.6 Two tabs can drive the same Flex, and the symptom is a status word
+
+**What happened.** A user had our site open in two tabs. Both opened the Flex over WebHID and took
+turns sending commands, so a payment request failed with `0x6901` in one tab while the other had
+just talked to the device. Nothing in the DMK says the device is already in use by another session.
+**Fix.** Our server now closes the older tab's connection with its own close code, and the bridge
+stops reconnecting and tells the user why.
+**Suggestion.** A typed "device in use by another session" error from the DMK, or a documented
+single-tab guard for web apps.
+
+---
+
 ## 6. Key Ring (LKRP)
 
 Wired as in our feasibility test: `@ledgerhq/ledger-key-ring-protocol` 0.24.0 +
@@ -359,7 +381,7 @@ we would rather not have had to.
 
 ## What worked well, and we mean it
 
-- **Speculos.** Headless + REST made a 57-test device suite possible, on a laptop, with the Flex
+- **Speculos.** Headless + REST made a 79-test device suite possible, on a laptop, with the Flex
   unplugged. We would not have shipped this without it.
 - **On-device EIP-712 from raw fields.** Our hand-rolled keccak digests matched `viem` and the live
   on-chain `DOMAIN_SEPARATOR` on the first try. The crypto primitives are solid and predictable.

@@ -1,0 +1,41 @@
+BSA Sentry: developer experience feedback
+
+What we used: a custom Rust device app on a Ledger Flex (ledger_device_sdk, NBGL, NVM), Speculos for every device test, the DMK over WebHID in the browser, and Ledger Key Ring (LKRP) for the encrypted backup. We did not use the Agent Stack CLI or Ring CLI (see point 4).
+
+WHERE THE DOCUMENTATION LOST US
+
+1. NBGL has no screen with more than two choices and no timeout. Our core screen is Reject / Pay once / Trust merchant, refused after 60 s of silence. Building it took about 130 lines of unsafe code on the C layout API, and the layout ticker stops counting while a finger is on the screen, so a held finger stopped the timeout.
+
+2. NBGL draws text that does not fit underneath the buttons, with no error. It hid the "(unverified)" warning on our payment confirmation. Every APDU test passed; only a screenshot caught it. On a confirmation screen that is a security bug, not a layout bug.
+
+3. Speculos swipes are undocumented. Flex reviews need them; we found the x2/y2 fields of /finger by reading the source.
+
+4. Nothing covers remote agents. Our agent is claude.ai calling a remote MCP server: it never runs on the user's machine. The Agent Stack and Ring CLI assume the agent and the device share a host, so the human approval had to live in a browser tab next to the device, and we built that bridge ourselves.
+
+CONFUSING WORKFLOWS
+
+5. The SDK bakes the derivation paths in at build time. After changing the path or curve in Cargo.toml, the app built fine and crashed on its first key derivation. The fix (cargo clean -p ledger_device_sdk) is not written anywhere.
+
+6. Key Ring and the DMK do not share a connection. The Key Ring SDK takes a legacy hw-transport-webhid transport, the DMK has its own session, and the Ledger Sync app must be open on the device. So we disconnect the DMK, switch apps, open a second transport, encrypt, close it, switch back and reconnect. It is the most fragile part of our site, and none of it is documented.
+
+7. Two browser tabs can drive the same Flex at once. Their commands interleave and the user sees 0x6901, with no hint that another session holds the device. We now close the older tab ourselves.
+
+8. Any app update erases the user's data. Renaming one line of our home screen meant reinstalling, which wiped every user's rules, trusted merchants and credentials. The loader gives no warning, and we found no documented way to keep or migrate NVM across an update.
+
+MISSING CONTEXT
+
+9. The DMK's background session refresher sends its own APDUs in the middle of a custom app's sequence. We had to find the option to disable it.
+
+10. Key Ring cannot be tested without hardware: Ledger Sync does not run in Speculos, and Speculos cannot keep a Rust app's NVM across a restart. Both of our "survives a restart" checks are manual, on a real Flex.
+
+11. Small things that cost hours: the Key Ring SDK needs Node polyfills in Vite while the DMK needs none; encryptUserData takes bytes although its TypeScript type says object; the DMK's ESM build does not load in plain Node, so Node tools must use the CommonJS build.
+
+THE ONE SUGGESTION
+
+An NBGL "choice with timeout" screen in the safe API: N choices, a deny-by-default countdown on a clock that keeps running while the screen is touched, and text that scrolls or fails loudly instead of hiding under the buttons. Deny by default is the screen every agent approval needs, and today each team rebuilds it in unsafe code.
+
+WHAT WORKED WELL
+
+Speculos with --display headless and the REST API gave us 79 device integration tests with screenshots, on a laptop, without the Flex. EIP-712 digests computed on the device matched viem and the on-chain domain separator on the first try. Silent signing within on-device rules takes 1 to 2 seconds. The DMK runs in the browser with plain Vite and no polyfills.
+
+Full report, with what we tried and the fix for each point: github.com/hliosone/bsa-sentry/blob/main/docs/DX_NOTES.md

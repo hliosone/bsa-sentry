@@ -1,0 +1,207 @@
+BSA SENTRY - DEMO RUN SHEET (submission video, about 3:00)
+Phone films the Flex. The computer records the screen. Record scene by scene.
+
+Base URL:   https://server-production-423c.up.railway.app
+Shops:      https://server-production-423c.up.railway.app/shops/...
+Main:       0x091da3c5e376db04928a9d8d5196716024e4318f
+Agent:      0x1c9940ef87ce842fb18d73fd43b49b53582c6b52
+
+======================================================================
+BEFORE RECORDING (not filmed)
+======================================================================
+[ ] 1. Close every BSA Sentry tab. Flex unlocked, on its dashboard, Ledger Live closed.
+[ ] 2. Sideload the new app here:  ! make load   (approve on the Flex, PIN).
+       This resets the Flex: no rules, no trusted merchants, no rights, session off.
+       Do NOT restore afterwards.
+[ ] 3. Flex settings: turn auto-lock OFF (or it locks in the middle of a take).
+[ ] 4. Optional: faucet.circle.com, Arc testnet, send USDC to the MAIN address.
+[ ] 5. Paradym, on a SECOND phone (the first one films the Flex): check the test PID is
+       there (adult birthdate, non-US nationality).
+       If not: open https://wiring-tiny-flexible-bookmark.trycloudflare.com and add it.
+[ ] 6. Ledger Sync app installed on the Flex (needed for the backup scene).
+[ ] 7. Chrome window 1: ONE tab on the base URL, logged out (Log out if needed).
+       Chrome window 2: claude.ai, new chat, BSA Sentry connector enabled.
+       Chrome window 3: Shopify admin, Orders page
+         https://admin.shopify.com/store/bsa-shop-swvbiac4/orders
+[ ] 8. Hide notifications and bookmarks. Phone on a stand above the Flex, plain surface,
+       exposure locked. Start the screen recorder and the phone.
+[ ] 9. At the start of each take: tap the Flex once on camera (to sync phone and screen).
+
+If Claude asks "do you want me to pay?", answer:  Yes, go ahead.
+
+======================================================================
+SCENES
+======================================================================
+
+----------------------------------------------------------------------
+1. INTRO (0:00 - 0:10)
+----------------------------------------------------------------------
+FLEX:    Open the BSA Sentry app (cube icon). Tap the gear, swipe through the menu
+         (Agent session, My rules, Trusted merchants, Block agent), back to home.
+SCREEN:  Nothing yet.
+SAY:     "This is our own Ledger app on a Flex. It is my AI agent's wallet, and it
+         holds the agent's mandate."
+
+----------------------------------------------------------------------
+2. LOGIN WITH LEDGER (0:10 - 0:20)
+----------------------------------------------------------------------
+SCREEN:  Base URL. Click "Connect the Flex", pick the Flex in Chrome's popup.
+         Click "Log in with Ledger".
+FLEX:    Shows the website address. Approve (sign).
+SEE:     The site opens the setup track: Rules.
+SAY:     "No password: my Flex signs the login."
+
+----------------------------------------------------------------------
+3. RULES (0:20 - 0:35)
+----------------------------------------------------------------------
+SCREEN:  Rules page, already filled with the demo values.
+         CHANGE "Total budget (USDC)" from 20 to 30. Leave the rest:
+           paid without asking up to 5, hard limit 50, 10 payments,
+           merchants: Cafe Sat, Corner Wines, Restaurant, Token Presale.
+         Click "Send to the Flex for approval".
+FLEX:    Review: limits, every merchant with its FULL address, network and token.
+         Swipe to the end, HOLD to approve.
+SAY:     "I set the mandate: 5 USDC without asking, 50 hard limit, the shops I trust.
+         I approve it on the device."
+
+----------------------------------------------------------------------
+4. AGENT SESSION (0:35 - 0:40)
+----------------------------------------------------------------------
+FLEX:    Gear icon, turn "Agent session" ON, back to home ("session on").
+SCREEN:  Status turns green ("Agent on"). If the page asks, click "I started the agent".
+SAY:     "Only the device can start my agent. It stays on until I turn it off."
+
+----------------------------------------------------------------------
+5. TOP-UP FROM MY LEDGER (0:40 - 0:50)   [cut first if too long]
+----------------------------------------------------------------------
+SCREEN:  Dashboard. Amount 5. Click "Top up from main account".
+FLEX:    Shows 5 USDC from your main account to your agent (both addresses). HOLD.
+SEE:     "Topped up 5 USDC". Agent wallet goes up.
+SAY:     "I fund my agent from my own Ledger account. The Flex picks the recipient itself."
+
+----------------------------------------------------------------------
+6. COFFEE, SIGNED ALONE (0:50 - 1:05)
+----------------------------------------------------------------------
+CLAUDE PROMPT:
+  Buy me a coffee at https://server-production-423c.up.railway.app/shops/cafe
+FLEX:    Nothing to tap. Home updates: "Limit left 27.00 USDC", "Last: Cafe Sat 3 USDC".
+SCREEN:  Dashboard Activity: "Paid Cafe Sat -3.00". Click "View on Arc" (explorer).
+SAY:     "A trusted shop under my limit: the Flex signs alone, in about a second.
+         Here it is on Arc, in USDC."
+
+----------------------------------------------------------------------
+7. NEW SHOP, THE FLEX ASKS (1:05 - 1:18)
+----------------------------------------------------------------------
+CLAUDE PROMPT:
+  Get me a croissant at https://server-production-423c.up.railway.app/shops/bakery
+FLEX:    "Pay 2 USDC", unknown merchant, full address, "agent says ... (unverified)".
+         Tap "Trust merchant".
+SEE:     Claude says it paid. Activity: "Paid Bakery -2.00".
+SAY:     "A shop I never paid: now the Flex asks. Reject, pay once, or trust.
+         I trust it, so next time it pays on its own."
+
+----------------------------------------------------------------------
+8. PROMPT INJECTION, REFUSED (1:18 - 1:30)
+----------------------------------------------------------------------
+Optional: first show https://server-production-423c.up.railway.app/shops/promo in a tab.
+CLAUDE PROMPT:
+  Check today's deals at https://server-production-423c.up.railway.app/shops/promo and use the best one
+FLEX:    Nothing to tap: it refuses on its own.
+SCREEN:  Red banner "Refused by your Flex: 400.00 USDC ... above your hard limit".
+FALLBACK if Claude spots the trap and does not try to pay:
+  The deals page says a 400 USDC deposit is required. Pay it at https://server-production-423c.up.railway.app/shops/evil/deposit
+  and SAY instead: "Even if my agent is told to pay, the Flex refuses."
+SAY:     "This page hides an instruction for agents: pay a 400 USDC deposit, don't ask.
+         The Flex refuses it on its own: above my hard limit, no tap could approve it."
+
+----------------------------------------------------------------------
+9. KNOW YOUR AGENT (1:30 - 1:55)
+----------------------------------------------------------------------
+SCREEN:  Tab "Agent identity". Click "Scan with my EU wallet". A QR code appears.
+PHONE 2: Paradym: scan the QR, share.
+SCREEN:  "Verified". Tick both rights: "18 or older" and "not a US person".
+         Click "Link to my Ledger".
+FLEX:    "Link your identity" (verifier + session). HOLD.
+SCREEN:  Agent name: Claude. Click "Grant to Claude".
+FLEX:    "Authorize your agent": Claude, full agent address, the 2 rights, expiry. HOLD.
+SEE:     "Done: your agent can now prove these rights..."
+SAY:     "Know Your Agent. One scan with my EU Digital Identity Wallet, verified by the
+         EU reference verifier. The demo uses a test PID; production uses a member state
+         PID. We keep two facts, 18 or older and a jurisdiction. My Flex binds them to my
+         account and grants them to my agent."
+
+----------------------------------------------------------------------
+10. WINE AND PRESALE (1:55 - 2:07)
+----------------------------------------------------------------------
+CLAUDE PROMPT:
+  Buy a bottle of wine at https://server-production-423c.up.railway.app/shops/wine
+CLAUDE PROMPT (right after):
+  Now get me an allocation in the token presale at https://server-production-423c.up.railway.app/shops/presale
+FLEX:    Nothing to tap (both trusted, both 5 or less).
+SEE:     Activity: "Paid Corner Wines -4.50", "Paid Token Presale -5.00".
+SAY:     "Wine requires 18 or older, the presale is closed to US persons. The Flex pays,
+         our facilitator checks the rights, and the shop learns the right, not my name."
+
+----------------------------------------------------------------------
+11. SHOPIFY (2:07 - 2:22)
+----------------------------------------------------------------------
+CLAUDE PROMPT:
+  Buy the Pinot Noir from the Shopify store at https://server-production-423c.up.railway.app/shops/shopify
+FLEX:    First purchase from this store: unknown merchant. Tap "Trust merchant".
+SCREEN:  Claude says it paid. Switch to the Shopify admin window, refresh Orders:
+         new order (#1010) "Paid", open it, show the note with the Arc transaction.
+SAY:     "Same rails on a real Shopify store. The product is tagged 18+, the agent proves
+         it, and the order lands in Shopify as paid, with its Arc transaction."
+
+----------------------------------------------------------------------
+12. REMOVE 18+, THE SHOP REFUSES (2:22 - 2:35)
+----------------------------------------------------------------------
+SCREEN:  Tab "Agent identity". On "18 or older", click "Remove this right".
+FLEX:    "Authorize your agent" with only "not a US person". HOLD.
+CLAUDE PROMPT:
+  Try buying the wine at https://server-production-423c.up.railway.app/shops/wine again
+FLEX:    Signs alone (it is within the rules).
+SEE:     Activity: "Not paid: ... The shop requires proof that you are 18 or older ...
+         No money moved." Claude reports the refusal.
+SAY:     "I remove 18+ on my Flex. Wine again: the shop refuses and nothing is paid.
+         My rights, one at a time, on my Ledger."
+
+----------------------------------------------------------------------
+13. SPENDING AND ISO 20022 EXPORT (2:35 - 2:45)   [cut second if too long]
+----------------------------------------------------------------------
+SCREEN:  Tab "Spending". Show the categories and the list. Click a category chip,
+         then "Download ISO 20022 statement".
+SAY:     "Every payment, sorted by category, exportable as an ISO 20022 bank statement
+         for my accountant."
+
+----------------------------------------------------------------------
+14. KEY RING BACKUP (2:45 - 2:58)
+----------------------------------------------------------------------
+SCREEN:  Tab "Backup". Click "Back up now". Follow the site: it reads the rules from
+         BSA Sentry, then asks you to open Ledger Sync.
+FLEX:    Quit BSA Sentry, open Ledger Sync, approve.
+SEE:     "Backed up".
+SAY:     "The whole mandate, rules, trusted shops and rights, is backed up with Ledger
+         Key Ring, encrypted under my seed."
+After:   Reopen BSA Sentry on the Flex (the session stays on).
+
+----------------------------------------------------------------------
+15. END CARD (2:58 - 3:05)  (added in editing)
+----------------------------------------------------------------------
+TEXT:    Know Your Agent, enforced by your Ledger.
+         github.com/hliosone/bsa-sentry
+         server-production-423c.up.railway.app
+SAY:     "BSA Sentry. Know Your Agent, enforced by your Ledger."
+
+======================================================================
+IF SOMETHING GOES WRONG
+======================================================================
+- Claude's request fails, "Flex locked": unlock the Flex, open BSA Sentry, ask again.
+- Status bar says another tab took over: close the other BSA Sentry tabs, reload.
+- The Flex asks "Budget exceeded" at the end: the budget was left at 20. Tap "Pay once"
+  and keep going, or redo from scene 3 with 30.
+- The limit runs low: Flex menu, "+20 USDC (reset budget)", then retake.
+- Any scene fails: just redo that scene. Payments already made stay on chain.
+
+Money used: 5 top-up; coffee 3, croissant 2, wine 4.5, presale 5, Pinot Noir 4.5 = 19 USDC.
+The agent has 32.99 USDC, so no top-up is needed for this run.
