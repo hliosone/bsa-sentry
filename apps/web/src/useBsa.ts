@@ -136,16 +136,31 @@ export function useBsa() {
     return () => { b.stop(); bridge.current = null; };
   }, [account, signer]);
 
-  // The live feed, for this account only.
+  // The activity: what happened before (kept by the server), then the live feed, for this
+  // account only. History first, so a live event can never be replayed twice.
   useEffect(() => {
     if (!account) return;
-    const es = new EventSource('/events');
-    const on = (type: string, fn: (d: any) => void) => es.addEventListener(type, (e) => fn(JSON.parse((e as MessageEvent).data)));
-    on('status', (d) => { if (d.state) try { setDevice(decodeState(unhex(d.state))); } catch { /* stale */ } });
-    on('request', (d) => dispatch({ type: 'request', id: d.id, at: Date.now(), message: d.message } as FeedEvent));
-    on('answer', (d) => dispatch({ type: 'answer', id: d.id, answer: d.answer } as FeedEvent));
-    on('payment', (d) => dispatch({ type: 'payment', ...d } as FeedEvent));
-    return () => es.close();
+    let es: EventSource | null = null;
+    let closed = false;
+    const apply = (type: string, d: any, at = Date.now()) => {
+      if (type === 'request') dispatch({ type: 'request', id: d.id, at, message: d.message } as FeedEvent);
+      else if (type === 'answer') dispatch({ type: 'answer', id: d.id, answer: d.answer } as FeedEvent);
+      else if (type === 'payment') dispatch({ type: 'payment', ...d } as FeedEvent);
+    };
+    void fetch('/activity', { credentials: 'same-origin' })
+      .then((r) => (r.ok ? r.json() : []))
+      .catch(() => [])
+      .then((history: { type: string; data: any; at: number }[]) => {
+        if (closed) return;
+        for (const h of history) apply(h.type, h.data, h.at);
+        // A past refusal is history, not an alert.
+        if (history.length) dispatch({ type: 'dismiss' });
+        es = new EventSource('/events');
+        const on = (type: string, fn: (d: any) => void) => es!.addEventListener(type, (e) => fn(JSON.parse((e as MessageEvent).data)));
+        on('status', (d) => { if (d.state) try { setDevice(decodeState(unhex(d.state))); } catch { /* stale */ } });
+        for (const type of ['request', 'answer', 'payment']) on(type, (d) => apply(type, d));
+      });
+    return () => { closed = true; es?.close(); };
   }, [account]);
 
   /** A device command from the page, queued behind any payment the bridge is handling. */

@@ -61,6 +61,14 @@ CREATE TABLE IF NOT EXISTS age_sessions (
   created_at INTEGER NOT NULL,
   expires_at INTEGER NOT NULL
 );
+CREATE TABLE IF NOT EXISTS activity (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  account TEXT NOT NULL,
+  type TEXT NOT NULL,   -- request | answer | payment
+  data TEXT NOT NULL,   -- the event as the dashboard receives it
+  at INTEGER NOT NULL   -- ms
+);
+CREATE INDEX IF NOT EXISTS activity_account ON activity(account, id);
 CREATE TABLE IF NOT EXISTS revocations (
   delegation_hash TEXT PRIMARY KEY, -- EIP-712 hash of the AgentDelegation the user revoked
   account TEXT NOT NULL,            -- the 0xMAIN that signed it, and revoked it

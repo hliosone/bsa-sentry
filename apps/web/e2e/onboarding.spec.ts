@@ -129,6 +129,11 @@ test('onboarding, then the dashboard follows what the agent does', async ({ page
   await page.getByTestId('kill').click();
   await expect(page.getByText('No rules on the Flex yet.')).toBeVisible();
   await expect(page.getByTestId('statusbar')).toContainText('No rules');
+
+  // The activity survives a reload: the server kept it.
+  await page.reload();
+  await page.goto(`${web}/?fakeDevice=1#/dashboard`);
+  await expect(page.getByTestId('feed')).toContainText('400 USDC');
 });
 
 test('the OAuth consent page asks a logged-out user to sign in with Ledger', async ({ page }) => {

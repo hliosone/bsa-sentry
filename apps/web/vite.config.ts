@@ -14,7 +14,7 @@ export default defineConfig({
     port: Number(process.env.WEB_PORT ?? 5173),
     strictPort: true,
     proxy: {
-      '^/(auth|oauth|mcp|x402|events|api|age|vault|health)': { target: server, changeOrigin: false },
+      '^/(auth|oauth|mcp|x402|events|activity|topup|shops|api|age|vault|health)': { target: server, changeOrigin: false },
       '/.well-known': { target: server, changeOrigin: false },
       '/relay': { target: server.replace(/^http/, 'ws'), ws: true },
     },

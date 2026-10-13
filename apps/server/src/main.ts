@@ -19,6 +19,7 @@ import { ageVerifier } from './facilitator/age.js';
 import { privateKeyToAccount } from 'viem/accounts';
 import { shopsProxy } from './shops-proxy.js';
 import { topupRouter } from './topup.js';
+import { activityRouter, recordActivity } from './activity.js';
 
 export type BsaServerEnv = Record<string, string | undefined>;
 
@@ -77,6 +78,10 @@ export async function startBsaServer(env: BsaServerEnv = process.env, opts: { po
         requestRestore: (a) => relay.requestRestore(a),
       }));
 
+      // The same events, kept: the activity survives a reload.
+      recordActivity(db, relay.events);
+      app.use('/activity', activityRouter({ db, secret, now }));
+
       // The dashboard's live feed: status changes, requests and answers for THIS account only.
       app.get('/events', (req, res) => {
         const account = readSession(req, secret, now);
@@ -112,7 +117,7 @@ export async function startBsaServer(env: BsaServerEnv = process.env, opts: { po
       const dist = resolve(env.WEB_DIST ?? resolve(import.meta.dirname, '../../web/dist'));
       if (existsSync(dist)) {
         app.use(express.static(dist, { index: 'index.html' }));
-        app.get(/^\/(?!auth|oauth|mcp|x402|events|api|age|vault|relay|health|topup|shops|assets\/|\.well-known).*/, (_req, res) => res.sendFile(resolve(dist, 'index.html')));
+        app.get(/^\/(?!auth|oauth|mcp|x402|events|activity|api|age|vault|relay|health|topup|shops|assets\/|\.well-known).*/, (_req, res) => res.sendFile(resolve(dist, 'index.html')));
       }
     },
   });
