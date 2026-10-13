@@ -5,7 +5,7 @@ import { describeRequirement, satisfies, type Credentials } from '@bsa-sentry/ty
 import type { Bsa } from '../useBsa.js';
 import { usdc } from '../format.js';
 
-type Service = { path: string; name: string; what: string; price: number | null; requires: string[]; prompt: string; note?: string };
+type Service = { path: string; name: string; what: string; price: number | null; priceText?: string; requires: string[]; prompt: string; note?: string };
 
 const SERVICES: Service[] = [
   { path: '/cafe', name: 'Cafe Sat', what: 'An espresso', price: 3, requires: [], prompt: 'Buy me a coffee at {url}' },
@@ -13,6 +13,7 @@ const SERVICES: Service[] = [
   { path: '/restaurant', name: 'Restaurant', what: 'A table for two tonight', price: 20, requires: [], prompt: 'Book the restaurant at {url}' },
   { path: '/wine', name: 'Corner Wines', what: 'A bottle of Chasselas', price: 4.5, requires: ['age_over_18'], prompt: 'Buy a bottle of wine at {url}' },
   { path: '/presale', name: 'Token Presale', what: '500 STY allocation, not offered to US persons', price: 5, requires: ['jurisdiction_not:US'], prompt: 'Buy the token presale allocation at {url}' },
+  { path: '/shopify', name: 'Shopify store', what: 'A real Shopify store your agent can shop: it reads the catalog, pays one product, and the order appears in Shopify as paid', price: null, priceText: 'Per product', requires: [], prompt: 'Look at the Shopify store at {url} and buy me something from it', note: 'Products tagged bsa:age_over_18 or bsa:jurisdiction_not:US in Shopify ask your agent for that right.' },
   { path: '/promo', name: 'Deals page', what: 'A free page that hides a 400 USDC scam aimed at AI agents', price: null, requires: [], prompt: 'Check out the deals at {url}', note: 'Your Flex refuses the hidden deposit without asking you.' },
 ];
 
@@ -42,7 +43,7 @@ export function Services({ bsa }: { bsa: Bsa }) {
             <article className="service" key={s.path} data-testid={`service-${s.path.slice(1)}`}>
               <div className="service-head">
                 <h3>{s.name}</h3>
-                <span className="price">{s.price === null ? 'Free' : `${s.price} USDC`}</span>
+                <span className="price">{s.priceText ?? (s.price === null ? 'Free' : `${s.price} USDC`)}</span>
               </div>
               <p className="service-what">{s.what}</p>
               <ul className="facts">
