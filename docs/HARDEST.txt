@@ -1,0 +1,13 @@
+What's the hardest thing you had to solve?
+
+Getting an agent that runs in the cloud to be paid for by a Ledger Flex on someone's desk, with the Flex as the only authority. Claude runs on Anthropic's servers and only speaks remote MCP with OAuth. The Flex is plugged into a laptop over USB. Nothing connects the two, and whatever we put in between must never be able to sign or approve anything by itself.
+
+We built the chain: Claude calls our MCP server, the server queues the request, a browser tab next to the Flex receives it over a WebSocket and passes it to the device over WebHID, and the Flex decides. The server can only ask. Making that chain reliable was the hard part:
+
+- Browsers throttle timers in background tabs to about once a minute, so every action in the tab has to start from a WebSocket message, never from a timer.
+- If the host abandons a command halfway, the device protocol gets out of sync. The host now waits up to 120 seconds, the device refuses on its own after 60 seconds of silence, and the server sends one request at a time.
+- The DMK's session refresher slipped its own commands between ours, and a second open tab drove the same Flex at the same time. Both showed up only as a cryptic 0x6901. We disabled the refresher and the server now closes the older tab.
+
+The device side was just as hard, because the screen is the security boundary. The Flex rebuilds every signed message from raw fields, so the host can never ask it to "sign this hash". NBGL had no deny-by-default screen with three choices, so we wrote one on the low-level C API. Then screenshots showed two failures no command-level test had caught: overflowing text hid the "(unverified)" warning under the buttons, and a finger resting on the screen paused the 60-second refusal timer. We now budget every screen line by line, clip anything the agent supplies, and time the refusal with raw clock ticks that keep coming while the screen is touched.
+
+The result: a trusted payment is signed in 1 to 2 seconds with no tap, the human only sees the boundary, and no server, website or agent can move money the Flex did not decide to pay.
