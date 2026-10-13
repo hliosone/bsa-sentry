@@ -25,11 +25,11 @@ describe('the request', () => {
     expect(body.dcql_query.credentials[0]).toMatchObject({ format: 'dc+sd-jwt', meta: { vct_values: ['urn:eudi:pid:1'] } });
   });
 
-  it('asks for the birthdate and the nationality, nothing else, the nationality being optional', () => {
+  it('asks for the birthdate and the nationality, nothing else, as plain paths (no claim_sets)', () => {
     const cred = body.dcql_query.credentials[0]!;
-    expect(cred.claims).toEqual([{ id: 'birthdate', path: ['birthdate'] }, { id: 'nationalities', path: ['nationalities'] }]);
-    // A wallet whose PID has no nationality still answers with the birthdate alone.
-    expect(cred.claim_sets).toEqual([['birthdate', 'nationalities'], ['birthdate']]);
+    expect(cred.claims).toEqual([{ path: ['birthdate'] }, { path: ['nationalities'] }]);
+    // Procivis One answered "credential missing" to a query using claim_sets.
+    expect(cred).not.toHaveProperty('claim_sets');
     expect(JSON.stringify(body)).not.toMatch(/given_name|family_name|address|age_over/);
   });
 

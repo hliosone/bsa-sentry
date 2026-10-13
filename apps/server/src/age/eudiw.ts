@@ -25,9 +25,9 @@ export function buildPresentationRequest(o: { nonce: string; intendedUseId: stri
         format: 'dc+sd-jwt',
         meta: { vct_values: [PID_VCT] },
         // Data minimisation: the birthdate (for "18 or older") and the nationality (for the
-        // jurisdiction right), nothing else. A PID without a nationality still answers.
-        claims: [{ id: 'birthdate', path: ['birthdate'] }, { id: 'nationalities', path: ['nationalities'] }],
-        claim_sets: [['birthdate', 'nationalities'], ['birthdate']],
+        // jurisdiction right), nothing else. Plain paths, exactly like the team's working
+        // reference: Procivis answered "credential missing" to a query with claim_sets.
+        claims: [{ path: ['birthdate'] }, { path: ['nationalities'] }],
       }],
     },
     nonce: o.nonce,
