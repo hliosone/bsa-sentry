@@ -79,7 +79,8 @@ code, .mono { font-family: var(--mono); font-size: 0.86em; }
   text-decoration: none;
   white-space: nowrap;
 }
-.wordmark svg { display: block; }
+.wordmark img { display: block; height: 34px; width: auto; }
+.wordmark span { padding-left: 0.7rem; border-left: 1px solid var(--hairline); line-height: 1.6; }
 .tabs { display: flex; gap: 0.25rem; height: 100%; }
 .tabs a {
   display: flex;
@@ -334,15 +335,7 @@ input:focus { outline: none; border-color: var(--ink); box-shadow: 0 0 0 1px var
   text-align: center;
   color: #000;
 }
-.flex-screen .crest {
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  border: 2px solid #000;
-  display: grid;
-  place-items: center;
-  margin: 0.5rem 0 1rem;
-}
+.flex-screen .crest { width: 48px; height: 48px; margin: 0.5rem 0 1rem; }
 .flex-screen .app { font-size: var(--s-24); font-weight: 600; margin-bottom: 0.6rem; }
 .flex-screen .tag { font-size: var(--s-15); line-height: 1.5; }
 .flex-screen .tag + .tag { margin-top: 0.1rem; }

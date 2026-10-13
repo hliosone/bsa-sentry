@@ -19,6 +19,7 @@ export function FlatFlex({ screen }: { screen: ScreenLines }) {
   return (
     <div className="flex-device">
       <div className="flex-screen" data-testid="flex-mirror">
+        <img className="crest" src="/bsa-cube-black.png" alt="" />
         <div className="app">{screen.title}</div>
         {screen.lines.map((l) => <div className="tag" key={l}>{l}</div>)}
         <div className="quit">Quit app</div>

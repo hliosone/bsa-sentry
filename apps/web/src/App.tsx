@@ -37,14 +37,6 @@ const routeFromHash = (): Route | null => {
   return ROUTES.includes(r) ? r : null;
 };
 
-/** The Flex, as a mark: the device is the product's authority. */
-const Mark = () => (
-  <svg width="22" height="28" viewBox="0 0 22 28" aria-hidden="true">
-    <rect x="1" y="1" width="20" height="26" rx="5" fill="none" stroke="currentColor" strokeWidth="2" />
-    <rect x="5" y="5" width="12" height="14" rx="2" fill="currentColor" />
-  </svg>
-);
-
 export function App() {
   const bsa = useBsa();
   const [route, setRoute] = useState<Route | null>(routeFromHash());
@@ -82,7 +74,7 @@ export function App() {
   return (
     <div className="app">
       <header className="topbar">
-        <a className="wordmark" href="#/dashboard"><Mark /> BSA Sentry</a>
+        <a className="wordmark" href="#/dashboard" aria-label="BSA Sentry"><img src="/bsa-logo.png" alt="Blockchain Student Association" /><span>Sentry</span></a>
         {bsa.account ? (
           <nav className="tabs" aria-label="Sections">
             {TABS.map((t) => (

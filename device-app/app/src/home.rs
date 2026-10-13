@@ -24,7 +24,7 @@ use ledger_device_sdk::nbgl::NbglGlyph;
 use ledger_device_sdk::sys::*;
 
 #[cfg(any(target_os = "stax", target_os = "flex"))]
-const ICON: NbglGlyph = NbglGlyph::from_include(include_gif!("glyphs/crab_64x64.gif", NBGL));
+const ICON: NbglGlyph = NbglGlyph::from_include(include_gif!("glyphs/bsa_cube_64x64.gif", NBGL));
 #[cfg(target_os = "apex_p")]
 const ICON: NbglGlyph = NbglGlyph::from_include(include_gif!("glyphs/crab_48x48.png", NBGL));
 #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]

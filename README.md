@@ -178,8 +178,26 @@ Identity with a real EU wallet: set `EUDIW_MODE=live` in `.env`, run
 `pnpm exec tsx scripts/test-issuer.ts`, put the CA it prints in `EUDIW_EXTRA_ISSUER_CA`, and load the
 test PID into Paradym from its page.
 
-Load on a real Flex (developer mode, on the dashboard, Ledger Live closed): `make load`, enter your
-PIN, accept the "non-genuine" warning (normal for a sideloaded app).
+## Use it with your own Ledger Flex
+
+The hosted site works for anyone: each Flex gets its own account, keys and rules. All you need is
+the BSA Sentry app on your Flex.
+
+1. **Tools, once:** Docker, Google Chrome, and Ledger's loader in a Python venv:
+   `python3 -m venv ~/.venvs/ledger && ~/.venvs/ledger/bin/pip install ledgerblue`. On Linux, also
+   Ledger's udev rules: `wget -q -O - https://raw.githubusercontent.com/LedgerHQ/udev-rules/master/add_udev_rules.sh | sudo bash`.
+2. **Build:** `make device` (Ledger's app builder image, nothing to install locally).
+3. **Sideload:** plug the Flex in, unlock it, stay on its dashboard, close Ledger Live, then
+   `make load`. Allow the install on the Flex and enter your PIN. The "non-genuine" warning is
+   normal for an app that is not from the Ledger store. Reinstalling the app wipes what it
+   stored (rules, trusted merchants, rights): back up with Key Ring first, then restore.
+4. **Open BSA Sentry on the Flex**, then the website in Chrome: Connect the Flex, Log in with
+   Ledger. Nothing to configure: the app derives both accounts from your Flex's own seed,
+   your main account at `m/44'/60'/0'/0/0` (your first Ethereum account in Ledger Live, the same
+   address on Arc) and the agent at `m/44'/60'/1'/0/0`.
+5. **Fund:** get Arc testnet USDC for your main account at faucet.circle.com, then top up the
+   agent from the Dashboard (your Flex signs; our facilitator pays the gas). Set your rules, turn
+   on the agent session on the Flex, and connect your agent.
 
 ## Tests
 

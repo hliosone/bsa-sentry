@@ -37,8 +37,8 @@ path = ["44'/60'"]
 name = "BSA Sentry"
 nanosplus = { icon = "icons/crab_14x14.gif" }
 nanox = { icon = "icons/crab_14x14.gif" }
-stax = { icon = "icons/crab_32x32.gif" }
-flex = { icon = "icons/crab_40x40.gif" }
+stax = { icon = "icons/bsa_cube_32x32.gif" }
+flex = { icon = "icons/bsa_cube_40x40.gif" }
 apex_p = { icon = "icons/crab_32x32.png" }
 
 

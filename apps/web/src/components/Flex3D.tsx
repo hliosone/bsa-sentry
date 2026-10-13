@@ -11,21 +11,16 @@ export type ScreenLines = { title: string; lines: string[] };
 const W = 480;
 const H = 600; // the Flex screen is 480 x 600
 
+/** The app's icon on the device: the BSA cube (device-app/app/glyphs/bsa_cube_64x64.gif). */
+const cube = Object.assign(new Image(), { src: '/bsa-cube-black.png' });
+
 /** Paints the home screen the way the device draws it: E Ink paper, black Inter, a Quit bar. */
 function paint(ctx: CanvasRenderingContext2D, s: ScreenLines) {
   ctx.fillStyle = '#f4f4ef';
   ctx.fillRect(0, 0, W, H);
   ctx.fillStyle = '#000';
   ctx.strokeStyle = '#000';
-  // The app's crest: a shield in a circle.
-  ctx.lineWidth = 4;
-  ctx.beginPath();
-  ctx.arc(W / 2, 150, 34, 0, Math.PI * 2);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.moveTo(W / 2, 128); ctx.lineTo(W / 2 - 16, 135); ctx.lineTo(W / 2 - 16, 152);
-  ctx.quadraticCurveTo(W / 2 - 14, 168, W / 2, 174); ctx.quadraticCurveTo(W / 2 + 14, 168, W / 2 + 16, 152);
-  ctx.lineTo(W / 2 + 16, 135); ctx.closePath(); ctx.lineWidth = 3; ctx.stroke();
+  if (cube.complete && cube.naturalWidth) ctx.drawImage(cube, W / 2 - 36, 114, 72, 72);
   ctx.textAlign = 'center';
   ctx.font = '600 38px Inter, system-ui, sans-serif';
   ctx.fillText(s.title, W / 2, 250);
@@ -53,6 +48,7 @@ function Device({ screen, still }: { screen: ScreenLines; still: boolean }) {
   useEffect(() => {
     const draw = () => { paint(canvas.getContext('2d')!, screen); texture.needsUpdate = true; };
     draw();
+    if (!cube.complete) cube.addEventListener('load', draw, { once: true });
     // Inter may still be loading on first paint: redraw once the fonts are in.
     void document.fonts?.ready.then(draw);
   }, [canvas, texture, screen]);
