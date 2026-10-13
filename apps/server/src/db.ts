@@ -61,6 +61,11 @@ CREATE TABLE IF NOT EXISTS age_sessions (
   created_at INTEGER NOT NULL,
   expires_at INTEGER NOT NULL
 );
+CREATE TABLE IF NOT EXISTS revocations (
+  delegation_hash TEXT PRIMARY KEY, -- EIP-712 hash of the AgentDelegation the user revoked
+  account TEXT NOT NULL,            -- the 0xMAIN that signed it, and revoked it
+  revoked_at INTEGER NOT NULL
+);
 CREATE TABLE IF NOT EXISTS vault (
   account TEXT PRIMARY KEY,
   ciphertext TEXT NOT NULL,

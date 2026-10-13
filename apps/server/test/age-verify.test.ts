@@ -8,9 +8,9 @@ import { describe, expect, it } from 'vitest';
 import { hashTypedData, type Hex } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import {
-  CLAIM_AGE_OVER_18, EIP712_TYPES, sentryDomain, splitCredentials, toWireSignature, verifierDomain, type Credentials,
+  joinCredentials, CLAIM_AGE_OVER_18, EIP712_TYPES, sentryDomain, splitCredentials, toWireSignature, verifierDomain, type Credentials,
 } from '@bsa-sentry/types';
-import { ageVerifier } from '../src/facilitator/age.js';
+import { ageVerifier, delegationHash } from '../src/facilitator/age.js';
 
 const CHAIN = 5042002;
 const NOW = 1_760_000_000;
@@ -147,5 +147,16 @@ describe('nationality rights', () => {
   it('refuses a delegation claiming more than the attestation says', async () => {
     const inflated = { attestation: { claim: 'age_over_18' }, delegation: { claims: ['age_over_18', 'nationality:FR'] } };
     expect(await verify(await proof(inflated), payer, ['nationality_not:US'])).toEqual({ ok: false, reason: 'ATTESTATION_WRONG_CLAIM' });
+  });
+});
+
+describe('revocation', () => {
+  it('refuses a delegation the user revoked, even though everything else verifies', async () => {
+    const p = await proof();
+    const revoked = new Set<string>();
+    const withList = ageVerifier({ chainId: CHAIN, issuer: issuer.address, now: () => NOW, isRevoked: (h) => revoked.has(h) });
+    expect(await withList(p, payer)).toEqual({ ok: true });
+    revoked.add(delegationHash(CHAIN, joinCredentials(p, BigInt(CHAIN)).delegation));
+    expect(await withList(p, payer)).toEqual({ ok: false, reason: 'DELEGATION_REVOKED' });
   });
 });

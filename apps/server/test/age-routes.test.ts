@@ -5,10 +5,10 @@ import express from 'express';
 import request from 'supertest';
 import { privateKeyToAccount } from 'viem/accounts';
 import { keccak256, recoverTypedDataAddress, stringToHex, type Hex } from 'viem';
-import { EIP712_TYPES, sentryDomain, toViemSignature, toWireSignature, verifierDomain } from '@bsa-sentry/types';
+import { EIP712_TYPES, sentryDomain, splitCredentials, toViemSignature, toWireSignature, verifierDomain } from '@bsa-sentry/types';
 import { openDb } from '../src/db.js';
 import { signSession, SESSION_COOKIE } from '../src/auth.js';
-import { ageRouter } from '../src/age/routes.js';
+import { ageRouter, isRevoked } from '../src/age/routes.js';
 
 const CHAIN = 5042002;
 const SECRET = 'k'.repeat(64);
@@ -174,5 +174,37 @@ describe('live mode', () => {
     await request(app).get(`/age/sessions/${s.sessionId}`);
     const dump = JSON.stringify(db.prepare('SELECT * FROM age_sessions').all());
     expect(dump).not.toMatch(/eyJ|SECRET|given_name|vp_token/);
+  });
+});
+
+describe('revoking the rights granted to an agent', () => {
+  async function parts(signer = user) {
+    const attestation = { subject: user.address.toLowerCase() as Hex, claim: 'age_over_18,nationality:FR', issuedAt: 1n, expiresAt: 2n ** 40n, evidence: `0x${'e1'.repeat(32)}` as Hex };
+    const delegation = {
+      agent: `0x${'aa'.repeat(20)}` as Hex, agentName: 'Claude', attestation: `0x${'ab'.repeat(32)}` as Hex,
+      claims: ['age_over_18', 'nationality:FR'], expiresAt: 2n ** 40n, nonce: `0x${'d1'.repeat(32)}` as Hex,
+    };
+    const attestationSig = toWireSignature(await user.signTypedData({ domain: verifierDomain(CHAIN), types: { AgeAttestation: EIP712_TYPES.AgeAttestation }, primaryType: 'AgeAttestation', message: attestation }));
+    const delegationSig = toWireSignature(await signer.signTypedData({ domain: sentryDomain(CHAIN), types: { AgentDelegation: EIP712_TYPES.AgentDelegation }, primaryType: 'AgentDelegation', message: delegation }));
+    return splitCredentials({ chainId: BigInt(CHAIN), attestation, attestationSig, delegation, delegationSig });
+  }
+
+  it('needs a Ledger login', async () => {
+    const { app } = setup();
+    expect((await request(app).post('/age/revoke').send(await parts())).status).toBe(401);
+  });
+
+  it('records the revocation of a delegation the logged-in user signed', async () => {
+    const { app, db } = setup();
+    const r = await request(app).post('/age/revoke').set('Cookie', cookie()).send(await parts());
+    expect(r.status).toBe(200);
+    expect(r.body.delegationHash).toMatch(/^0x[0-9a-f]{64}$/);
+    expect(isRevoked(db, r.body.delegationHash)).toBe(true);
+    expect((await request(app).get(`/age/revoked/${r.body.delegationHash}`)).body).toEqual({ revoked: true });
+  });
+
+  it('refuses to revoke someone else\'s delegation', async () => {
+    const { app } = setup();
+    expect((await request(app).post('/age/revoke').set('Cookie', cookie()).send(await parts(other))).status).toBe(403);
   });
 });

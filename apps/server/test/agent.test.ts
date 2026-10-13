@@ -244,6 +244,11 @@ describe('refusals and failures, in words the agent can repeat', () => {
     expect(r.kind === 'error' && r.message).toMatch(/Agent identity/);
   });
 
+  it('says plainly when the user revoked the agent\'s rights', async () => {
+    const r = await x402Fetch('alice', { url: 'http://merchants/wine' }, deps({}, merchant({ rejectReason: 'DELEGATION_REVOKED' })));
+    expect(r.kind === 'error' && r.message).toMatch(/revoked/i);
+  });
+
   it('reports an unreachable merchant', async () => {
     const d = deps({ fetch: vi.fn(async () => { throw new Error('ECONNREFUSED'); }) as any });
     const r = await x402Fetch('alice', { url: 'http://merchants/cafe' }, d);

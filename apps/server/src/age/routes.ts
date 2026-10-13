@@ -12,12 +12,13 @@ import { Router, json } from 'express';
 import { getAddress, isAddress, keccak256, recoverTypedDataAddress, stringToHex, type Hex } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import {
-  CLAIM_AGE_OVER_18, EIP712_TYPES, joinClaims, nationalityClaim, sentryDomain, toViemSignature, toWireSignature, verifierDomain,
+  CLAIM_AGE_OVER_18, EIP712_TYPES, joinClaims, joinCredentials, nationalityClaim, sentryDomain, toViemSignature, toWireSignature, verifierDomain,
 } from '@bsa-sentry/types';
 import type { Db } from '../db.js';
 import { readSession } from '../auth.js';
 import { buildPresentationRequest, createTransaction, eudiTestCas, identityClaims, pollTransaction, qrUrl, readIdentity } from './eudiw.js';
 import { safeRouter } from '../safe-router.js';
+import { delegationHash } from '../facilitator/age.js';
 
 const BIND_WINDOW_S = 15 * 60;
 const ATTESTATION_TTL_S = 30 * 86400;
@@ -42,6 +43,11 @@ type Row = {
   status: string; evidence: string | null; bound_to: string | null; created_at: number; expires_at: number;
 };
 
+/** Whether the user revoked this delegation (by its EIP-712 hash). */
+export function isRevoked(db: Db, delegationHashHex: string): boolean {
+  return !!db.prepare('SELECT 1 FROM revocations WHERE delegation_hash = ?').get(delegationHashHex.toLowerCase());
+}
+
 export function ageRouter(o: AgeOptions) {
   const now = o.now ?? (() => Math.floor(Date.now() / 1000));
   const fetchImpl = o.fetch ?? fetch;
@@ -49,6 +55,30 @@ export function ageRouter(o: AgeOptions) {
   const router = safeRouter();
   router.use(json({ limit: '8kb' }));
   const get = (id: string) => o.db.prepare('SELECT * FROM age_sessions WHERE id = ?').get(id) as Row | undefined;
+
+  // Revoking the rights granted to an agent: the browser sends the credentials read from the
+  // Flex; only the 0xMAIN that signed the delegation (logged in with its Ledger) can revoke it.
+  // From then on the facilitator refuses it. Expiry still applies to everything else.
+  router.post('/revoke', async (req, res) => {
+    const account = readSession(req, o.secret, now);
+    if (!account) return res.status(401).json({ error: 'log in with Ledger first' });
+    let c;
+    try {
+      c = joinCredentials(req.body, BigInt(o.chainId));
+    } catch {
+      return res.status(400).json({ error: 'malformed credentials' });
+    }
+    const signer = await recoverTypedDataAddress({
+      domain: sentryDomain(o.chainId), types: { AgentDelegation: EIP712_TYPES.AgentDelegation }, primaryType: 'AgentDelegation',
+      message: c.delegation, signature: toViemSignature(c.delegationSig),
+    }).catch(() => null);
+    if (!signer || signer.toLowerCase() !== account.toLowerCase()) return res.status(403).json({ error: 'only the account that granted these rights can revoke them' });
+    const hash = delegationHash(o.chainId, c.delegation);
+    o.db.prepare('INSERT OR IGNORE INTO revocations (delegation_hash, account, revoked_at) VALUES (?, ?, ?)').run(hash, account.toLowerCase(), now());
+    res.json({ revoked: true, delegationHash: hash });
+  });
+
+  router.get('/revoked/:hash', (req, res) => res.json({ revoked: isRevoked(o.db, String(req.params.hash)) }));
 
   router.post('/sessions', async (req, res) => {
     const account = readSession(req, o.secret, now);

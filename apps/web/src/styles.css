@@ -411,3 +411,5 @@ input:focus { outline: none; border-color: var(--ink); box-shadow: 0 0 0 1px var
 .right span:not(.right-mark) { display: block; font-size: var(--s-13); color: var(--graphite); }
 .rights-foot { grid-column: 1 / -1; font-size: var(--s-13); margin: 0.25rem 0 0; }
 .choose { cursor: pointer; }
+.rights.revoked .right { opacity: 0.45; }
+.rights-foot button { margin-left: 0.5rem; vertical-align: baseline; }

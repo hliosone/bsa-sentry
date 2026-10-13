@@ -13,7 +13,7 @@ import { chainConfig } from './chain.js';
 import { openDb } from './db.js';
 import { mcpRouter } from './mcp.js';
 import { oauthRouter } from './oauth.js';
-import { ageRouter } from './age/routes.js';
+import { ageRouter, isRevoked } from './age/routes.js';
 import { vaultRouter } from './vault.js';
 import { ageVerifier } from './facilitator/age.js';
 import { privateKeyToAccount } from 'viem/accounts';
@@ -49,7 +49,7 @@ export async function startBsaServer(env: BsaServerEnv = process.env, opts: { po
     chain,
     facilitatorKey: need('FACILITATOR_PRIVATE_KEY') as Hex,
     // The facilitator trusts exactly one attestation issuer: ours.
-    verifyAge: ageVerifier({ chainId: chain.chainId, issuer: privateKeyToAccount(issuerKey).address }),
+    verifyAge: ageVerifier({ chainId: chain.chainId, issuer: privateKeyToAccount(issuerKey).address, isRevoked: (h) => isRevoked(db, h) }),
     authenticateSocket: (req) => readSession(req, secret, now),
     webOrigin: env.WEB_ORIGIN,
     log,

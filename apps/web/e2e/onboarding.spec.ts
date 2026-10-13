@@ -171,6 +171,12 @@ test('the 18+ badge: wallet (mock) -> Bind -> delegation -> the facilitator acce
   expect(wine.kind).toBe('error');
   expect(wine.kind === 'error' && wine.message).toMatch(/insufficient_funds/);
   expect(wine.kind === 'error' && wine.message).not.toMatch(/AGE_PROOF|DELEGATION_|ATTESTATION_|SUBJECT_MISMATCH/);
+
+  // The user revokes the rights: from then on the facilitator refuses them.
+  await page.getByTestId('revoke').click();
+  await expect(page.getByTestId('rights-revoked')).toBeVisible();
+  const again = await bsa.agent.fetch(account, { url: `${shop}/wine` });
+  expect(again.kind === 'error' && again.message).toMatch(/DELEGATION_REVOKED/);
 });
 
 test('Key Ring backup, a wiped Flex, and a one-tap restore', async ({ page }) => {

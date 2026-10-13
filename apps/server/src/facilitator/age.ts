@@ -15,7 +15,18 @@ import {
 } from '@bsa-sentry/types';
 import type { AgeVerdict } from './facilitator.js';
 
-export type AgeVerifierOptions = { chainId: number; issuer: Hex; now?: () => number };
+export type AgeVerifierOptions = {
+  chainId: number; issuer: Hex; now?: () => number;
+  /** The user's revocations, by delegation hash: a revoked delegation proves nothing. */
+  isRevoked?: (delegationHash: string) => boolean;
+};
+
+/** The EIP-712 hash that identifies one delegation, for revocation. */
+export function delegationHash(chainId: number, delegation: Credentials['delegation']): string {
+  return hashTypedData({
+    domain: sentryDomain(chainId), types: { AgentDelegation: EIP712_TYPES.AgentDelegation }, primaryType: 'AgentDelegation', message: delegation,
+  }).toLowerCase();
+}
 
 const isParts = (p: unknown): p is CredentialParts =>
   !!p && typeof p === 'object'
@@ -52,6 +63,8 @@ export function ageVerifier(opts: AgeVerifierOptions) {
       return fail('DELEGATION_INVALID_SIGNATURE');
     }
 
+    // 1b. Not revoked by the user since.
+    if (opts.isRevoked?.(delegationHash(opts.chainId, c.delegation))) return fail('DELEGATION_REVOKED');
     // 2. The delegated agent must be the one paying.
     if (getAddress(c.delegation.agent) !== getAddress(payer)) return fail('DELEGATION_WRONG_AGENT');
     // 3. Still valid.

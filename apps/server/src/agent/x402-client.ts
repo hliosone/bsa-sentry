@@ -233,6 +233,9 @@ export async function x402Fetch(
 /** A next step the agent can pass on, for the facilitator reasons a user can act on. */
 function hintForReason(reason: string | undefined, requires: string[] = []): string {
   if (!reason) return '';
+  if (reason === 'DELEGATION_REVOKED') {
+    return '. The user revoked the identity rights this agent held; they can grant new ones on the BSA Sentry website (Agent identity).';
+  }
   if (reason === 'AGE_PROOF_REQUIRED' || reason.startsWith('DELEGATION_') || reason.startsWith('ATTESTATION_') || reason === 'SUBJECT_MISMATCH') {
     const what = requires.length ? requires.map(describeRequirement).join(' and ') : 'a verified credential';
     return `. This merchant requires proof of: ${what}. The user can add it on the BSA Sentry website (Agent identity, then authorize the agent on the Flex).`;

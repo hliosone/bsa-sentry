@@ -4,7 +4,7 @@
 import { useEffect, useRef, useState } from 'react';
 import QRCode from 'qrcode';
 import { hashTypedData, type Hex } from 'viem';
-import { attestedClaims, EIP712_TYPES, verifierDomain, type AgeAttestation, type Credentials } from '@bsa-sentry/types';
+import { attestedClaims, EIP712_TYPES, sentryDomain, splitCredentials, verifierDomain, type AgeAttestation, type Credentials } from '@bsa-sentry/types';
 import type { Bsa } from '../useBsa.js';
 
 type Session = { sessionId: Hex; mode: 'mock' | 'live'; qr: string; bind: { verifier: string; session: Hex; expiresAt: number } };
@@ -34,6 +34,7 @@ export function Badge({ bsa }: { bsa: Bsa }) {
   const [found, setFound] = useState<string[]>([]);
   const [chosen, setChosen] = useState<string[]>([]);
   const [held, setHeld] = useState<Credentials | null>(null);
+  const [revoked, setRevoked] = useState(false);
   // Kept in memory between the two device taps only; it ends up on the Flex, nowhere else.
   const attestation = useRef<{ attestation: AgeAttestation; attestationSig: Hex } | null>(null);
 
@@ -43,6 +44,26 @@ export function Badge({ bsa }: { bsa: Bsa }) {
     void bsa.onDevice((s) => s.getCredentials()).then((c) => setHeld((c as Credentials) ?? null)).catch(() => setHeld(null));
   };
   useEffect(readHeld, [bsa.signer, bsa.device?.hasCredentials]);
+
+  // Whether the rights on the Flex were revoked: checked against the server's revocation list.
+  const heldHash = held && bsa.config ? hashTypedData({
+    domain: sentryDomain(bsa.config.chainId), types: { AgentDelegation: EIP712_TYPES.AgentDelegation }, primaryType: 'AgentDelegation', message: held.delegation,
+  }).toLowerCase() : null;
+  useEffect(() => {
+    if (!heldHash) { setRevoked(false); return; }
+    void fetch(`/age/revoked/${heldHash}`).then((r) => r.json()).then((b) => setRevoked(!!b.revoked)).catch(() => undefined);
+  }, [heldHash]);
+
+  const revoke = () => bsa.run('Revoking the rights your agent holds…', async () => {
+    if (!held) return;
+    const r = await fetch('/age/revoke', {
+      method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(splitCredentials(held)),
+    });
+    const b = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(b.error ?? 'the revocation was refused');
+    setRevoked(true);
+  });
 
   const start = async () => {
     // Any failure is shown: a click that silently does nothing is the worst outcome here.
@@ -125,7 +146,7 @@ export function Badge({ bsa }: { bsa: Bsa }) {
         <p>Let your agent prove facts about you, and nothing else. One scan with your EU identity wallet, then your Flex grants the rights you choose to the agent. Merchants check them without learning who you are.</p>
 
         {held ? (
-          <div className="rights" data-testid="rights-held">
+          <div className={`rights ${revoked ? 'revoked' : ''}`} data-testid="rights-held">
             {held.delegation.claims.map((c) => {
               const r = describeRight(c);
               return (
@@ -135,9 +156,14 @@ export function Badge({ bsa }: { bsa: Bsa }) {
                 </div>
               );
             })}
+            {revoked ? (
+              <p className="err rights-foot" data-testid="rights-revoked">Revoked. Merchants refuse these rights from now on. Grant new ones below if you want.</p>
+            ) : (
             <p className="muted rights-foot">
               Granted to {held.delegation.agentName} ({held.delegation.agent.slice(0, 6)}…{held.delegation.agent.slice(-4)}) until {new Date(Number(held.delegation.expiresAt) * 1000).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}. Stored on your Flex.
+              {' '}<button className="danger small" onClick={() => void revoke()} data-testid="revoke">Revoke these rights</button>
             </p>
+            )}
           </div>
         ) : stage === 'start' && <p className="muted">No rights granted yet.</p>}
       </section>
