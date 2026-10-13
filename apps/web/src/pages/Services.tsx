@@ -12,7 +12,7 @@ const SERVICES: Service[] = [
   { path: '/bakery', name: 'Bakery', what: 'A croissant', price: 2, requires: [], prompt: 'Get me a croissant at {url}' },
   { path: '/restaurant', name: 'Restaurant', what: 'A table for two tonight', price: 20, requires: [], prompt: 'Book the restaurant at {url}' },
   { path: '/wine', name: 'Corner Wines', what: 'A bottle of Chasselas', price: 4.5, requires: ['age_over_18'], prompt: 'Buy a bottle of wine at {url}' },
-  { path: '/presale', name: 'Token Presale', what: '500 STY allocation, not offered to US persons', price: 5, requires: ['nationality_not:US'], prompt: 'Buy the token presale allocation at {url}' },
+  { path: '/presale', name: 'Token Presale', what: '500 STY allocation, not offered to US persons', price: 5, requires: ['jurisdiction_not:US'], prompt: 'Buy the token presale allocation at {url}' },
   { path: '/promo', name: 'Deals page', what: 'A free page that hides a 400 USDC scam aimed at AI agents', price: null, requires: [], prompt: 'Check out the deals at {url}', note: 'Your Flex refuses the hidden deposit without asking you.' },
 ];
 

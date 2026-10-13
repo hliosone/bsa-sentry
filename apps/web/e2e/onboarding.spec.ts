@@ -103,7 +103,7 @@ test('onboarding, then the dashboard follows what the agent does', async ({ page
   await expect(page.getByRole('heading', { name: 'Agent wallet' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Spending limit' })).toBeVisible();
   await page.goto(`${web}/?fakeDevice=1#/services`);
-  await expect(page.getByTestId('service-presale')).toContainText('not a US national');
+  await expect(page.getByTestId('service-presale')).toContainText('not a US person');
   await shot(page, '13-services');
   await page.goto(`${web}/?fakeDevice=1#/dashboard`);
   const account = (await page.evaluate(() => fetch('/auth/me').then((r) => r.json()))).account as string;

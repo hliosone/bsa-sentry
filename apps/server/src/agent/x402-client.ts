@@ -162,7 +162,7 @@ export async function x402Fetch(
     validBefore: BigInt(deps.now() + validity),
     nonce: deps.randomNonce?.() ?? (`0x${randomBytes(32).toString('hex')}` as Hex),
   };
-  // Any requirement (18+, a nationality) is proven with the credentials stored on the Flex.
+  // Any requirement (18+, a jurisdiction) is proven with the credentials stored on the Flex.
   const requires = Array.isArray(offer.extra?.requires) ? offer.extra!.requires!.filter((r): r is string => typeof r === 'string') : [];
   const wantCredentials = requires.length > 0;
 

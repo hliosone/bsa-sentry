@@ -114,7 +114,7 @@ export async function verifyPayment(body: any, deps: FacilitatorDeps): Promise<V
   }
   if (getAddress(recovered) !== auth.from) return fail('invalid_signature', undefined, auth.from);
 
-  // Rights required by the merchant (18+, a nationality) -> a proof must be attached and must
+  // Rights required by the merchant (18+, a jurisdiction) -> a proof must be attached and must
   // verify against every requirement. Fail closed.
   const requires: string[] = Array.isArray(req.extra?.requires) ? req.extra.requires.filter((r: unknown): r is string => typeof r === 'string') : [];
   if (requires.length > 0) {

@@ -12,7 +12,7 @@ import { Router, json } from 'express';
 import { getAddress, isAddress, keccak256, recoverTypedDataAddress, stringToHex, type Hex } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import {
-  CLAIM_AGE_OVER_18, EIP712_TYPES, joinClaims, joinCredentials, nationalityClaim, sentryDomain, toViemSignature, toWireSignature, verifierDomain,
+  CLAIM_AGE_OVER_18, EIP712_TYPES, joinClaims, joinCredentials, jurisdictionClaim, sentryDomain, toViemSignature, toWireSignature, verifierDomain,
 } from '@bsa-sentry/types';
 import type { Db } from '../db.js';
 import { readSession } from '../auth.js';
@@ -36,6 +36,8 @@ export type AgeOptions = {
   fetch?: typeof fetch;
   /** The PEM chain to trust for Procivis' trial issuer. Defaults to fetching the EUDI test CAs. */
   issuerChain?: () => Promise<string>;
+  /** The PID field read as the jurisdiction (default `issuing_country`), e.g. ['address', 'country']. */
+  countryPath?: string[];
 };
 
 type Row = {
@@ -99,6 +101,7 @@ export function ageRouter(o: AgeOptions) {
         const chain = await (o.issuerChain ?? (() => eudiTestCas(fetchImpl)))().catch(() => '');
         const t = await createTransaction(fetchImpl, o.backend, buildPresentationRequest({
           nonce: randomBytes(16).toString('base64url'), intendedUseId: o.intendedUseId, ...(chain ? { issuerChain: chain } : {}),
+          ...(o.countryPath ? { countryPath: o.countryPath } : {}),
         }));
         transactionId = t.transactionId;
         qr = qrUrl(o.qrScheme, t);
@@ -113,12 +116,12 @@ export function ageRouter(o: AgeOptions) {
   });
 
   // The rights a verified session proves. Re-read from the EU verifier each time rather than
-  // stored: the nationality only ever exists in the signed attestation on the user's Flex.
+  // stored: the jurisdiction only ever exists in the signed attestation on the user's Flex.
   const claimsFor = async (row: { mode: string; transaction_id: string | null }): Promise<string[]> => {
-    if (row.mode === 'mock') return [CLAIM_AGE_OVER_18, nationalityClaim('FR')];
+    if (row.mode === 'mock') return [CLAIM_AGE_OVER_18, jurisdictionClaim('FR')];
     try {
       const r = await pollTransaction(fetchImpl, o.backend, row.transaction_id!);
-      return r.state === 'verified' ? identityClaims(readIdentity(r.vpToken, now())) : [];
+      return r.state === 'verified' ? identityClaims(readIdentity(r.vpToken, now(), o.countryPath)) : [];
     } catch {
       return [];
     }
@@ -135,7 +138,7 @@ export function ageRouter(o: AgeOptions) {
         try {
           const r = await pollTransaction(fetchImpl, o.backend, row.transaction_id!);
           // The birthdate is read for one comparison and dropped here; it is never stored or logged.
-          if (r.state === 'verified') status = identityClaims(readIdentity(r.vpToken, now())).length > 0 ? 'verified' : 'not_over_18';
+          if (r.state === 'verified') status = identityClaims(readIdentity(r.vpToken, now(), o.countryPath)).length > 0 ? 'verified' : 'not_over_18';
           else if (r.state !== 'pending') status = r.state;
         } catch {
           /* backend hiccup: stay pending, the page polls again */

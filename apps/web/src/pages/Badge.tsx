@@ -1,4 +1,4 @@
-// Agent identity: one EU wallet scan -> the rights it proves (18+, a nationality) -> Bind on the
+// Agent identity: one EU wallet scan -> the rights it proves (18+, a jurisdiction) -> Bind on the
 // Flex -> our attestation -> the user picks the rights to grant -> delegation on the Flex ->
 // stored on the Flex. Nothing about the person but those rights ever reaches this page.
 import { useEffect, useRef, useState } from 'react';
@@ -18,9 +18,9 @@ const flag = (code: string) => String.fromCodePoint(...[...code.toUpperCase()].m
 /** A right in the user's words. */
 export function describeRight(claim: string): { title: string; detail: string; mark: string } {
   if (claim === 'age_over_18') return { title: '18 or older', detail: 'Proves adulthood, not the date of birth.', mark: '18+' };
-  if (claim.startsWith('nationality:')) {
-    const cc = claim.slice('nationality:'.length);
-    return { title: `Nationality: ${regionName(cc)}`, detail: 'Proves a nationality, not who you are.', mark: flag(cc) };
+  if (claim.startsWith('jurisdiction:')) {
+    const cc = claim.slice('jurisdiction:'.length);
+    return { title: `Jurisdiction: ${regionName(cc)}`, detail: 'The country that issued your ID, not who you are.', mark: flag(cc) };
   }
   return { title: claim, detail: '', mark: '•' };
 }
@@ -172,7 +172,7 @@ export function Badge({ bsa }: { bsa: Bsa }) {
         <h2>{held ? 'Renew or change the rights' : 'Verify with your EU wallet'}</h2>
         {stage === 'start' && (
           <>
-            <p>We ask your wallet for two things only: your date of birth (for "18 or older") and your nationality. Neither is stored: they become signed rights on your Flex.</p>
+            <p>We ask your wallet for two things only: your date of birth (for "18 or older") and the country that issued your ID (your jurisdiction). Neither is stored: they become signed rights on your Flex.</p>
             <button className="primary" disabled={!bsa.account} onClick={() => void start()} data-testid="badge-start">Scan with my EU wallet</button>
           </>
         )}

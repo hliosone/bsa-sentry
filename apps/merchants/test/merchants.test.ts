@@ -64,7 +64,7 @@ describe('prices and payees', () => {
     const r = await required('/presale');
     expect(r.accepts[0]).toMatchObject({ amount: '5000000' });
     expect(r.accepts[0].payTo.toLowerCase()).toBe(payTo.presale);
-    expect(r.accepts[0].extra.requires).toEqual(['nationality_not:US']);
+    expect(r.accepts[0].extra.requires).toEqual(['jurisdiction_not:US']);
   });
 
   it('the restaurant is 20 USDC, above the demo auto limit', async () => {

@@ -121,7 +121,7 @@ export function Dashboard({ bsa }: { bsa: Bsa }) {
               })}
             </div>
           ) : <p className="sub">Your agent proves nothing about you yet.</p>}
-          <a className="tile-link" href="#/badge">{held ? 'Manage rights' : 'Grant 18+ or nationality'}</a>
+          <a className="tile-link" href="#/badge">{held ? 'Manage rights' : 'Grant 18+ or jurisdiction'}</a>
         </section>
 
         <section className="tile main">

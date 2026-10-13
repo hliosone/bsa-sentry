@@ -67,7 +67,7 @@ describe('mock mode', () => {
     const { app } = setup();
     const s = (await request(app).post('/age/sessions').set('Cookie', cookie())).body;
     const st = await request(app).get(`/age/sessions/${s.sessionId}`);
-    expect(st.body).toEqual({ sessionId: s.sessionId, status: 'verified', mode: 'mock', claims: ['age_over_18', 'nationality:FR'] });
+    expect(st.body).toEqual({ sessionId: s.sessionId, status: 'verified', mode: 'mock', claims: ['age_over_18', 'jurisdiction:FR'] });
   });
 
   it('binds once, and returns an AgeAttestation signed by our issuer for this 0xMAIN', async () => {
@@ -77,7 +77,7 @@ describe('mock mode', () => {
     const r = await request(app).post(`/age/sessions/${s.sessionId}/bind`).send({ address: user.address, signature: await signBind(s.bind) });
     expect(r.status).toBe(200);
     const a = r.body.attestation;
-    expect(a).toMatchObject({ subject: user.address.toLowerCase(), claim: 'age_over_18,nationality:FR', issuedAt: String(clock.t), expiresAt: String(clock.t + 30 * 86400) });
+    expect(a).toMatchObject({ subject: user.address.toLowerCase(), claim: 'age_over_18,jurisdiction:FR', issuedAt: String(clock.t), expiresAt: String(clock.t + 30 * 86400) });
     expect(a.evidence).toBe(keccak256(stringToHex(`mock-${s.sessionId}`)));
     const signer = await recoverTypedDataAddress({
       domain: verifierDomain(CHAIN), types: { AgeAttestation: EIP712_TYPES.AgeAttestation }, primaryType: 'AgeAttestation',
@@ -179,10 +179,10 @@ describe('live mode', () => {
 
 describe('revoking the rights granted to an agent', () => {
   async function parts(signer = user) {
-    const attestation = { subject: user.address.toLowerCase() as Hex, claim: 'age_over_18,nationality:FR', issuedAt: 1n, expiresAt: 2n ** 40n, evidence: `0x${'e1'.repeat(32)}` as Hex };
+    const attestation = { subject: user.address.toLowerCase() as Hex, claim: 'age_over_18,jurisdiction:FR', issuedAt: 1n, expiresAt: 2n ** 40n, evidence: `0x${'e1'.repeat(32)}` as Hex };
     const delegation = {
       agent: `0x${'aa'.repeat(20)}` as Hex, agentName: 'Claude', attestation: `0x${'ab'.repeat(32)}` as Hex,
-      claims: ['age_over_18', 'nationality:FR'], expiresAt: 2n ** 40n, nonce: `0x${'d1'.repeat(32)}` as Hex,
+      claims: ['age_over_18', 'jurisdiction:FR'], expiresAt: 2n ** 40n, nonce: `0x${'d1'.repeat(32)}` as Hex,
     };
     const attestationSig = toWireSignature(await user.signTypedData({ domain: verifierDomain(CHAIN), types: { AgeAttestation: EIP712_TYPES.AgeAttestation }, primaryType: 'AgeAttestation', message: attestation }));
     const delegationSig = toWireSignature(await signer.signTypedData({ domain: sentryDomain(CHAIN), types: { AgentDelegation: EIP712_TYPES.AgentDelegation }, primaryType: 'AgentDelegation', message: delegation }));

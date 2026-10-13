@@ -7,7 +7,7 @@
 // Signatures are not re-checked here: a "Wallet response posted" transaction has already been
 // verified by the backend (issuer signature, KB-JWT, nonce).
 import { createHash } from 'node:crypto';
-import { CLAIM_AGE_OVER_18, nationalityClaim } from '@bsa-sentry/types';
+import { CLAIM_AGE_OVER_18, jurisdictionClaim } from '@bsa-sentry/types';
 
 export const PID_VCT = 'urn:eudi:pid:1';
 
@@ -17,17 +17,21 @@ export const EUDI_TEST_CAS = [
   'https://preprod.pki.eudiw.dev/aia/PIDIssuerCA02-EU.cacert.pem',
 ];
 
-export function buildPresentationRequest(o: { nonce: string; intendedUseId: string; issuerChain?: string }) {
+/** The PID field read as the person's jurisdiction: the country that issued the credential. */
+export const DEFAULT_COUNTRY_PATH = ['issuing_country'];
+
+export function buildPresentationRequest(o: { nonce: string; intendedUseId: string; issuerChain?: string; countryPath?: string[] }) {
   return {
     dcql_query: {
       credentials: [{
         id: 'pid',
         format: 'dc+sd-jwt',
         meta: { vct_values: [PID_VCT] },
-        // Data minimisation: the birthdate (for "18 or older") and the nationality (for the
-        // jurisdiction right), nothing else. Plain paths, exactly like the team's working
-        // reference: Procivis answered "credential missing" to a query with claim_sets.
-        claims: [{ path: ['birthdate'] }, { path: ['nationalities'] }],
+        // Data minimisation: the birthdate (for "18 or older") and the country of the
+        // credential (for the jurisdiction right), nothing else. Plain paths, exactly like the
+        // team's working reference: Procivis answered "credential missing" to claim_sets, and
+        // its test PID has no `nationalities`.
+        claims: [{ path: ['birthdate'] }, { path: o.countryPath ?? DEFAULT_COUNTRY_PATH }],
       }],
     },
     nonce: o.nonce,
@@ -87,34 +91,35 @@ export function readAgeOver18(vpToken: unknown, nowSeconds = Math.floor(Date.now
 }
 
 /**
- * The two facts we derive from a verified presentation: "18 or older", and the nationalities
- * (ISO codes). The birthdate never leaves this function; nothing here is stored.
+ * The two facts we derive from a verified presentation: "18 or older", and the country of the
+ * credential (ISO code) at `countryPath`. The birthdate never leaves this function; nothing here
+ * is stored.
  */
-export function readIdentity(vpToken: unknown, nowSeconds = Math.floor(Date.now() / 1000)): { ageOver18: boolean; nationalities: string[] } {
+export function readIdentity(vpToken: unknown, nowSeconds = Math.floor(Date.now() / 1000), countryPath = DEFAULT_COUNTRY_PATH): { ageOver18: boolean; country: string | null } {
   let ageOver18 = false;
-  const nationalities: string[] = [];
+  let country: string | null = null;
   try {
     for (const presentations of Object.values((vpToken ?? {}) as Record<string, unknown>)) {
       for (const p of ([] as unknown[]).concat(presentations)) {
         if (typeof p !== 'string' || !p.includes('~')) continue;
         const claims = resolveSdJwt(p);
         if (isAtLeast18(claims.birthdate, nowSeconds)) ageOver18 = true;
-        for (const n of ([] as unknown[]).concat(claims.nationalities ?? [])) {
-          if (typeof n === 'string' && !nationalities.includes(n)) nationalities.push(n);
-        }
+        let v: unknown = claims;
+        for (const seg of countryPath) v = (v as Record<string, unknown> | undefined)?.[seg];
+        const first = ([] as unknown[]).concat(v ?? []).find((x) => typeof x === 'string');
+        if (!country && typeof first === 'string') country = first;
       }
     }
   } catch {
     /* malformed: treated as "not proven" */
   }
-  return { ageOver18, nationalities };
+  return { ageOver18, country };
 }
 
-/** The rights to attest: 18+ if adult, and the first valid nationality (one fits in 32 bytes). */
-export function identityClaims(i: { ageOver18: boolean; nationalities: string[] }): string[] {
+/** The rights to attest: 18+ if adult, and the jurisdiction if it is an ISO country code. */
+export function identityClaims(i: { ageOver18: boolean; country: string | null }): string[] {
   const out: string[] = i.ageOver18 ? [CLAIM_AGE_OVER_18] : [];
-  const n = i.nationalities.find((c) => /^[a-zA-Z]{2}$/.test(c));
-  if (n) out.push(nationalityClaim(n));
+  if (i.country && /^[a-zA-Z]{2}$/.test(i.country)) out.push(jurisdictionClaim(i.country));
   return out;
 }
 

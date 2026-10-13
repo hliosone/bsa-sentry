@@ -69,6 +69,8 @@ export async function startBsaServer(env: BsaServerEnv = process.env, opts: { po
         backend: (env.VERIFIER_BACKEND ?? 'https://verifier-backend.eudiw.dev').replace(/\/$/, ''),
         intendedUseId: env.INTENDED_USE_ID ?? 'TEST-01',
         qrScheme: env.EUDIW_QR_SCHEME ?? 'openid4vp',
+        // Which PID field is the jurisdiction: `issuing_country` by default, or e.g. `address.country`.
+        ...(env.EUDIW_COUNTRY_CLAIM ? { countryPath: env.EUDIW_COUNTRY_CLAIM.split('.') } : {}),
       }));
       app.use(mcpRouter({
         db, baseUrl, explorer: chain.explorer, agent,

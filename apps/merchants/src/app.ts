@@ -18,9 +18,9 @@ export const MERCHANTS = [
   // Not in the default rules and under the auto limit: the unknown payee is the ONLY problem,
   // so the Flex offers "Faire confiance" - and pays it silently afterwards.
   { key: 'boulangerie', path: '/bakery', price: '$2', description: 'Bakery - croissant' },
-  // A token sale closed to US persons (the US "Reg S" exclusion): it needs to know a nationality,
+  // A token sale closed to US persons (the US "Reg S" exclusion): it needs to know a jurisdiction,
   // never who the buyer is. Optional: mounted only when its address is configured.
-  { key: 'presale', path: '/presale', price: '$5', description: 'Token presale (non-US)', requires: ['nationality_not:US'] },
+  { key: 'presale', path: '/presale', price: '$5', description: 'Token presale (non-US)', requires: ['jurisdiction_not:US'] },
 ] as const satisfies readonly { key: MerchantKey; path: string; price: string; description: string; requires?: readonly string[] }[];
 
 export type MerchantsConfig = {

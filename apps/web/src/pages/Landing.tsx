@@ -36,7 +36,7 @@ export function Landing({ bsa }: { bsa: Bsa }) {
         <ul className="hero-points">
           <li><b>Rules on the device</b><span>No website or server can change them.</span></li>
           <li><b>Claude can only ask</b><span>Every payment is decided by your Flex.</span></li>
-          <li><b>Proof without identity</b><span>18 or older, a nationality, and nothing else.</span></li>
+          <li><b>Proof without identity</b><span>18 or older, a jurisdiction, and nothing else.</span></li>
         </ul>
       </div>
 

@@ -188,13 +188,13 @@ describe('18+', () => {
   });
 
   it('asks for credentials for a nationality requirement too, and names it when they are missing', async () => {
-    const presale = () => paymentRequired([requirement({ amount: '5000000', extra: { name: 'USDC', version: '2', requires: ['nationality_not:US'] } })]);
+    const presale = () => paymentRequired([requirement({ amount: '5000000', extra: { name: 'USDC', version: '2', requires: ['jurisdiction_not:US'] } })]);
     const d = deps({ relay: { signPayment: vi.fn(async () => ({ ok: true as const, signature: sig, credentials })) } }, merchant({ required: presale() }));
     await x402Fetch('alice', { url: 'http://merchants/presale' }, d);
     expect((d.relay.signPayment as any).mock.calls[0][1].wantCredentials).toBe(true);
 
     const r = await x402Fetch('alice', { url: 'http://merchants/presale' }, deps({}, merchant({ required: presale(), rejectReason: 'AGE_PROOF_REQUIRED' })));
-    expect(r.kind === 'error' && r.message).toMatch(/not a US national/);
+    expect(r.kind === 'error' && r.message).toMatch(/not a US person/);
     expect(r.kind === 'error' && r.message).toMatch(/Agent identity/);
   });
 
