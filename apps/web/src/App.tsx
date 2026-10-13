@@ -10,15 +10,17 @@ import { Claude } from './pages/Claude.js';
 import { Dashboard } from './pages/Dashboard.js';
 import { Badge } from './pages/Badge.js';
 import { Backup, Restore } from './pages/Backup.js';
+import { Services } from './pages/Services.js';
 
-type Route = 'connect' | 'rules' | 'session' | 'claude' | 'dashboard' | 'badge' | 'backup' | 'restore';
-const ROUTES: Route[] = ['connect', 'rules', 'session', 'claude', 'dashboard', 'badge', 'backup', 'restore'];
+type Route = 'connect' | 'rules' | 'session' | 'claude' | 'dashboard' | 'badge' | 'backup' | 'restore' | 'services';
+const ROUTES: Route[] = ['connect', 'rules', 'session', 'claude', 'dashboard', 'badge', 'backup', 'restore', 'services'];
 const STEP_ROUTE: Record<StepId, Route> = {
   connect: 'connect', login: 'connect', rules: 'rules', session: 'session', claude: 'claude', badge: 'badge', backup: 'backup', done: 'dashboard',
 };
 // Day-to-day places, once set up. Setup-only steps (connect, session) live on the setup track.
 const TABS: { route: Route; label: string }[] = [
   { route: 'dashboard', label: 'Dashboard' },
+  { route: 'services', label: 'Services' },
   { route: 'rules', label: 'Rules' },
   { route: 'claude', label: 'Claude' },
   { route: 'badge', label: 'Agent identity' },
@@ -140,6 +142,7 @@ export function App() {
           {current === 'badge' && <Badge bsa={bsa} />}
           {current === 'backup' && <Backup bsa={bsa} />}
           {current === 'restore' && <Restore bsa={bsa} />}
+          {current === 'services' && <Services bsa={bsa} />}
         </main>
       </div>
     </div>

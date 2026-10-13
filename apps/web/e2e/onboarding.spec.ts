@@ -100,8 +100,12 @@ test('onboarding, then the dashboard follows what the agent does', async ({ page
   await page.goto(`${web}/?fakeDevice=1#/dashboard`);
   await expect(page.getByTestId('budget-left')).toContainText('20');
   await expect(page.getByTestId('topup')).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Wallets' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Agent wallet' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Spending limit' })).toBeVisible();
+  await page.goto(`${web}/?fakeDevice=1#/services`);
+  await expect(page.getByTestId('service-presale')).toContainText('not a US national');
+  await shot(page, '13-services');
+  await page.goto(`${web}/?fakeDevice=1#/dashboard`);
   const account = (await page.evaluate(() => fetch('/auth/me').then((r) => r.json()))).account as string;
 
   // The prompt-injection deposit: the device refuses it, the banner says why.
@@ -123,7 +127,7 @@ test('onboarding, then the dashboard follows what the agent does', async ({ page
 
   // The kill switch wipes the rules on the device.
   await page.getByTestId('kill').click();
-  await expect(page.getByText('No active rules on the Flex.')).toBeVisible();
+  await expect(page.getByText('No rules on the Flex yet.')).toBeVisible();
   await expect(page.getByTestId('statusbar')).toContainText('No rules');
 });
 

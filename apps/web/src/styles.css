@@ -225,47 +225,88 @@ input {
 }
 input:focus { outline: none; border-color: var(--ink); box-shadow: 0 0 0 1px var(--ink); }
 
-/* ---------------------------------------------------------------- dashboard */
+/* ---------------------------------------------------------------- dashboard (bento) */
 
-.overview {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 340px;
-  gap: 1.5rem;
-  align-items: start;
+.bento { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 16px; }
+.tile {
+  background: var(--sheet);
+  border: 1px solid var(--hairline);
+  border-radius: 20px;
+  padding: 22px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  min-width: 0;
 }
+.tile h2 { font-size: var(--s-13); font-weight: 600; color: var(--graphite); letter-spacing: 0; }
+.tile .sub, .sub { color: var(--graphite); font-size: var(--s-13); margin: 0; max-width: none; }
+.tile-head { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; }
+.tile-link { margin-top: auto; padding-top: 0.5rem; font-size: var(--s-13); font-weight: 600; }
 
-.statement-head { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; margin-bottom: 0.5rem; }
-.statement-head .muted { font-size: var(--s-13); }
-
-.line {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 0.25rem 1.5rem;
-  align-items: baseline;
-  padding: 1.1rem 0;
-  border-top: 1px solid var(--hairline);
+.stage {
+  grid-column: span 5;
+  grid-row: span 3;
+  padding: 0;
+  overflow: hidden;
+  background: radial-gradient(90% 70% at 50% 38%, #3a3d42 0%, #16171a 55%, #000 100%);
+  border-color: #000;
+  color: #fff;
 }
-.line-name { font-weight: 600; }
-.line-sub { grid-column: 1; color: var(--graphite); font-size: var(--s-13); margin-top: -0.2rem; }
-.line-sub code { color: var(--ink); }
-.amount { grid-row: 1; grid-column: 2; text-align: right; font-weight: 600; font-size: var(--s-24); letter-spacing: -0.02em; white-space: nowrap; }
-.amount small { font-size: var(--s-15); font-weight: 500; color: var(--graphite); margin-left: 0.3rem; }
-.line.primary-line .amount { font-size: var(--s-44); font-weight: 700; }
-.line-actions { grid-column: 1 / -1; display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap; margin-top: 0.6rem; }
-.line-actions input { width: 6.5rem; }
-.line-actions .done { color: var(--signed); font-size: var(--s-13); }
-.line-actions .muted { font-size: var(--s-13); }
+.stage-view { flex: 1; min-height: 440px; position: relative; }
+.stage-view canvas { cursor: grab; }
+.stage-view canvas:active { cursor: grabbing; }
+.stage .flex-device { width: min(78%, 300px); margin: 32px auto; }
+.stage-caption { padding: 0 24px 22px; display: grid; gap: 0.2rem; font-size: var(--s-13); color: rgba(255, 255, 255, 0.66); }
+.stage-caption b { color: #fff; font-size: var(--s-15); }
 
-.limit { padding-top: 1.25rem; border-top: 1px solid var(--hairline); }
-.limit-figure { display: flex; align-items: baseline; gap: 0.5rem; margin-top: 0.6rem; }
-.limit-figure b { font-size: var(--s-30); letter-spacing: -0.02em; }
-.gauge { height: 8px; border-radius: 4px; background: var(--paper); margin: 0.75rem 0 0.5rem; overflow: hidden; }
+.wallet { grid-column: span 7; }
+.limit { grid-column: span 4; }
+.session { grid-column: span 3; }
+.identity { grid-column: span 4; }
+.main { grid-column: span 3; }
+.activity { grid-column: span 8; }
+.rules-tile { grid-column: span 4; }
+
+.figure { font-size: 3.5rem; font-weight: 700; letter-spacing: -0.035em; line-height: 1.05; margin: 0.15rem 0; }
+.figure small { font-size: var(--s-15); font-weight: 500; color: var(--graphite); letter-spacing: 0; margin-left: 0.45rem; }
+.small-figure { font-size: 2.125rem; }
+.gauge { height: 8px; border-radius: 4px; background: var(--paper); margin: 0.4rem 0 0.3rem; overflow: hidden; }
 .gauge > div { height: 100%; background: var(--ink); border-radius: 4px; }
 .gauge.low > div { background: var(--asked); }
-.limit p { font-size: var(--s-13); color: var(--graphite); }
+
+.session-state { font-size: 2.125rem; font-weight: 700; letter-spacing: -0.02em; }
+.session.is-on .session-state { color: var(--signed); }
+.session.is-off .session-state { color: var(--asked); }
+
+.chips { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.2rem; }
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.3rem 0.75rem 0.3rem 0.3rem;
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: var(--s-13);
+}
+.chip i {
+  font-style: normal;
+  min-width: 30px;
+  height: 30px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--sheet);
+  display: grid;
+  place-items: center;
+  font-size: 0.75rem;
+}
+
+.topup-row { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center; margin-top: auto; padding-top: 0.75rem; }
+.topup-row input { width: 6.5rem; }
+.topup-row .done { color: var(--signed); font-size: var(--s-13); }
 
 /* The one bold element: what the Flex itself shows and enforces. */
-.mirror { display: grid; gap: 1rem; }
 .flex-device {
   background: var(--ink);
   border-radius: 26px;
@@ -317,7 +358,6 @@ input:focus { outline: none; border-color: var(--ink); box-shadow: 0 0 0 1px var
 .banner button { margin-left: auto; color: var(--refused); }
 
 /* Activity: ledger rows, the outcome colour is the Flex's decision. */
-.activity { margin-top: 1.5rem; }
 .feed { list-style: none; margin: 0.75rem 0 0; padding: 0; }
 .feed li {
   display: grid;
@@ -364,6 +404,13 @@ input:focus { outline: none; border-color: var(--ink); box-shadow: 0 0 0 1px var
 
 /* ---------------------------------------------------------------- small screens */
 
+@media (max-width: 1100px) {
+  .stage { grid-column: span 12; grid-row: auto; }
+  .stage-view { min-height: 360px; }
+  .wallet, .activity { grid-column: span 12; }
+  .limit, .session, .identity, .main, .rules-tile { grid-column: span 6; }
+}
+
 @media (max-width: 900px) {
   .topbar { padding: 0 1rem; gap: 1rem; height: auto; min-height: 56px; flex-wrap: wrap; }
   .tabs { order: 3; width: 100%; overflow-x: auto; height: 44px; }
@@ -374,7 +421,8 @@ input:focus { outline: none; border-color: var(--ink); box-shadow: 0 0 0 1px var
   .feed .outcome { grid-column: 2 / -1; text-align: left; }
   .rules, .qr-block { grid-template-columns: 1fr; }
   .payee { grid-template-columns: 1fr; }
-  .line.primary-line .amount { font-size: var(--s-30); }
+  .limit, .session, .identity, .main, .rules-tile { grid-column: span 12; }
+  .figure { font-size: 2.6rem; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -413,3 +461,19 @@ input:focus { outline: none; border-color: var(--ink); box-shadow: 0 0 0 1px var
 .choose { cursor: pointer; }
 .rights.revoked .right { opacity: 0.45; }
 .rights-foot button { margin-left: 0.5rem; vertical-align: baseline; }
+
+/* Services: one card per place the agent can pay. */
+.services { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; margin-top: 1.25rem; }
+.service { border: 1px solid var(--hairline); border-radius: 16px; padding: 18px 20px; display: flex; flex-direction: column; gap: 0.5rem; }
+.service-head { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; }
+.service-head h3 { margin: 0; font-size: var(--s-19); }
+.price { font-weight: 700; white-space: nowrap; }
+.service-what { margin: 0; color: var(--graphite); font-size: var(--s-13); }
+.facts { list-style: none; margin: 0.25rem 0 0; padding: 0; display: grid; gap: 0.3rem; font-size: var(--s-13); }
+.facts li { position: relative; padding-left: 15px; }
+.facts li::before { content: ''; position: absolute; left: 0; top: 0.5em; width: 7px; height: 7px; border-radius: 50%; background: var(--graphite); }
+.facts li.good::before { background: var(--signed); }
+.facts li.ask::before { background: var(--asked); }
+.facts li.bad::before { background: var(--refused); }
+.prompt { margin-top: auto; padding-top: 0.6rem; display: flex; align-items: center; gap: 0.5rem; }
+.prompt span { flex: 1; min-width: 0; background: var(--paper); border-radius: 8px; padding: 0.5rem 0.7rem; font-size: var(--s-13); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
