@@ -30,6 +30,8 @@ export type ChainHistory = {
 };
 
 const CACHE_MS = 10_000;
+/** The explorer pages 50 transfers at a time; 20 pages is more than a demo wallet ever holds. */
+const MAX_PAGES = 20;
 
 /**
  * The agent wallet's USDC transfers, from the explorer's Blockscout API: the payments it made and
@@ -37,12 +39,20 @@ const CACHE_MS = 10_000;
  * configured USDC counts (a spam token sent to the agent must never look like a payment).
  */
 async function chainTransfers(c: ChainHistory, agent: string): Promise<ChainTransfer[]> {
-  const url = `${c.explorer.replace(/\/$/, '')}/api/v2/addresses/${agent}/token-transfers?type=ERC-20`;
-  const res = await (c.fetchImpl ?? fetch)(url, { headers: { accept: 'application/json' }, signal: AbortSignal.timeout(8_000) });
-  if (!res.ok) throw new Error(`explorer answered ${res.status}`);
-  const body = (await res.json()) as { items?: any[] };
+  const base = `${c.explorer.replace(/\/$/, '')}/api/v2/addresses/${agent}/token-transfers?type=ERC-20`;
+  const items: any[] = [];
+  let next: Record<string, unknown> | null = null;
+  for (let page = 0; page < MAX_PAGES; page++) {
+    const url = next ? `${base}&${new URLSearchParams(Object.entries(next).map(([k, v]) => [k, String(v)]))}` : base;
+    const res = await (c.fetchImpl ?? fetch)(url, { headers: { accept: 'application/json' }, signal: AbortSignal.timeout(8_000) });
+    if (!res.ok) throw new Error(`explorer answered ${res.status}`);
+    const body = (await res.json()) as { items?: any[]; next_page_params?: Record<string, unknown> | null };
+    items.push(...(body.items ?? []));
+    next = body.next_page_params ?? null;
+    if (!next) break;
+  }
   const usdc = c.usdc.toLowerCase();
-  return (body.items ?? [])
+  return items
     .filter((x) => String(x?.token?.address_hash ?? x?.token?.address ?? '').toLowerCase() === usdc && /^\d+$/.test(String(x?.total?.value ?? '')))
     .map((x) => ({
       txHash: String(x.transaction_hash).toLowerCase(),

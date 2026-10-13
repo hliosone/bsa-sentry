@@ -68,6 +68,9 @@ Digital Identity Wallet reference verifier; demo uses a test PID; production use
 - **Any agent:** a remote MCP server with OAuth (`x402_fetch`, `sentry_status`, `sentry_restore`)
   works with any agent that supports remote MCP with OAuth (tested with Claude). The agent can only
   ask; the Flex decides.
+- **Spending and ISO 20022 export:** the Spending tab reads the agent wallet's history from Arc,
+  sorts payments into categories, and exports any period as an ISO 20022 bank statement
+  (camt.053.001.02, checked against the official schema) for an accountant.
 - **Prompt injection, shown:** a shop page hides an instruction to pay a 400 USDC "deposit". The
   agent tries; the Flex refuses it without asking, because it is above the hard limit.
 

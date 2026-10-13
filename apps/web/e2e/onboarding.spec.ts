@@ -110,6 +110,30 @@ test('onboarding, then the dashboard follows what the agent does', async ({ page
   await page.goto(`${web}/?fakeDevice=1#/how`);
   await expect(page.getByRole('img', { name: 'EU Digital Identity Wallet' }).first()).toBeVisible();
   await shot(page, '14-how-it-works');
+
+  // Spending, with a wallet history standing in for the explorer (the fake agent never paid).
+  const agentAddr = '0x1c9940ef87ce842fb18d73fd43b49b53582c6b52';
+  const mainAddr = (await page.evaluate(() => fetch('/auth/me').then((r) => r.json()))).account.toLowerCase();
+  const day = (d: number, h: number) => Date.parse(`2026-10-${String(d).padStart(2, '0')}T${String(h).padStart(2, '0')}:15:00Z`);
+  const tx = (n: number, from: string, to: string, value: string, at: number) => ({ txHash: `0x${String(n).padStart(2, '0').repeat(32)}`, at, from, to, value });
+  const env = process.env;
+  const history = [
+    tx(1, mainAddr, agentAddr, '20000000', day(1, 9)), tx(2, agentAddr, env.MERCHANT_CAFE_ADDRESS!.toLowerCase(), '3000000', day(2, 8)),
+    tx(3, agentAddr, env.MERCHANT_BOULANGERIE_ADDRESS!.toLowerCase(), '2000000', day(3, 7)), tx(4, agentAddr, env.MERCHANT_CAVE_ADDRESS!.toLowerCase(), '4500000', day(9, 19)),
+    tx(5, agentAddr, (env.MERCHANT_PRESALE_ADDRESS || env.MERCHANT_RESTO_ADDRESS!).toLowerCase(), '5000000', day(11, 14)), tx(6, agentAddr, env.MERCHANT_CAFE_ADDRESS!.toLowerCase(), '3000000', day(12, 8)),
+  ].map((t) => ({ ...t, at: t.at - Date.parse('2026-10-13T00:00:00Z') + new Date(new Date().getFullYear(), new Date().getMonth(), 13).getTime() }));
+  await page.route('**/activity/chain', (r) => r.fulfill({ json: { agent: agentAddr, transfers: history } }));
+  await page.route('**/topup/wallets', (r) => r.fulfill({ json: { main: { address: mainAddr, usdc: '80' }, agent: { address: agentAddr, usdc: '2.5' } } }));
+  await page.goto(`${web}/?fakeDevice=1#/spending`);
+  await expect(page.getByTestId('sp-spent')).toHaveText('17.50');
+  await expect(page.locator('.sp-cats').getByText('Food and drink')).toBeVisible();
+  await shot(page, '15-spending');
+  const [download] = await Promise.all([page.waitForEvent('download'), page.getByTestId('export-camt').click()]);
+  const xml = await (await download.createReadStream()).toArray().then((c) => Buffer.concat(c).toString('utf8'));
+  expect(xml).toContain('camt.053.001.02');
+  expect(xml.match(/<CdtDbtInd>DBIT<\/CdtDbtInd>\s*<Sts>/g)).toHaveLength(5);
+  await page.unroute('**/activity/chain');
+  await page.unroute('**/topup/wallets');
   await page.goto(`${web}/?fakeDevice=1#/dashboard`);
   const account = (await page.evaluate(() => fetch('/auth/me').then((r) => r.json()))).account as string;
 

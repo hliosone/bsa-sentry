@@ -75,3 +75,23 @@ tests first; nothing was copied. What differs:
 - **The catalog comes from Shopify** (Admin GraphQL `products`), and the order is created from the
   product variant after settlement; bsa-gate paid an amount for an existing order id.
 - Supports Shopify's Dev Dashboard apps (client credentials grant) as well as Admin API tokens.
+
+## 6. The ISO 20022 statement export's design (Edel Gate, SwissHacks 2026, June 2026)
+
+The Spending page's export (`apps/web/src/state/statement.ts`, `camt053()`) follows the camt.053
+exporter that a team member wrote on June 20, 2026 for **Edel Gate** at SwissHacks 2026
+(`../../SwissHacks2026/edel-gate/frontend/lib/camt053.js`): one camt.053 `<Ntry>` per on-chain
+x402 payment, the transaction hash as the reference, the wallet addresses as the parties.
+
+That file was read for its structure only. **The code here is newly written on Oct 13, 2026**, in
+TypeScript, with tests first. What differs:
+
+- **A user's statement, not a merchant's.** Edel Gate booked every entry as a credit to a merchant.
+  Here, agent payments are debits and top-ups are credits, with real debit and credit totals, and
+  each entry carries a spending category.
+- **Valid against the camt.053.001.02 schema.** The mandatory opening and closing balances are
+  included, the currency is a 3-letter ISO 4217 code (USD at 1 USDC = 1 USD, stated in every
+  entry), amounts have at most 5 decimals, and ids fit the 34/35-character limits (full addresses
+  and hashes go in the name and additional-information fields). `test/statement.test.ts` runs
+  `xmllint` against the official XSD (`test/fixtures/camt.053.001.02.xsd`, from iso20022.org).
+- **Arc testnet (EVM)** instead of the XRP Ledger, and the history is read from the Arc explorer.

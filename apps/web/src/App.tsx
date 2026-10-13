@@ -13,15 +13,17 @@ import { Backup, Restore } from './pages/Backup.js';
 import { Services } from './pages/Services.js';
 import { Landing } from './pages/Landing.js';
 import { HowItWorks } from './pages/HowItWorks.js';
+import { Spending } from './pages/Spending.js';
 
-type Route = 'connect' | 'rules' | 'session' | 'claude' | 'dashboard' | 'badge' | 'backup' | 'restore' | 'services' | 'how';
-const ROUTES: Route[] = ['connect', 'rules', 'session', 'claude', 'dashboard', 'badge', 'backup', 'restore', 'services', 'how'];
+type Route = 'connect' | 'rules' | 'session' | 'claude' | 'dashboard' | 'badge' | 'backup' | 'restore' | 'services' | 'how' | 'spending';
+const ROUTES: Route[] = ['connect', 'rules', 'session', 'claude', 'dashboard', 'badge', 'backup', 'restore', 'services', 'how', 'spending'];
 const STEP_ROUTE: Record<StepId, Route> = {
   connect: 'connect', login: 'connect', rules: 'rules', session: 'session', claude: 'claude', badge: 'badge', backup: 'backup', done: 'dashboard',
 };
 // Day-to-day places, once set up. Setup-only steps (connect, session) live on the setup track.
 const TABS: { route: Route; label: string }[] = [
   { route: 'dashboard', label: 'Dashboard' },
+  { route: 'spending', label: 'Spending' },
   { route: 'services', label: 'Services' },
   { route: 'rules', label: 'Rules' },
   { route: 'claude', label: 'Agent' },
@@ -153,6 +155,7 @@ export function App() {
           {current === 'restore' && <Restore bsa={bsa} />}
           {current === 'services' && <Services bsa={bsa} />}
           {current === 'how' && <HowItWorks bsa={bsa} />}
+          {current === 'spending' && <Spending bsa={bsa} />}
         </main>
       </div>
       )}

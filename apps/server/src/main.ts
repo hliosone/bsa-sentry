@@ -115,9 +115,16 @@ export async function startBsaServer(env: BsaServerEnv = process.env, opts: { po
       const defaultPayees = [
         ['Cafe Sat', env.MERCHANT_CAFE_ADDRESS], ['Corner Wines', env.MERCHANT_CAVE_ADDRESS], ['Restaurant', env.MERCHANT_RESTO_ADDRESS], ['Token Presale', env.MERCHANT_PRESALE_ADDRESS],
       ].filter(([, a]) => !!a).map(([label, address]) => ({ label, address: address!.toLowerCase() }));
+      // Every demo merchant with a spending category, for the statement. Unlike defaultPayees,
+      // this includes the bakery and the Shopify store.
+      const merchants = [
+        ['Cafe Sat', env.MERCHANT_CAFE_ADDRESS, 'Food and drink'], ['Bakery', env.MERCHANT_BOULANGERIE_ADDRESS, 'Food and drink'],
+        ['Restaurant', env.MERCHANT_RESTO_ADDRESS, 'Food and drink'], ['Corner Wines', env.MERCHANT_CAVE_ADDRESS, 'Alcohol'],
+        ['Token Presale', env.MERCHANT_PRESALE_ADDRESS, 'Digital assets'], ['BSA Shop (Shopify)', env.MERCHANT_SHOPIFY_ADDRESS, 'Shopping'],
+      ].filter(([, a]) => !!a).map(([label, address, category]) => ({ label, address: address!.toLowerCase(), category }));
       app.get('/api/config', (_req, res) => res.json({
         chainId: chain.chainId, chainName: chain.name, usdc: chain.usdc, explorer: chain.explorer,
-        mcpUrl: `${baseUrl}/mcp`, merchantUrl: env.MERCHANT_URL ?? null, defaultPayees,
+        mcpUrl: `${baseUrl}/mcp`, merchantUrl: env.MERCHANT_URL ?? null, defaultPayees, merchants,
       }));
 
       // The built website, if present. In dev, Vite proxies to us instead.

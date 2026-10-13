@@ -1,0 +1,39 @@
+/* Spending: the agent wallet as a statement. Totals across the top, categories beside the list. */
+.spending { display: grid; gap: 16px; }
+.sp-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 1rem; flex-wrap: wrap; }
+.sp-head h1 { font-size: var(--s-30); font-weight: 650; }
+.sp-periods { display: flex; gap: 0.25rem; padding: 3px; border: 1px solid var(--hairline); border-radius: 999px; }
+.sp-periods button { border-radius: 999px; }
+.sp-periods button.is-on { background: var(--ink); border-color: var(--ink); color: var(--sheet); }
+
+.sp-figures { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border: 1px solid var(--hairline); border-radius: 20px; background: var(--glass); }
+.sp-figures > div { padding: 18px 24px; display: grid; grid-template-columns: auto 1fr; align-items: baseline; column-gap: 0.4rem; }
+.sp-figures > div + div { border-left: 1px solid var(--hairline); }
+.sp-figures span { grid-column: 1 / -1; font-size: var(--s-13); color: var(--graphite); }
+.sp-figures b { font-size: var(--s-30); font-weight: 650; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+.sp-figures b.is-in { color: var(--signed); }
+.sp-figures small { color: var(--graphite); font-size: var(--s-13); }
+
+.sp-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: 16px; align-items: start; }
+.sp-cats ul { list-style: none; margin: 0.5rem 0 0; padding: 0; display: grid; gap: 1rem; }
+.sp-cat-row { display: flex; justify-content: space-between; gap: 1rem; font-variant-numeric: tabular-nums; }
+.sp-cat-row b { font-weight: 600; }
+.sp-bar { height: 6px; margin: 0.4rem 0 0.25rem; border-radius: 3px; background: var(--well); overflow: hidden; }
+.sp-bar > div { height: 100%; border-radius: 3px; background: var(--ink); }
+.sp-export { margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px solid var(--hairline); display: grid; gap: 0.6rem; justify-items: start; }
+
+.sp-txs table { width: 100%; border-collapse: collapse; margin-top: 0.5rem; font-size: var(--s-15); }
+.sp-txs th { text-align: left; font-size: var(--s-13); font-weight: 600; color: var(--graphite); padding: 0 0.75rem 0.5rem 0; }
+.sp-txs td { padding: 0.65rem 0.75rem 0.65rem 0; border-top: 1px solid var(--hairline); vertical-align: baseline; }
+.sp-txs td:first-child { color: var(--graphite); white-space: nowrap; font-size: var(--s-13); }
+.sp-txs td a { margin-left: 0.4rem; font-size: var(--s-13); color: var(--graphite); }
+.sp-txs .num { text-align: right; padding-right: 0; white-space: nowrap; font-weight: 600; font-variant-numeric: tabular-nums; }
+.sp-txs .num small { color: var(--graphite); font-weight: 500; }
+.sp-txs tr.is-in .num { color: var(--signed); }
+
+@media (max-width: 1000px) {
+  .sp-grid { grid-template-columns: 1fr; }
+  .sp-figures { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .sp-figures > div:nth-child(3) { border-left: 0; }
+  .sp-figures > div:nth-child(n + 3) { border-top: 1px solid var(--hairline); }
+}

@@ -7,6 +7,8 @@ export type Config = {
   mcpUrl: string;
   merchantUrl: string | null;
   defaultPayees: { label: string; address: string }[];
+  /** Every demo merchant, with its spending category. */
+  merchants?: { label: string; address: string; category: string }[];
 };
 
 async function call<T>(path: string, init?: RequestInit): Promise<T> {

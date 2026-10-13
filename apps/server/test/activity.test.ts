@@ -65,6 +65,21 @@ describe('agent history from the chain', () => {
     expect(r.body.transfers).toEqual([{ txHash: '0xab', at: Date.parse('2026-10-12T18:13:44Z'), from: AGENT, to: '0xcafe', value: '3000000' }]);
   });
 
+  it('follows the explorer\'s pages, so a statement covers the whole history', async () => {
+    const calls: string[] = [];
+    const fetchImpl = (async (url: string) => {
+      calls.push(url);
+      return new Response(JSON.stringify(url.includes('block_number=7')
+        ? { items: [item({ transaction_hash: '0x02' })], next_page_params: null }
+        : { items: [item({ transaction_hash: '0x01' })], next_page_params: { block_number: 7, index: 3 } }));
+    }) as unknown as typeof fetch;
+    const app = express();
+    app.use('/activity', activityRouter({ db: openDb(':memory:'), secret: SECRET, chain: { explorer: 'https://x.test', usdc: USDC, agentOf: () => AGENT, fetchImpl } }));
+    const r = await request(app).get('/activity/chain').set('Cookie', cookie('alice'));
+    expect(r.body.transfers.map((t: any) => t.txHash)).toEqual(['0x01', '0x02']);
+    expect(calls[1]).toBe(`https://x.test/api/v2/addresses/${AGENT}/token-transfers?type=ERC-20&block_number=7&index=3`);
+  });
+
   it('is empty until the Flex told the server the agent address, and needs a login', async () => {
     const { app, calls } = chainApp([item({})], null);
     expect((await request(app).get('/activity/chain').set('Cookie', cookie('alice'))).body).toEqual({ agent: null, transfers: [] });
