@@ -1,4 +1,4 @@
-# Developer experience report — building BSA Sentry on the Ledger stack
+# Developer experience report: building BSA Sentry on the Ledger stack
 
 **Team:** BSA (EPFL Blockchain Student Association) · **Event:** N3XT Hackathon @ OP3N 2026
 **Device:** Ledger Flex (hw 009-1, SE 1.7.0, MCU 6.9.3, API level 27) · **Host:** Ubuntu 24.04 (KDE Neon)
@@ -23,7 +23,7 @@ We did **not** use the Agent Stack CLI or Ring CLI: our agent is a remote MCP se
 claude.ai, so the human-approval step had to happen in a browser tab over WebHID rather than on
 the machine running the agent. §7 says what would have made them usable for us.
 
-Entries marked *(feasibility)* were hit during our 10–11 Oct feasibility tests on the same Flex.
+Entries marked *(feasibility)* were hit during our 10 to 11 Oct feasibility tests on the same Flex.
 
 ---
 
@@ -31,7 +31,7 @@ Entries marked *(feasibility)* were hit during our 10–11 Oct feasibility tests
 
 ### 1.1 Derivation paths are baked in at build time, and the failure mode is a crash *(feasibility)*
 
-**What happened.** We added `44'/60'` to `path` in `Cargo.toml`, rebuilt, installed — and the app
+**What happened.** We added `44'/60'` to `path` in `Cargo.toml`, rebuilt, installed, and the app
 **crashed** the moment it derived a key.
 **What we tried.** Rebuilding and reinstalling several times; the manifest looked correct.
 **Root cause.** The SDK's `build.rs` bakes the install parameters in at compile time, and a cached
@@ -39,7 +39,7 @@ build silently reuses the old ones.
 **Fix.** `cargo clean -p ledger_device_sdk --target flex --release` before building. You can tell it
 worked because `install_params_size` changes in the build output.
 **Suggestion.** Make `build.rs` depend on the manifest's `path` and `curve` keys so Cargo
-invalidates it automatically — or fail the build with *"install params changed, run `cargo clean -p
+invalidates it automatically, or fail the build with *"install params changed, run `cargo clean -p
 ledger_device_sdk`"*. Shipping an app that crashes at runtime is the worst possible signal here.
 
 ### 1.2 The linker requires an empty `.data` section *(feasibility)*
@@ -75,7 +75,7 @@ example of "read a payload, show a review, reply". Also note that handlers have 
 
 **What happened.** `app-boilerplate-rust` ships `sign_tx`, `swap.rs`, `get_public_key` and a settings
 page. For an app whose security claim is "there is no command that signs arbitrary data", the first
-real task is **deleting** things — and `swap.rs` is entangled with `TxContext`, which the main loop
+real task is **deleting** things, and `swap.rs` is entangled with `TxContext`, which the main loop
 needs for the home screen.
 **Suggestion.** Ship a `--minimal` variant (main loop + one APDU + home screen, no swap, no signing)
 or a `cargo ledger new` template with the optional parts behind features. For any app making a
@@ -83,7 +83,7 @@ security argument, every line you did not delete is a line you have to audit.
 
 ---
 
-## 2. NBGL — this is where the stack cost us the most
+## 2. NBGL: this is where the stack cost us the most
 
 Our core UX is one screen: **three choices** (Refuse / Once / Trust this merchant) with a **60 s
 auto-refusal**. The safe Rust wrappers offer two choices and no timeout, so we had to drop to the
@@ -103,18 +103,18 @@ wall clock while the screen was being touched.
 600 = 60 s). Those keep arriving during touches.
 **Suggestion.** Document that the layout ticker is paused during touch interaction, and expose a
 monotonic millisecond counter. A screen whose job is to deny by default must not be timed by a clock
-a finger can stop — that is a security property, not a cosmetic one.
+a finger can stop: that is a security property, not a cosmetic one.
 
 ### 2.3 A sixth line is drawn *underneath* the buttons rather than wrapped or clipped
 
 **What happened.** Our screen had one line too many for the Flex's 600 px. NBGL did not scroll,
 shrink or clip: it drew the extra line **behind the choice buttons**. The hidden line was
-`"Corner bar" (unverified)` — the agent's unverified claim about the payee, i.e. exactly the line a
+`"Corner bar" (unverified)`: the agent's unverified claim about the payee, i.e. exactly the line a
 user needs in order to distrust a payment. Every APDU-level test passed; only a `/screenshot` caught it.
 **What we tried.** Shortening strings twice; each time the text re-wrapped and the overflow moved.
 There is no "did this fit?" query, and `nbgl_layoutAddText` returns a handle, not a height.
-**Fix.** Budget the screen by hand — the Flex fits **five lines of ~26 characters** above two stacked
-buttons, and a full EVM address takes two of them — then clip every host-supplied string.
+**Fix.** Budget the screen by hand: the Flex fits **five lines of ~26 characters** above two stacked
+buttons, and a full EVM address takes two of them. Then clip every host-supplied string.
 **Suggestion.** Return the consumed height from `nbgl_layoutAdd*`, or expose
 `nbgl_layoutGetRemainingHeight()`. Better: clip or scroll overflow instead of drawing it under later
 elements, and panic on overflow in debug builds. Silently hiding text on a *confirmation* screen is a
@@ -186,23 +186,23 @@ device. **Suggestion:** require the target explicitly, or read a default from `l
 **What happened.** Two things, both at the Docker boundary. (a) `target/` comes back owned by `root`,
 so the next host-side `cargo check` or `rm -rf target` fails. (b) The documented invocation mounts
 only the app directory, so a Cargo **path dependency** (`core = { path = "../core" }`) is invisible
-inside the container — and splitting pure logic into a host-testable crate is exactly what you want
+inside the container, and splitting pure logic into a host-testable crate is exactly what you want
 for an app like ours.
 **Fix.** Mount the parent directory and `-w` into the app, and `chown -R $HOST_UID:$HOST_GID target`
 inside the container.
 **Suggestion.** Make the image run as the invoking UID (or chown on exit), and show a workspace
 layout with a host-testable `core` crate in the docs. Being able to `cargo test` the decision logic
-on the host was the single most valuable thing we did — 88 host tests, no hardware.
+on the host was the single most valuable thing we did: 88 host tests, no hardware.
 
 ### 3.3 Reinstalling wipes NVM, with no warning in the tooling
 
-Expected once you know it, and it is *why* Key Ring backup matters — but `ledgerblue.runScript`
+Expected once you know it, and it is *why* Key Ring backup matters, but `ledgerblue.runScript`
 says nothing. **Suggestion:** print "this will erase the app's stored data" before installing over an
 existing app.
 
 ---
 
-## 4. Speculos — the best part of the stack
+## 4. Speculos: the best part of the stack
 
 57 of our device tests run against Speculos in CI: simulated taps, screen assertions, screenshots,
 a wiped-NVM restart between suites. It derives the same addresses as hardware from the same seed,
@@ -243,7 +243,7 @@ limitation next to the flags.
 
 `import { DeviceManagementKitBuilder }` in a Node ESM script:
 *"does not provide an export named 'DeviceManagementKitBuilder'"*. In the browser, Vite handles the
-DMK with **no polyfills** — that part is genuinely smooth.
+DMK with **no polyfills**: that part is genuinely smooth.
 **Fix.** Keep DMK-importing Node code CommonJS.
 **Suggestion.** Fix the ESM export map, or state the constraint at the top of the README. This is a
 hard stop for anyone scripting the DMK outside a bundler, and the error does not point at the cause.
@@ -313,7 +313,7 @@ Wired as in our feasibility test: `@ledgerhq/ledger-key-ring-protocol` 0.24.0 +
   and back", in the DMK docs, saying which objects survive the switch.
 - **No way to test it in CI.** Ledger Sync does not run in Speculos, so every Key Ring path is
   untestable without hardware. We put the Key Ring behind an interface and test our flows with a
-  fake that does real AES-GCM — but the LKRP integration itself only gets exercised on a real Flex.
+  fake that does real AES-GCM, but the LKRP integration itself only gets exercised on a real Flex.
   **Suggestion:** a Speculos-loadable Ledger Sync build, or a documented test mode of the LKRP SDK
   backed by a software member key.
 
@@ -323,7 +323,7 @@ Wired as in our feasibility test: `@ledgerhq/ledger-key-ring-protocol` 0.24.0 +
 
 ## 7. What we would have needed to use the Agent Stack / Ring CLI
 
-Our agent is **claude.ai talking to a remote MCP server** — it has no access to the user's machine.
+Our agent is **claude.ai talking to a remote MCP server**: it has no access to the user's machine.
 The human-approval step therefore has to happen in a browser tab over WebHID, next to the device.
 The CLI tools assume the agent and the device share a host.
 
@@ -340,7 +340,7 @@ we would rather not have had to.
   timeout clock) and §2.3 (overflowing text hidden under the buttons), both of our worst bugs were
   cases where the device *looked* right in every APDU-level test and was wrong for a human. Only
   screenshots caught them. A "lint my layout" tool for NBGL screens would pay for itself.
-- **Silent signing is the feature that makes agents usable** — and the SDK makes it easy. What is
+- **Silent signing is the feature that makes agents usable**, and the SDK makes it easy. What is
   missing is everything *around* it for this use case: a deny-by-default screen, a monotonic clock,
   and a documented pattern for a policy stored in NVM that only the device can change.
 
@@ -348,7 +348,7 @@ we would rather not have had to.
 
 1. **An N-choice NBGL screen with a built-in timeout.** Deny-by-default is the core primitive for
    agent approval, and today it costs 130 lines of `unsafe`. (§2.1, §2.2)
-2. **Do not draw overflowing text under the buttons** — clip, scroll, or fail loudly. On a
+2. **Do not draw overflowing text under the buttons**: clip, scroll, or fail loudly. On a
    confirmation screen this is a security bug, not a layout bug. (§2.3)
 3. **Make the SDK rebuild when `path`/`curve` change**, instead of producing an app that crashes on
    first derivation. (§1.1)
@@ -363,7 +363,36 @@ we would rather not have had to.
   unplugged. We would not have shipped this without it.
 - **On-device EIP-712 from raw fields.** Our hand-rolled keccak digests matched `viem` and the live
   on-chain `DOMAIN_SEPARATOR` on the first try. The crypto primitives are solid and predictable.
-- **Silent signing is possible and fast** (~1–1.8 s, 5/5), which is what lets "inside the rules, no
+- **Silent signing is possible and fast** (~1 to 1.8 s, 5/5), which is what lets "inside the rules, no
   button press" exist at all.
 - **The DMK in the browser with plain Vite and no polyfills** is genuinely pleasant.
 - **`AtomicStorage` NVM** behaved exactly as documented across app restarts.
+
+---
+
+## 9. Outside the Ledger stack: the EU Digital Identity Wallet
+
+Not Ledger tools, but they cost us time, and anyone building Know Your Agent on the EUDI wallet
+will hit them.
+
+### 9.1 The EU test issuer only issues to the EU Android reference wallet
+
+**What happened.** We wanted a PID from the EU test issuer (`issuer.eudiw.dev`) in Paradym on an
+iPhone. The issuer requires a hardware key attestation (`iso_18045_high`) on every proof type, which
+only the EU Android reference wallet provides, so other wallets cannot get a PID from it.
+**Fix.** Our own test issuer, [`scripts/test-issuer.ts`](../scripts/test-issuer.ts) (OpenID4VCI 1.0,
+pre-authorized code), signs an SD-JWT VC PID under a test CA; the server adds that CA to the
+verifier's `issuer_chain` (`EUDIW_EXTRA_ISSUER_CA`). The EU reference verifier then checks the
+presentation as usual. The demo therefore uses a test PID; production uses a member state PID.
+**Suggestion.** A test issuer profile without key attestation, clearly marked as test only, so
+wallets other than the reference one can be used in demos and CI.
+
+### 9.2 Paradym discloses an array claim without its element disclosures
+
+**What happened.** We asked for the nationality with the DCQL path `["nationalities"]`. Paradym
+answered with the array but without the per-element disclosures, so no nationality could be read
+from the selectively disclosed values.
+**Fix.** Ask for every element: the path `["nationalities", null]`
+(`buildPresentationRequest` in [`apps/server/src/age/eudiw.ts`](../apps/server/src/age/eudiw.ts)).
+**Suggestion.** Document in the DCQL examples that an array claim needs the `null` element path to
+get its values, and align wallets on what a bare array path discloses.

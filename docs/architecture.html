@@ -98,23 +98,24 @@ td.k{font-weight:600;white-space:nowrap}
 
 <header>
   <h1>BSA Sentry</h1>
-  <p class="tag">Your agent spends. Your Ledger decides.</p>
-  <p class="lead">An AI agent pays on the web with x402; a custom Ledger Flex app decides every payment and proves facts about its owner, never who they are.</p>
+  <p class="tag">Know Your Agent, enforced by your Ledger.</p>
+  <p class="lead">An AI agent gets a mandate held by your Ledger: our own Flex app is its wallet and policy engine, the EU Digital Identity Wallet supplies its Know Your Agent rights, and our x402 facilitator lets any shop sell to it in USDC on Arc. The agent acts on its own inside the mandate; the human decides only at its boundary.</p>
+  <p class="honest"><b>Autonomous:</b> in-policy payments to trusted merchants; presenting granted rights. <b>Human on the Flex:</b> new merchants, over the automatic limit or budget, rules, granting or changing rights, top-ups. <b>Never:</b> above the hard limit, no armed session, wrong chain or token (the Flex refuses); rights not granted or revoked (the facilitator refuses).</p>
   <p class="meta">Ledger N3XT Hackathon @ OP3N 2026 · EPFL Blockchain Student Association · Arc testnet (chainId 5042002) · USDC via EIP-3009</p>
 </header>
 
 <section class="cards" aria-label="The three pillars">
   <div class="card">
-    <h3>1 · Spending rules on the Flex</h3>
-    <p>A custom Flex app holds the agent's rules (auto-approve max, hard max, budget, payment count, trusted merchants) and judges each payment: <b>AUTO</b> signs silently, <b>ASK</b> shows Reject / Pay once / Trust merchant (60 s = deny), <b>REFUSE</b>. 0xMAIN and 0xAGENT never leave the Flex.</p>
+    <h3>1 · Our own Ledger app, the agent's wallet</h3>
+    <p>A sideloaded Flex app holds 0xMAIN and 0xAGENT (never exported), the rules (automatic limit, hard limit, budget, payment count, trusted merchants) and the agent's rights. <b>AUTO</b> signs silently in 1 to 2 s, <b>ASK</b> shows Reject / Pay once, plus Trust merchant for an unknown merchant (60 s = deny), <b>REFUSE</b> cannot be overridden. It builds every digest itself.</p>
   </div>
   <div class="card">
-    <h3>2 · Agent identity from the EU wallet</h3>
-    <p>The user presents an EU Digital Identity Wallet PID to the EU reference verifier; we keep only "18 or older" and a jurisdiction. The Flex delegates these rights to its agent, merchants check them without learning who the person is, and the user can revoke.</p>
+    <h3>2 · Know Your Agent, from the EU wallet</h3>
+    <p>One EU Digital Identity Wallet presentation, verified by the EU Digital Identity Wallet reference verifier; we keep only "18 or older" and a jurisdiction. The Flex signs a Bind, our verifier attests, the Flex delegates chosen rights to its agent. Revocable. Demo uses a test PID; production uses a member state PID.</p>
   </div>
   <div class="card">
-    <h3>3 · Open x402 rails</h3>
-    <p>Our own x402 facilitator settles USDC on Arc, with an extension that lets a merchant require rights like <code>age_over_18</code> or <code>jurisdiction_not:US</code>. A remote MCP server with OAuth serves any MCP agent (tested with Claude) via one browser tab bridged to the Flex.</p>
+    <h3>3 · Agentic commerce rails</h3>
+    <p>Our x402 facilitator settles USDC on Arc and enforces the rights a merchant lists in <code>extra.requires</code> (<code>age_over_18</code>, <code>jurisdiction_not:US</code>). Merchants keep the standard x402 middleware; Shopify stores too. A remote MCP server with OAuth serves any MCP agent (tested with Claude) via one browser tab bridged to the Flex.</p>
   </div>
 </section>
 

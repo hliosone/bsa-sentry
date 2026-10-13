@@ -1,5 +1,6 @@
-// The three parts of BSA Sentry, side by side: rules on the Flex, an agent identity from the EU
-// Digital Identity Wallet, open x402 rails. Used on the first screen and on "How it works".
+// The three parts of BSA Sentry, side by side: our own Ledger app as the agent's wallet, Know Your
+// Agent from the EU Digital Identity Wallet, agentic commerce rails. Used on the first screen and on
+// "How it works".
 // It has no buttons and none of the headings the e2e test looks for, so it fits on any page.
 import type { ReactNode } from 'react';
 import '../pages/overview.css';
@@ -28,24 +29,24 @@ const FlexGlyph = () => (
 export const PILLARS = [
   {
     id: 'rules',
-    title: 'Spending rules on your Flex',
-    line: 'Pays within your rules, asks you, or refuses.',
+    title: 'Your own Ledger app',
+    line: 'The agent\'s wallet. It pays within your limits and asks you only at the boundary.',
     detail:
-      'A custom Ledger Flex app holds your agent\'s spending rules. For each x402 payment (USDC, Arc testnet) it signs on its own within them, asks you (Reject, Pay once, Trust merchant), or refuses. Keys never leave the device.',
+      'Our sideloaded Ledger Flex app is your agent\'s wallet: its keys never leave the device. Payments to trusted merchants within your limits are signed with no tap, in 1 to 2 seconds. You only see the boundary: a new merchant, or a payment over your automatic limit. Above the hard limit, it refuses.',
   },
   {
     id: 'identity',
-    title: 'Agent identity from your EU wallet',
+    title: 'Know Your Agent',
     line: '18 or older and a jurisdiction, never your name.',
     detail:
-      'One scan with an EU Digital Identity Wallet app, verified by the EU Digital Identity Wallet reference verifier. Only "18 or older" and a jurisdiction are kept; your Flex grants them to your agent, and you can revoke them.',
+      'One scan with an EU Digital Identity Wallet app, verified by the EU Digital Identity Wallet reference verifier. Only "18 or older" and a jurisdiction are kept. Your Flex grants them to your agent, one right at a time, and you can revoke them.',
   },
   {
     id: 'rails',
-    title: 'Open x402 rails',
-    line: 'Any agent over MCP, any x402 shop, settled on Arc.',
+    title: 'Agentic commerce rails',
+    line: 'Our facilitator, any x402 shop, Shopify, any MCP agent.',
     detail:
-      'Our x402 facilitator verifies and settles USDC on Arc testnet. A shop can require rights (18 or older, not a US person) and checks them without learning who you are. Agents connect over MCP.',
+      'Our x402 facilitator settles USDC on Arc testnet and checks the rights a shop requires (18 or older, not a US person) without telling it who you are. Shops keep the standard x402 middleware, Shopify stores included. Agents connect over remote MCP with OAuth.',
   },
 ] as const;
 

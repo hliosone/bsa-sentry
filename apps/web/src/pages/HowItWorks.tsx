@@ -67,7 +67,7 @@ export function HowItWorks({ bsa }: { bsa: Bsa }) {
     <>
       <section className="card">
         <h2>How BSA Sentry works</h2>
-        <p>Three parts that work together so an AI agent can pay for things on the web without holding your keys or your identity.</p>
+        <p>BSA Sentry gives an AI agent a mandate held by your Ledger. Our own Flex app is its wallet and enforces its spending limits, your EU Digital Identity Wallet supplies the rights shops ask for, and x402 rails let any agent pay any shop. The agent acts on its own inside the mandate; you decide only at its boundary, on the Flex.</p>
         <Pillars />
       </section>
 

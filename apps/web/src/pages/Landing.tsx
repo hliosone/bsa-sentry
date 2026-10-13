@@ -16,9 +16,10 @@ export function Landing({ bsa }: { bsa: Bsa }) {
         <div className="hero-copy">
           <h1>Your agent spends.<br />Your Ledger decides.</h1>
           <p className="lede">
-            BSA Sentry lets an AI agent pay in USDC on the web. Spending rules live on your Ledger Flex, the agent's
-            identity comes from your EU Digital Identity Wallet, and payments run on open x402 rails that any agent
-            and any shop can use.
+            BSA Sentry gives your AI agent a mandate held by your Ledger. Our own Flex app is the agent's wallet: it
+            pays trusted shops on its own and asks you only at the boundary. Your EU Digital Identity Wallet proves what
+            a shop needs to know (18 or older, a jurisdiction), never who you are. Payments settle in USDC on Arc
+            through x402 rails that any agent and any shop can use.
           </p>
 
           <ol className="hero-steps">
