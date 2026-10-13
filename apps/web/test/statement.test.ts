@@ -3,7 +3,7 @@ import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { byCategory, camtAmount, camt053, periodRange, statementEntries, totals } from '../src/state/statement.js';
+import { balanceAt, byCategory, camtAmount, camt053, periodRange, statementEntries, totals } from '../src/state/statement.js';
 import type { ChainTransfer } from '../src/state/activity.js';
 
 const AGENT = '0x1c9940ef87ce842fb18d73fd43b49b53582c6b52';
@@ -33,13 +33,20 @@ describe('statement entries', () => {
     ]);
   });
 
+  it('counts a transfer back to the main account as sent, not spent', () => {
+    const e = statementEntries([t({ to: MAIN, value: '35000000' })], { agent: AGENT, main: MAIN, merchants });
+    expect(e[0]).toMatchObject({ direction: 'debit', name: 'Your main account', category: 'Sent to main account' });
+    expect(totals(e)).toEqual({ spent: 0n, sent: 35000000n, received: 0n, payments: 0 });
+    expect(byCategory(e)).toEqual([]);
+  });
+
   it('sums spending per category, biggest first, and the period totals', () => {
     expect(byCategory(entries)).toEqual([
       { category: 'Alcohol', units: 4500000n, count: 1 },
       { category: 'Food and drink', units: 3000000n, count: 1 },
       { category: 'Other', units: 100000n, count: 1 },
     ]);
-    expect(totals(entries)).toEqual({ spent: 7600000n, received: 20000000n, payments: 3 });
+    expect(totals(entries)).toEqual({ spent: 7600000n, sent: 0n, received: 20000000n, payments: 3 });
   });
 
   it('turns a period into a date range', () => {
@@ -48,13 +55,24 @@ describe('statement entries', () => {
     expect(new Date(periodRange('year', now).from).getMonth()).toBe(0);
     expect(periodRange('all', now).from).toBe(0);
     expect(periodRange('month', now).to).toBe(now);
+    const last = periodRange('lastMonth', now);
+    expect([new Date(last.from).getMonth(), new Date(last.from).getDate()]).toEqual([8, 1]);
+    expect(new Date(last.to).getMonth()).toBe(8);
+    expect(new Date(last.to + 1).getMonth()).toBe(9);
+  });
+
+  it('works out the wallet balance at any date from today\'s balance and the history', () => {
+    // Today 12.40; before Oct 10 nothing had arrived; after the top-up 20.00; after everything 12.40.
+    expect(balanceAt(entries, 12_400_000n, Date.parse('2026-10-09T00:00:00Z'))).toBe(0n);
+    expect(balanceAt(entries, 12_400_000n, Date.parse('2026-10-11T00:00:00Z'))).toBe(20_000_000n);
+    expect(balanceAt(entries, 12_400_000n, Date.parse('2026-10-13T00:00:00Z'))).toBe(12_400_000n);
   });
 });
 
 describe('ISO 20022 camt.053 export', () => {
   const xml = camt053({
     account: AGENT, entries, from: Date.parse('2026-10-01T00:00:00Z'), to: Date.parse('2026-10-13T15:00:00Z'),
-    closing: 12_400_000n, now: Date.parse('2026-10-13T15:00:00Z'), network: 'Arc testnet', chainId: 5042002,
+    opening: 0n, closing: 12_400_000n, now: Date.parse('2026-10-13T15:00:00Z'), network: 'Arc testnet', chainId: 5042002,
   });
 
   it('amounts fit the schema: at most 5 decimals, never negative', () => {
@@ -74,6 +92,15 @@ describe('ISO 20022 camt.053 export', () => {
     expect(xml).toContain(`Arc testnet transaction 0x${'03'.repeat(32)}`);
   });
 
+  it('says when a statement is filtered', () => {
+    const food = camt053({
+      account: AGENT, entries: entries.filter((e) => e.category === 'Food and drink'), from: Date.parse('2026-10-01T00:00:00Z'), to: Date.parse('2026-10-13T15:00:00Z'),
+      opening: 0n, closing: 12_400_000n, now: Date.parse('2026-10-13T15:00:00Z'), network: 'Arc testnet', chainId: 5042002, filter: 'Food and drink',
+    });
+    expect(food).toContain('<TtlDbtNtries><NbOfNtries>1</NbOfNtries><Sum>3.00</Sum></TtlDbtNtries>');
+    expect(food).toContain('<AddtlStmtInf>Filtered: Food and drink. The balances cover the whole wallet.</AddtlStmtInf>');
+  });
+
   it('escapes merchant names and uses a 3-letter currency', () => {
     expect(xml).toContain('Corner &lt;Wines&gt; &amp; Co');
     expect(xml).not.toContain('<Wines>');
@@ -85,9 +112,12 @@ describe('ISO 20022 camt.053 export', () => {
     try { execFileSync('xmllint', ['--version'], { stdio: 'ignore' }); } catch { hasXmllint = false; }
     if (!hasXmllint) return;
     const dir = mkdtempSync(join(tmpdir(), 'camt-'));
-    const file = join(dir, 'statement.xml');
-    writeFileSync(file, xml);
     const xsd = join(import.meta.dirname, 'fixtures/camt.053.001.02.xsd');
-    expect(() => execFileSync('xmllint', ['--noout', '--schema', xsd, file], { stdio: 'pipe' })).not.toThrow();
+    const filtered = camt053({ account: AGENT, entries: entries.slice(0, 1), from: 0, to: 1, opening: -1n, closing: 0n, now: 2, network: 'Arc testnet', chainId: 5042002, filter: 'Other' });
+    for (const [i, doc] of [xml, filtered].entries()) {
+      const file = join(dir, `statement-${i}.xml`);
+      writeFileSync(file, doc);
+      expect(() => execFileSync('xmllint', ['--noout', '--schema', xsd, file], { stdio: 'pipe' })).not.toThrow();
+    }
   });
 });

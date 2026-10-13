@@ -59,7 +59,8 @@ export function Dashboard({ bsa }: { bsa: Bsa }) {
   }, [bsa.signer, d?.hasCredentials]);
 
   const labels: Record<string, string> = {};
-  for (const m of [...(bsa.config?.defaultPayees ?? []), ...(p?.payees ?? [])]) labels[m.address.toLowerCase()] = m.label;
+  // The demo merchants' own names win over a label clipped on the Flex ("BSA Shop - Arc R").
+  for (const m of [...(bsa.config?.defaultPayees ?? []), ...(p?.payees ?? []), ...(bsa.config?.merchants ?? [])]) labels[m.address.toLowerCase()] = m.label;
   const rows = activityRows(bsa.feed.items, transfers, { agent: wallets?.agent?.address, main: wallets?.main.address, labels, reasons: REASONS });
 
   const screen: ScreenLines = {

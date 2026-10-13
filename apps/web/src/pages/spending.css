@@ -2,9 +2,15 @@
 .spending { display: grid; gap: 16px; }
 .sp-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 1rem; flex-wrap: wrap; }
 .sp-head h1 { font-size: var(--s-30); font-weight: 650; }
-.sp-periods { display: flex; gap: 0.25rem; padding: 3px; border: 1px solid var(--hairline); border-radius: 999px; }
-.sp-periods button { border-radius: 999px; }
-.sp-periods button.is-on { background: var(--ink); border-color: var(--ink); color: var(--sheet); }
+.sp-filters { display: grid; gap: 0.75rem; padding: 16px 24px; border: 1px solid var(--hairline); border-radius: 20px; background: var(--glass); }
+.sp-filter { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem 1rem; }
+.sp-filter > span { width: 4rem; font-size: var(--s-13); color: var(--graphite); }
+.sp-seg { display: flex; gap: 0.25rem; padding: 3px; border: 1px solid var(--hairline); border-radius: 999px; }
+.sp-seg button, .sp-cats-pick button { border-radius: 999px; }
+.sp-filters button.is-on { background: var(--ink); border-color: var(--ink); color: var(--sheet); }
+.sp-date { display: flex; align-items: center; gap: 0.4rem; font-size: var(--s-13); color: var(--graphite); }
+.sp-date input { font: inherit; color: var(--ink); background: var(--well); border: 1px solid var(--hairline); border-radius: 8px; padding: 0.3rem 0.5rem; color-scheme: dark; }
+.sp-cats-pick { display: flex; flex-wrap: wrap; gap: 0.35rem; }
 
 .sp-figures { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border: 1px solid var(--hairline); border-radius: 20px; background: var(--glass); }
 .sp-figures > div { padding: 18px 24px; display: grid; grid-template-columns: auto 1fr; align-items: baseline; column-gap: 0.4rem; }

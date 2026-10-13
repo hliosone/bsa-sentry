@@ -9,7 +9,7 @@ export type ChainTransfer = { txHash: string; at: number; from: string; to: stri
 export type ActivityRow = {
   key: string;
   at: number;
-  kind: 'paid' | 'topup' | 'received' | 'pending' | 'signed' | 'refused' | 'failed';
+  kind: 'paid' | 'sent' | 'topup' | 'received' | 'pending' | 'signed' | 'refused' | 'failed';
   title: string;
   /** "3.00", always two decimals. */
   amount: string;
@@ -28,6 +28,27 @@ const fromUnits = (v: string) => {
 /** "3.00" from the feed's human amount ("3", "4.5"). */
 const fromHuman = (a: string) => (/^\d+(\.\d+)?$/.test(a) ? Number(a).toFixed(2) : a);
 
+/**
+ * Why a signed payment was not paid, for the user. The server's message is written for the agent
+ * ("The user can add it..."); the facilitator's reason code and the right it names are in it.
+ */
+export function failureText(message: string): string {
+  const code = /\(HTTP \d+\): ([A-Za-z_]+)/.exec(message)?.[1];
+  if (!code) return message;
+  const right = /requires proof of: ([^.]+)\./.exec(message)?.[1];
+  const tail = ' No money moved.';
+  if (code === 'DELEGATION_REVOKED') return `You revoked the rights your agent held. Grant new ones in Agent identity.${tail}`;
+  if (code.endsWith('_EXPIRED')) return `Your agent's rights have expired. Grant them again in Agent identity.${tail}`;
+  if ((code === 'DELEGATION_MISSING_CLAIM' || code === 'AGE_PROOF_REQUIRED') && right) {
+    return `The shop requires proof that you are ${right}, and your agent does not hold that right. Grant it in Agent identity.${tail}`;
+  }
+  if (code.startsWith('DELEGATION_') || code.startsWith('ATTESTATION_') || code === 'SUBJECT_MISMATCH' || code === 'AGE_PROOF_REQUIRED') {
+    return `The shop could not verify your agent's rights. Grant them again in Agent identity.${tail}`;
+  }
+  if (code === 'insufficient_funds') return `Not enough USDC in the agent wallet. Top it up from your main account.${tail}`;
+  return message;
+}
+
 export function activityRows(
   feed: FeedItem[],
   transfers: ChainTransfer[],
@@ -44,7 +65,8 @@ export function activityRows(
   for (const t of transfers) {
     const tx = t.txHash.toLowerCase();
     const base = { key: tx + t.from + t.to, at: t.at, amount: fromUnits(t.value), txHash: tx };
-    if (agent && t.from === agent) rows.push({ ...base, kind: 'paid', title: `Paid ${name(t.to, tx)}`, sign: '-' });
+    if (agent && main && t.from === agent && t.to === main) rows.push({ ...base, kind: 'sent', title: 'Sent to your main account', sign: '-' });
+    else if (agent && t.from === agent) rows.push({ ...base, kind: 'paid', title: `Paid ${name(t.to, tx)}`, sign: '-' });
     else if (main && t.from === main) rows.push({ ...base, kind: 'topup', title: 'Top-up from your main account', sign: '+' });
     else rows.push({ ...base, kind: 'received', title: `Received from ${name(t.from, tx)}`, sign: '+' });
   }
@@ -57,7 +79,7 @@ export function activityRows(
       case 'signed': rows.push({ ...base, kind: 'signed', title: `Signed by your Flex, settling: ${i.merchant}`, sign: '' }); break;
       case 'pending': rows.push({ ...base, kind: 'pending', title: `Waiting for your Flex: ${i.merchant}`, sign: '' }); break;
       case 'refused': rows.push({ ...base, kind: 'refused', title: `Refused by your Flex: ${i.merchant}`, sign: '', ...(reason ? { detail: reason } : {}) }); break;
-      case 'failed': rows.push({ ...base, kind: 'failed', title: `Not paid: ${i.merchant}`, sign: '', ...(reason ? { detail: reason } : {}) }); break;
+      case 'failed': rows.push({ ...base, kind: 'failed', title: `Not paid: ${i.merchant}`, sign: '', ...(reason ? { detail: failureText(reason) } : {}) }); break;
     }
   }
   return rows.sort((a, b) => b.at - a.at).slice(0, MAX_ROWS);

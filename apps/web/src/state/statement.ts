@@ -17,8 +17,10 @@ export type StatementEntry = {
   units: bigint;
 };
 
-export type Period = 'month' | 'year' | 'all';
+export type Period = 'month' | 'lastMonth' | 'year' | 'all';
 
+/** Money moved back to the user's own main account: a debit, but not spending. */
+const SENT = 'Sent to main account';
 const short = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;
 
 /** Newest first. Payments to a known merchant take its category; top-ups are "Top-ups". */
@@ -29,7 +31,9 @@ export function statementEntries(transfers: ChainTransfer[], o: { agent?: string
   const out: StatementEntry[] = [];
   for (const t of transfers) {
     const base = { txHash: t.txHash.toLowerCase(), at: t.at, units: BigInt(t.value) };
-    if (agent && t.from === agent) {
+    if (agent && main && t.from === agent && t.to === main) {
+      out.push({ ...base, direction: 'debit', counterparty: t.to, name: 'Your main account', category: SENT });
+    } else if (agent && t.from === agent) {
       const m = known.get(t.to);
       out.push({ ...base, direction: 'debit', counterparty: t.to, name: m?.label ?? short(t.to), category: m?.category ?? 'Other' });
     } else if (main && t.from === main) {
@@ -44,15 +48,23 @@ export function statementEntries(transfers: ChainTransfer[], o: { agent?: string
 export function periodRange(p: Period, now = Date.now()): { from: number; to: number } {
   const d = new Date(now);
   if (p === 'month') return { from: new Date(d.getFullYear(), d.getMonth(), 1).getTime(), to: now };
+  if (p === 'lastMonth') return { from: new Date(d.getFullYear(), d.getMonth() - 1, 1).getTime(), to: new Date(d.getFullYear(), d.getMonth(), 1).getTime() - 1 };
   if (p === 'year') return { from: new Date(d.getFullYear(), 0, 1).getTime(), to: now };
   return { from: 0, to: now };
+}
+
+/** The wallet balance at `at`, from today's balance and the full history after it. */
+export function balanceAt(all: StatementEntry[], current: bigint, at: number): bigint {
+  let b = current;
+  for (const e of all) if (e.at > at) b += e.direction === 'debit' ? e.units : -e.units;
+  return b;
 }
 
 /** Spending per category, biggest first. Credits are not spending. */
 export function byCategory(entries: StatementEntry[]): { category: string; units: bigint; count: number }[] {
   const m = new Map<string, { category: string; units: bigint; count: number }>();
   for (const e of entries) {
-    if (e.direction !== 'debit') continue;
+    if (e.direction !== 'debit' || e.category === SENT) continue;
     const c = m.get(e.category) ?? { category: e.category, units: 0n, count: 0 };
     c.units += e.units;
     c.count += 1;
@@ -61,12 +73,14 @@ export function byCategory(entries: StatementEntry[]): { category: string; units
   return [...m.values()].sort((a, b) => (b.units > a.units ? 1 : b.units < a.units ? -1 : 0));
 }
 
-export function totals(entries: StatementEntry[]): { spent: bigint; received: bigint; payments: number } {
-  let spent = 0n, received = 0n, payments = 0;
+export function totals(entries: StatementEntry[]): { spent: bigint; sent: bigint; received: bigint; payments: number } {
+  let spent = 0n, sent = 0n, received = 0n, payments = 0;
   for (const e of entries) {
-    if (e.direction === 'debit') { spent += e.units; payments += 1; } else received += e.units;
+    if (e.direction === 'credit') received += e.units;
+    else if (e.category === SENT) sent += e.units;
+    else { spent += e.units; payments += 1; }
   }
-  return { spent, received, payments };
+  return { spent, sent, received, payments };
 }
 
 /** USDC base units (6 dp) as a camt amount: at least 2 decimals, at most the schema's 5. */
@@ -84,15 +98,16 @@ const dtTm = (ms: number) => new Date(ms).toISOString().replace(/\.\d{3}Z$/, 'Z'
 const day = (ms: number) => new Date(ms).toISOString().slice(0, 10);
 
 /**
- * A camt.053.001.02 statement of the agent wallet over [from, to]. `entries` must be the period's
- * entries; `closing` is the wallet balance at `to`, and the opening balance is derived from it.
+ * A camt.053.001.02 statement of the agent wallet over [from, to]: `entries` are the period's
+ * entries (or a filtered subset, named by `filter`), `opening` and `closing` the whole wallet's
+ * balances at `from` and `to` (see balanceAt).
  * Amounts are in USD at 1 USDC = 1 USD (camt needs an ISO 4217 code); every entry says so.
  * EVM addresses (42 chars) do not fit camt's 34-char account id, so the id holds a prefix and the
  * name holds the full address.
  */
-export function camt053(o: { account: string; entries: StatementEntry[]; from: number; to: number; closing: bigint; now: number; network: string; chainId: number }): string {
+export function camt053(o: { account: string; entries: StatementEntry[]; from: number; to: number; opening: bigint; closing: bigint; now: number; network: string; chainId: number; filter?: string }): string {
   const t = totals(o.entries);
-  const opening = o.closing - t.received + t.spent;
+  const debited = t.spent + t.sent;
   const bal = (cd: string, units: bigint, at: number) =>
     `<Bal><Tp><CdOrPrtry><Cd>${cd}</Cd></CdOrPrtry></Tp><Amt Ccy="USD">${camtAmount(units)}</Amt><CdtDbtInd>${units < 0n ? 'DBIT' : 'CRDT'}</CdtDbtInd><Dt><Dt>${day(at)}</Dt></Dt></Bal>`;
   const wallet = `BSA Sentry agent wallet ${o.account}`;
@@ -134,7 +149,7 @@ export function camt053(o: { account: string; entries: StatementEntry[]; from: n
       </Ntry>`;
   };
 
-  const net = t.received - t.spent;
+  const net = t.received - debited;
   return `<?xml version="1.0" encoding="UTF-8"?>
 <Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.053.001.02" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <BkToCstmrStmt>
@@ -155,13 +170,14 @@ export function camt053(o: { account: string; entries: StatementEntry[]; from: n
         <Nm>${esc(wallet)}</Nm>
         <Svcr><FinInstnId><Nm>${esc(`${o.network}, USDC`)}</Nm><Othr><Id>eip155:${o.chainId}</Id><SchmeNm><Prtry>CAIP-2 chain</Prtry></SchmeNm></Othr></FinInstnId></Svcr>
       </Acct>
-      ${bal('OPBD', opening, o.from)}
+      ${bal('OPBD', o.opening, o.from)}
       ${bal('CLBD', o.closing, o.to)}
       <TxsSummry>
         <TtlNtries><NbOfNtries>${o.entries.length}</NbOfNtries><TtlNetNtryAmt>${camtAmount(net)}</TtlNetNtryAmt><CdtDbtInd>${net < 0n ? 'DBIT' : 'CRDT'}</CdtDbtInd></TtlNtries>
         <TtlCdtNtries><NbOfNtries>${credits.length}</NbOfNtries><Sum>${camtAmount(t.received)}</Sum></TtlCdtNtries>
-        <TtlDbtNtries><NbOfNtries>${debits.length}</NbOfNtries><Sum>${camtAmount(t.spent)}</Sum></TtlDbtNtries>
-      </TxsSummry>${[...o.entries].sort((a, b) => a.at - b.at).map(entry).join('')}
+        <TtlDbtNtries><NbOfNtries>${debits.length}</NbOfNtries><Sum>${camtAmount(debited)}</Sum></TtlDbtNtries>
+      </TxsSummry>${[...o.entries].sort((a, b) => a.at - b.at).map(entry).join('')}${o.filter ? `
+      <AddtlStmtInf>${esc(`Filtered: ${o.filter}. The balances cover the whole wallet.`)}</AddtlStmtInf>` : ''}
     </Stmt>
   </BkToCstmrStmt>
 </Document>

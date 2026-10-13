@@ -132,6 +132,14 @@ test('onboarding, then the dashboard follows what the agent does', async ({ page
   const xml = await (await download.createReadStream()).toArray().then((c) => Buffer.concat(c).toString('utf8'));
   expect(xml).toContain('camt.053.001.02');
   expect(xml.match(/<CdtDbtInd>DBIT<\/CdtDbtInd>\s*<Sts>/g)).toHaveLength(5);
+  // Filters: one category, then a date range, narrow the list, the totals and the export.
+  await page.locator('.sp-cats-pick').getByRole('button', { name: 'Food and drink' }).click();
+  await expect(page.getByTestId('sp-spent')).toHaveText('8.00');
+  const ym = (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`; })();
+  await page.getByTestId('sp-from').fill(`${ym}-03`);
+  await expect(page.getByTestId('sp-spent')).toHaveText('5.00');
+  const [filtered] = await Promise.all([page.waitForEvent('download'), page.getByTestId('export-camt').click()]);
+  expect(filtered.suggestedFilename()).toMatch(/-filtered\.xml$/);
   await page.unroute('**/activity/chain');
   await page.unroute('**/topup/wallets');
   await page.goto(`${web}/?fakeDevice=1#/dashboard`);

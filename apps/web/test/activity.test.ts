@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { activityRows, whenText, type ChainTransfer } from '../src/state/activity.js';
+import { activityRows, failureText, whenText, type ChainTransfer } from '../src/state/activity.js';
 import type { FeedItem } from '../src/state/feed.js';
 
 const AGENT = '0x1c9940ef87ce842fb18d73fd43b49b53582c6b52';
@@ -33,6 +33,31 @@ describe('activity rows', () => {
 
   it('falls back to a short address for an unknown merchant', () => {
     expect(activityRows([], [t({ to: '0xabcdef0000000000000000000000000000001234' })], { agent: AGENT, labels: {} })[0]!.title).toBe('Paid 0xabcd…1234');
+  });
+});
+
+describe('why a signed payment was not paid, in the user\'s words', () => {
+  const host = 'server-production-423c.up.railway.app rejected the signed payment (HTTP 402): ';
+  it('names the missing right and where to grant it', () => {
+    expect(failureText(`${host}DELEGATION_MISSING_CLAIM. This merchant requires proof of: 18 or older. The user can add it on the BSA Sentry website (Agent identity, then authorize the agent on the Flex).`))
+      .toBe('The shop requires proof that you are 18 or older, and your agent does not hold that right. Grant it in Agent identity. No money moved.');
+    expect(failureText(`${host}AGE_PROOF_REQUIRED. This merchant requires proof of: not a US person. The user can add it`))
+      .toBe('The shop requires proof that you are not a US person, and your agent does not hold that right. Grant it in Agent identity. No money moved.');
+  });
+  it('explains revoked, expired and unverifiable rights, and an empty wallet', () => {
+    expect(failureText(`${host}DELEGATION_REVOKED. The user revoked`)).toBe('You revoked the rights your agent held. Grant new ones in Agent identity. No money moved.');
+    expect(failureText(`${host}ATTESTATION_EXPIRED. This merchant requires proof of: 18 or older.`)).toBe('Your agent\'s rights have expired. Grant them again in Agent identity. No money moved.');
+    expect(failureText(`${host}DELEGATION_WRONG_AGENT. This merchant`)).toBe('The shop could not verify your agent\'s rights. Grant them again in Agent identity. No money moved.');
+    expect(failureText(`${host}insufficient_funds. The agent account has not enough USDC on Arc testnet.`)).toBe('Not enough USDC in the agent wallet. Top it up from your main account. No money moved.');
+  });
+  it('keeps anything else as it came', () => {
+    expect(failureText('the payment was signed but shop.test could not be reached: timeout')).toBe('the payment was signed but shop.test could not be reached: timeout');
+  });
+});
+
+describe('transfers back to the main account', () => {
+  it('are not payments to a stranger', () => {
+    expect(activityRows([], [t({ to: MAIN, value: '35000000' })], { agent: AGENT, main: MAIN, labels: {} })[0]).toMatchObject({ kind: 'sent', title: 'Sent to your main account', sign: '-', amount: '35.00' });
   });
 });
 
