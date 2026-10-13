@@ -60,7 +60,7 @@ code, .mono { font-family: var(--mono); font-size: 0.86em; }
 .topbar {
   display: flex;
   align-items: center;
-  gap: 2rem;
+  gap: 1.25rem;
   padding: 0 2rem;
   height: 64px;
   background: rgba(5, 5, 6, 0.72);
@@ -84,16 +84,18 @@ code, .mono { font-family: var(--mono); font-size: 0.86em; }
 .tabs a {
   display: flex;
   align-items: center;
-  padding: 0 0.85rem;
+  padding: 0 0.7rem;
   color: var(--graphite);
   text-decoration: none;
   font-weight: 500;
+  white-space: nowrap;
   border-bottom: 2px solid transparent;
 }
 .tabs a:hover { color: var(--ink); }
 .tabs a.active { color: var(--ink); border-bottom-color: var(--ink); }
 .topbar-right { margin-left: auto; display: flex; align-items: center; gap: 1rem; min-width: 0; }
-.account { color: var(--graphite); }
+.account { color: var(--graphite); white-space: nowrap; }
+.topbar-right button { white-space: nowrap; }
 
 .status {
   display: inline-flex;
@@ -101,7 +103,7 @@ code, .mono { font-family: var(--mono); font-size: 0.86em; }
   gap: 0.5rem;
   font-size: var(--s-13);
   color: var(--graphite);
-  max-width: 56ch;
+  max-width: 30ch;
 }
 .status::before {
   content: '';
@@ -444,9 +446,15 @@ input:focus { outline: none; border-color: var(--ink); box-shadow: 0 0 0 1px var
   .limit, .session, .identity, .main { grid-column: span 6; }
 }
 
-@media (max-width: 900px) {
-  .topbar { padding: 0 1rem; gap: 1rem; height: auto; min-height: 56px; flex-wrap: wrap; }
+/* Seven sections do not fit beside the status on a laptop screen: the tabs get their own row. */
+@media (max-width: 1280px) {
+  .topbar { gap: 1rem; height: auto; min-height: 56px; flex-wrap: wrap; }
   .tabs { order: 3; width: 100%; overflow-x: auto; height: 44px; }
+  .status { max-width: 48ch; }
+}
+
+@media (max-width: 900px) {
+  .topbar { padding: 0 1rem; }
   .account { display: none; }
   .page, .with-track, .notices { padding-left: 1rem; padding-right: 1rem; }
   .with-track, .overview { grid-template-columns: 1fr; }

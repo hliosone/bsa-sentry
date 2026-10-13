@@ -1,0 +1,126 @@
+/* The project overview: the three pillars, "How it works" and the merchant / agent blocks.
+ * Every class here starts with ov- and only uses the variables of styles.css. */
+
+/* ---------------------------------------------------------------- pillars */
+
+.ov-pillars {
+  list-style: none;
+  margin: 1.25rem 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+.ov-pillar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding: 18px 20px;
+  border: 1px solid var(--hairline);
+  border-radius: 16px;
+  background: var(--glass);
+  min-width: 0;
+}
+.ov-pillar-mark { height: 44px; display: flex; align-items: center; color: var(--ink); }
+.ov-pillar h3 { margin: 0.25rem 0 0; font-size: var(--s-15); font-weight: 650; }
+.ov-pillar p { margin: 0; font-size: var(--s-13); color: var(--graphite); max-width: none; }
+
+/* On the first screen: under the login steps (same width), where the old three points were. */
+.ov-pillars.is-compact { margin-top: 2rem; max-width: 34rem; gap: 10px; }
+.ov-pillars.is-compact .ov-pillar { padding: 14px 14px 16px; border-radius: 14px; backdrop-filter: blur(16px); }
+.ov-pillars.is-compact .ov-pillar-mark { height: 46px; }
+
+.ov-eudi { display: block; max-width: 100%; height: auto; }
+.ov-x402 {
+  font-family: var(--mono);
+  font-weight: 500;
+  font-size: var(--s-13);
+  padding: 0.2rem 0.55rem;
+  border: 1px solid var(--ink);
+  border-radius: 6px;
+}
+
+/* ---------------------------------------------------------------- first screen, below the hero */
+
+.ov-audiences {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 2rem 4rem;
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: 1.25rem;
+  align-items: start;
+}
+.ov-audiences > .card + .card { margin-top: 0; }
+
+/* ---------------------------------------------------------------- how it works */
+
+.ov-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+.ov-head h2 { margin: 0; }
+
+.ov-flow { list-style: none; counter-reset: ov-step; margin: 1rem 0 0; padding: 0; display: grid; gap: 0.65rem; }
+.ov-flow li {
+  counter-increment: ov-step;
+  position: relative;
+  min-height: 26px;
+  padding-left: 40px;
+  max-width: 78ch;
+}
+.ov-flow li::before {
+  content: counter(ov-step);
+  position: absolute;
+  left: 0;
+  top: -1px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid var(--hairline);
+  background: var(--sheet);
+  display: grid;
+  place-items: center;
+  font-size: var(--s-13);
+  font-weight: 600;
+}
+
+/* The three outcomes, in the colours the dashboard uses for them. */
+.ov-outcomes { list-style: none; margin: 1.1rem 0 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.ov-outcomes li { padding: 0.75rem 0.9rem; border: 1px solid var(--hairline); border-left-width: 3px; border-radius: 10px; font-size: var(--s-13); }
+.ov-outcomes b { display: block; font-size: var(--s-15); }
+.ov-outcomes span { color: var(--graphite); }
+.ov-outcomes .is-signed { border-left-color: var(--signed); }
+.ov-outcomes .is-asked { border-left-color: var(--asked); }
+.ov-outcomes .is-refused { border-left-color: var(--refused); }
+
+.ov-note { font-size: var(--s-13); color: var(--graphite); border-left: 2px solid var(--asked); padding-left: 0.75rem; margin-top: 1rem; }
+.ov-link { margin: 1rem 0 0; font-size: var(--s-13); font-weight: 600; }
+.ov-url code { display: inline-block; background: var(--well); padding: 0.45rem 0.7rem; border-radius: 8px; overflow-wrap: anywhere; }
+
+.ov-code {
+  margin: 1rem 0 0;
+  padding: 1rem 1.1rem;
+  background: var(--well);
+  border: 1px solid var(--hairline);
+  border-radius: 12px;
+  overflow-x: auto;
+  font-family: var(--mono);
+  font-size: var(--s-13);
+  line-height: 1.6;
+}
+.ov-code code { font-size: inherit; }
+
+.ov-shops { list-style: none; margin: 0.75rem 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+.ov-shops li { display: flex; flex-direction: column; gap: 0.2rem; padding: 0.8rem 0.95rem; border: 1px solid var(--hairline); border-radius: 12px; background: var(--glass); min-width: 0; }
+.ov-shops a { font-weight: 650; }
+.ov-shop-what { font-size: var(--s-13); }
+.ov-shop-note { font-size: var(--s-13); color: var(--graphite); }
+.ov-shops code { margin-top: 0.25rem; color: var(--graphite); overflow-wrap: anywhere; }
+
+.ov-tools { margin: 0.75rem 0 0; padding-left: 1.2rem; }
+.ov-tools li { margin: 0.3rem 0; }
+
+/* ---------------------------------------------------------------- small screens */
+
+@media (max-width: 960px) {
+  .ov-pillars, .ov-outcomes, .ov-audiences { grid-template-columns: minmax(0, 1fr); }
+  .ov-audiences { padding: 0 1rem 3rem; }
+}

@@ -12,9 +12,10 @@ import { Badge } from './pages/Badge.js';
 import { Backup, Restore } from './pages/Backup.js';
 import { Services } from './pages/Services.js';
 import { Landing } from './pages/Landing.js';
+import { HowItWorks } from './pages/HowItWorks.js';
 
-type Route = 'connect' | 'rules' | 'session' | 'claude' | 'dashboard' | 'badge' | 'backup' | 'restore' | 'services';
-const ROUTES: Route[] = ['connect', 'rules', 'session', 'claude', 'dashboard', 'badge', 'backup', 'restore', 'services'];
+type Route = 'connect' | 'rules' | 'session' | 'claude' | 'dashboard' | 'badge' | 'backup' | 'restore' | 'services' | 'how';
+const ROUTES: Route[] = ['connect', 'rules', 'session', 'claude', 'dashboard', 'badge', 'backup', 'restore', 'services', 'how'];
 const STEP_ROUTE: Record<StepId, Route> = {
   connect: 'connect', login: 'connect', rules: 'rules', session: 'session', claude: 'claude', badge: 'badge', backup: 'backup', done: 'dashboard',
 };
@@ -26,6 +27,7 @@ const TABS: { route: Route; label: string }[] = [
   { route: 'claude', label: 'Agent' },
   { route: 'badge', label: 'Agent identity' },
   { route: 'backup', label: 'Backup' },
+  { route: 'how', label: 'How it works' },
 ];
 
 const routeFromHash = (): Route | null => {
@@ -145,6 +147,7 @@ export function App() {
           {current === 'backup' && <Backup bsa={bsa} />}
           {current === 'restore' && <Restore bsa={bsa} />}
           {current === 'services' && <Services bsa={bsa} />}
+          {current === 'how' && <HowItWorks bsa={bsa} />}
         </main>
       </div>
       )}
