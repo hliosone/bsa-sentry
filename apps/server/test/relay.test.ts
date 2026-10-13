@@ -243,6 +243,15 @@ describe('status', () => {
     expect(relay.status('alice').agent).toBe('0xaa6abf8f8c5f003a69d26d12d5a625da77e2d9bf');
   });
 
+  it('keeps the 0xAGENT address while the tab reconnects, but nothing else', () => {
+    const relay = new Relay();
+    const tab = new FakeTab();
+    relay.attach('alice', tab);
+    relay.onTabMessage('alice', JSON.stringify({ type: 'status', flex: 'connected', session: true, agent: '0xaa6abf8f8c5f003a69d26d12d5a625da77e2d9bf' }));
+    relay.detach('alice', tab);
+    expect(relay.status('alice')).toEqual({ attached: false, flex: 'disconnected', session: false, agent: '0xaa6abf8f8c5f003a69d26d12d5a625da77e2d9bf' });
+  });
+
   it('notifies listeners, which is what feeds the dashboard', () => {
     const relay = new Relay();
     const seen: any[] = [];

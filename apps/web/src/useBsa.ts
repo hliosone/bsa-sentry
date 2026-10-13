@@ -31,6 +31,8 @@ export function useBsa() {
   const [account, setAccount] = useState<string | null>(null);
   const [signer, setSigner] = useState<AppSigner | null>(null);
   const [addresses, setAddresses] = useState<{ main?: string; agent?: string }>({});
+  // The agent address as the SERVER knows it (reported by the bridge): balances and history need it.
+  const [serverAgent, setServerAgent] = useState<string | null>(null);
   const [bridgeStatus, setBridgeStatus] = useState<BridgeStatus>({ socket: 'closed', flex: 'disconnected', session: false });
   const [device, setDevice] = useState<DeviceState | null>(null);
   const [feed, dispatch] = useReducer(feedReducer, initialFeed);
@@ -157,7 +159,10 @@ export function useBsa() {
         if (history.length) dispatch({ type: 'dismiss' });
         es = new EventSource('/events');
         const on = (type: string, fn: (d: any) => void) => es!.addEventListener(type, (e) => fn(JSON.parse((e as MessageEvent).data)));
-        on('status', (d) => { if (d.state) try { setDevice(decodeState(unhex(d.state))); } catch { /* stale */ } });
+        on('status', (d) => {
+          if (d.agent) setServerAgent(String(d.agent).toLowerCase());
+          if (d.state) try { setDevice(decodeState(unhex(d.state))); } catch { /* stale */ }
+        });
         for (const type of ['request', 'answer', 'payment']) on(type, (d) => apply(type, d));
       });
     return () => { closed = true; es?.close(); };
@@ -291,7 +296,7 @@ export function useBsa() {
   }), [onDevice, withKeyRing, addresses.main]);
 
   return {
-    config, account, signer, addresses, bridgeStatus, device, feed, busy, error, hasBackup, prompt,
+    config, account, signer, addresses, serverAgent, bridgeStatus, device, feed, busy, error, hasBackup, prompt,
     connect, login, setRules, clearRules, refreshDevice, logout, onDevice, run, flowDeps, topUp,
     dismissBanner: () => dispatch({ type: 'dismiss' }),
     clearError: () => setError(null),

@@ -45,7 +45,8 @@ export function Dashboard({ bsa }: { bsa: Bsa }) {
   }, []);
   // Re-read after anything that can move money: a payment settling, the device state changing.
   const settledCount = bsa.feed.items.filter((i) => i.stage === 'settled').length;
-  useEffect(() => { if (bsa.account) void loadWallets(); }, [bsa.account, bsa.feed.items.length, d?.spent, loadWallets]);
+  // bsa.serverAgent: the agent balance can only be read once the bridge told the server its address.
+  useEffect(() => { if (bsa.account) void loadWallets(); }, [bsa.account, bsa.serverAgent, bsa.feed.items.length, d?.spent, loadWallets]);
   useEffect(() => { if (bsa.account) void loadHistory(); }, [bsa.account, settledCount, d?.spent, wallets?.agent?.address, loadHistory]);
   const [, tick] = useState(0);
   useEffect(() => { const t = setInterval(() => tick((n) => n + 1), 60_000); return () => clearInterval(t); }, []);

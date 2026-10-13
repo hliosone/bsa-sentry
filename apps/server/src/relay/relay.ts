@@ -73,7 +73,9 @@ export class Relay {
     const a = this.accounts.get(account);
     if (!a || a.tab !== tab) return;
     a.tab = null;
-    a.status = { attached: false, flex: 'disconnected', session: false };
+    // The agent address never changes for an account's Flex: keep it, so balances and history
+    // still load while the tab reconnects (the tunnel drops idle sockets every couple of minutes).
+    a.status = { attached: false, flex: 'disconnected', session: false, ...(a.status.agent ? { agent: a.status.agent } : {}) };
     const pending = [...(a.inFlight ? [a.inFlight] : []), ...a.queue];
     a.inFlight = null;
     a.queue = [];
