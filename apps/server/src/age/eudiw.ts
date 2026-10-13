@@ -6,10 +6,13 @@
 // comparison and is never stored or logged (security invariant 8): only the boolean survives.
 // Signatures are not re-checked here: a "Wallet response posted" transaction has already been
 // verified by the backend (issuer signature, KB-JWT, nonce).
-import { createHash, X509Certificate } from 'node:crypto';
+import { createHash } from 'node:crypto';
 import { CLAIM_AGE_OVER_18, jurisdictionClaim } from '@bsa-sentry/types';
 
 export const PID_VCT = 'urn:eudi:pid:1';
+
+/** The PID field read as the person's jurisdiction: their nationality, as disclosed by the wallet. */
+export const DEFAULT_COUNTRY_PATH = ['nationalities'];
 
 /** Procivis' trial EUDI issuer chains to these; the public backend does not trust them by default. */
 export const EUDI_TEST_CAS = [
@@ -24,11 +27,10 @@ export function buildPresentationRequest(o: { nonce: string; intendedUseId: stri
         id: 'pid',
         format: 'dc+sd-jwt',
         meta: { vct_values: [PID_VCT] },
-        // Data minimisation: the birthdate (for "18 or older") only, the one claim every PID
-        // answers. Procivis answered "credential missing" to claim_sets, to `nationalities` and
-        // to `issuing_country`. The jurisdiction comes from the issuer instead (readIdentity).
-        // A deployment whose wallets disclose a country field can still ask for it.
-        claims: [{ path: ['birthdate'] }, ...(o.countryPath ? [{ path: o.countryPath }] : [])],
+        // Data minimisation: the birthdate (for "18 or older") and the nationality (for the
+        // jurisdiction right), nothing else. Plain paths: Procivis answered "credential missing"
+        // to claim_sets.
+        claims: [{ path: ['birthdate'] }, { path: o.countryPath ?? DEFAULT_COUNTRY_PATH }],
       }],
     },
     nonce: o.nonce,
@@ -88,28 +90,24 @@ export function readAgeOver18(vpToken: unknown, nowSeconds = Math.floor(Date.now
 }
 
 /**
- * The two facts we derive from a verified presentation: "18 or older", and the country of the
- * credential (ISO code). The country is, in order: the configured disclosed field
- * (`countryPath`), an issuer-signed `issuing_country` visible in the payload, or the country of
- * the issuer's certificate (header `x5c`, whose chain the EU verifier has checked). The
- * birthdate never leaves this function; nothing here is stored.
+ * The two facts we derive from a verified presentation: "18 or older" from the disclosed
+ * birthdate, and the jurisdiction (ISO code) from the disclosed field at `countryPath` (the
+ * nationality). Only selectively disclosed values count, never a plain payload field or the
+ * issuer's certificate. The birthdate never leaves this function; nothing here is stored.
  */
-export function readIdentity(vpToken: unknown, nowSeconds = Math.floor(Date.now() / 1000), countryPath?: string[]): { ageOver18: boolean; country: string | null } {
+export function readIdentity(vpToken: unknown, nowSeconds = Math.floor(Date.now() / 1000), countryPath = DEFAULT_COUNTRY_PATH): { ageOver18: boolean; country: string | null } {
   let ageOver18 = false;
   let country: string | null = null;
   try {
     for (const presentations of Object.values((vpToken ?? {}) as Record<string, unknown>)) {
       for (const p of ([] as unknown[]).concat(presentations)) {
         if (typeof p !== 'string' || !p.includes('~')) continue;
-        const claims = resolveSdJwt(p);
+        const claims = resolveSdJwt(p, { disclosedOnly: true });
         if (isAtLeast18(claims.birthdate, nowSeconds)) ageOver18 = true;
         let v: unknown = claims;
-        for (const seg of countryPath ?? []) v = (v as Record<string, unknown> | undefined)?.[seg];
-        const first = countryPath ? ([] as unknown[]).concat(v ?? []).find((x) => typeof x === 'string') : undefined;
-        const found = typeof first === 'string' ? first
-          : typeof claims.issuing_country === 'string' ? claims.issuing_country
-          : issuerCountry(p);
-        if (!country && found) country = found;
+        for (const seg of countryPath) v = (v as Record<string, unknown> | undefined)?.[seg];
+        const first = ([] as unknown[]).concat(v ?? []).find((x) => typeof x === 'string');
+        if (!country && typeof first === 'string') country = first;
       }
     }
   } catch {
@@ -146,20 +144,8 @@ function isAtLeast18(birthdate: unknown, nowSeconds: number): boolean {
 
 const b64json = (s: string) => JSON.parse(Buffer.from(s, 'base64url').toString('utf8'));
 
-/** The country (C=) of the certificate that signed the SD-JWT, from its header's x5c. */
-function issuerCountry(token: string): string | null {
-  try {
-    const x5c = b64json(token.split('~')[0]!.split('.')[0]!).x5c;
-    if (!Array.isArray(x5c) || typeof x5c[0] !== 'string') return null;
-    const subject = new X509Certificate(Buffer.from(x5c[0], 'base64')).subject;
-    return /^C=([A-Z]{2})$/m.exec(subject)?.[1] ?? null;
-  } catch {
-    return null;
-  }
-}
-
 /** Minimal SD-JWT resolution (the reference's algorithm): only disclosures whose digest the signed payload lists count. */
-function resolveSdJwt(token: string): Record<string, unknown> {
+function resolveSdJwt(token: string, o: { disclosedOnly?: boolean } = {}): Record<string, unknown> {
   const parts = token.split('~');
   const payload = b64json(parts[0]!.split('.')[1]!);
   const alg = String(payload._sd_alg ?? 'sha-256').replace('-', '');
@@ -170,28 +156,32 @@ function resolveSdJwt(token: string): Record<string, unknown> {
       if (Array.isArray(decoded)) byDigest.set(createHash(alg).update(d, 'ascii').digest('base64url'), decoded);
     } catch { /* the trailing KB-JWT, or junk */ }
   }
-  const resolve = (node: unknown): unknown => {
+  // `shown`: inside a disclosure (or disclosedOnly is off), so plain values count. Outside one,
+  // in disclosedOnly mode, plain values of the signed payload are skipped: only what the wallet
+  // chose to disclose counts. Containers are still walked for their disclosed children.
+  const isLeaf = (v: unknown) => v === null || typeof v !== 'object';
+  const resolve = (node: unknown, shown: boolean): unknown => {
     // Array elements can be disclosed one by one: { "...": digest } -> [salt, value].
     if (Array.isArray(node)) {
       return node.flatMap((el) => {
         const dg = el && typeof el === 'object' && !Array.isArray(el) ? (el as Record<string, unknown>)['...'] : undefined;
-        if (typeof dg !== 'string') return [resolve(el)];
+        if (typeof dg !== 'string') return !shown && isLeaf(el) ? [] : [resolve(el, shown)];
         const d = byDigest.get(dg);
-        return d && d.length === 2 ? [resolve(d[1])] : [];
+        return d && d.length === 2 ? [resolve(d[1], true)] : [];
       });
     }
     if (node && typeof node === 'object') {
       const out: Record<string, unknown> = {};
-      for (const [k, v] of Object.entries(node)) if (k !== '_sd' && k !== '_sd_alg') out[k] = resolve(v);
+      for (const [k, v] of Object.entries(node)) if (k !== '_sd' && k !== '_sd_alg' && (shown || !isLeaf(v))) out[k] = resolve(v, shown);
       for (const dg of ((node as { _sd?: string[] })._sd ?? [])) {
         const d = byDigest.get(dg);
-        if (d && d.length === 3) out[String(d[1])] = resolve(d[2]);
+        if (d && d.length === 3) out[String(d[1])] = resolve(d[2], true);
       }
       return out;
     }
     return node;
   };
-  return resolve(payload) as Record<string, unknown>;
+  return resolve(payload, !o.disclosedOnly) as Record<string, unknown>;
 }
 
 let caPem: Promise<string> | undefined;

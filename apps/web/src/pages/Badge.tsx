@@ -20,7 +20,7 @@ export function describeRight(claim: string): { title: string; detail: string; m
   if (claim === 'age_over_18') return { title: '18 or older', detail: 'Proves adulthood, not the date of birth.', mark: '18+' };
   if (claim.startsWith('jurisdiction:')) {
     const cc = claim.slice('jurisdiction:'.length);
-    return { title: `Jurisdiction: ${regionName(cc)}`, detail: 'The country that issued your ID, not who you are.', mark: flag(cc) };
+    return { title: `Jurisdiction: ${regionName(cc)}`, detail: 'Your nationality, from your verified ID. Not who you are.', mark: flag(cc) };
   }
   return { title: claim, detail: '', mark: '•' };
 }
@@ -172,7 +172,7 @@ export function Badge({ bsa }: { bsa: Bsa }) {
         <h2>{held ? 'Renew or change the rights' : 'Verify with your EU wallet'}</h2>
         {stage === 'start' && (
           <>
-            <p>We ask your wallet for one thing only: your date of birth (for "18 or older"). Your jurisdiction is the country of the authority that signed your ID. Nothing is stored: both become signed rights on your Flex.</p>
+            <p>We ask your wallet for two things only: your date of birth (for "18 or older") and your nationality (your jurisdiction). The EU verifier checks the issuer's signature. Neither is stored: they become signed rights on your Flex.</p>
             <button className="primary" disabled={!bsa.account} onClick={() => void start()} data-testid="badge-start">Scan with my EU wallet</button>
           </>
         )}
