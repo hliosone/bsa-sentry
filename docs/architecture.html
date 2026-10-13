@@ -434,7 +434,7 @@ footer{margin-top:80px;padding-top:24px;border-top:1px solid var(--hairline);col
       <!-- Zone: third parties -->
       <rect class="z" x="20" y="630" width="1160" height="186" rx="16"/>
       <text class="zl" x="36" y="804">THIRD PARTIES</text>
-      <rect class="bx" x="40" y="646" width="262" height="104" rx="12"/><text class="t" x="56" y="670">EU verifier backend</text><text class="sm" x="56" y="692">verifier-backend.eudiw.dev</text><text class="s" x="56" y="712">checks issuer signature, holder</text><text class="s" x="56" y="730">binding and nonce</text>
+      <rect class="bx" x="40" y="646" width="262" height="104" rx="12"/><text class="t" x="56" y="670">EU verifier backend</text><text class="sm" x="56" y="692">verifier-backend.eudiw.dev</text><text class="s" x="56" y="712">checks issuer signature, KB-JWT,</text><text class="s" x="56" y="730">nonce, PID type metadata</text>
       <rect class="bx" x="326" y="646" width="262" height="104" rx="12"/><text class="t" x="342" y="670">Arc testnet</text><text class="sm" x="342" y="692">chainId 5042002</text><text class="sm" x="342" y="710">USDC 0x3600…0000</text><text class="s" x="342" y="730">gas paid in USDC</text>
       <rect class="bx" x="612" y="646" width="262" height="150" rx="12"/><text class="t" x="628" y="670">C4 · Demo shops (x402)</text><text class="s" x="628" y="692">cafe 3 · bakery 2 · restaurant 20</text><text class="s" x="628" y="710">wine 4.5 (18+) · presale 5 (not US)</text><text class="s" x="628" y="728">promo: hidden 400 USDC "deposit"</text><text class="sm" x="628" y="756">official @x402/express 2.28</text><text class="sm" x="628" y="776">reached at /shops/* on the server</text>
       <rect class="bx" x="898" y="646" width="262" height="104" rx="12"/><text class="t" x="914" y="670">Ledger Key Ring (LKRP)</text><text class="s" x="914" y="692">Ledger Sync infrastructure</text><text class="s" x="914" y="712">called directly by the website</text><text class="sm" x="914" y="732">application id 17</text>
@@ -548,6 +548,7 @@ footer{margin-top:80px;padding-top:24px;border-top:1px solid var(--hairline);col
       <ul>
         <li><b>claude.ai</b>: the agent, with our server added as a custom connector.</li>
         <li><b>EU reference verifier</b> (<code>verifier-backend.eudiw.dev</code>): receives the wallet's presentation and verifies it; no credentials needed (<code>intended_use_id TEST-01</code>).</li>
+        <li><b>Paradym Wallet</b> (iPhone, App Store) holding a test PID from our <b>test PID issuer</b>, <code>scripts/test-issuer.ts</code> (see Agent identity).</li>
         <li><b>Arc testnet</b> RPC and explorer; USDC from faucet.circle.com.</li>
         <li><b>Ledger Key Ring</b> (Ledger Sync), from the browser.</li>
         <li><b>cloudflared</b> quick tunnel for the public HTTPS URL.</li>
@@ -732,14 +733,14 @@ Session  { armed: bool }              // RAM only</code></pre>
   <p class="sub">Some merchants must know something about the buyer: a wine shop needs an adult, a token presale must not sell to US persons. BSA Sentry lets the agent prove exactly that, from the user's EU Digital Identity Wallet, without the merchant, our server or the agent ever learning a name or a birthdate.</p>
 
   <div class="grid three">
-    <div class="panel"><h4>The rights</h4><p><code>age_over_18</code>: computed from the PID's birthdate, which is used for one comparison and dropped.</p><p><code>jurisdiction:CH</code>: the country that issued the person's EU identity credential.</p></div>
+    <div class="panel"><h4>The rights</h4><p><code>age_over_18</code>: computed from the PID's birthdate, which is used for one comparison and dropped.</p><p><code>jurisdiction:CH</code>: the person's nationality, as disclosed by their wallet (the first one if there are several).</p></div>
     <div class="panel"><h4>What merchants can require</h4><p><code>age_over_18</code> · <code>jurisdiction_not:US,RU</code> · <code>jurisdiction_in:FR,DE</code>, in the x402 offer's <code>extra.requires</code>. Corner Wines requires <code>age_over_18</code>; the Token Presale requires <code>jurisdiction_not:US</code>.</p></div>
     <div class="panel"><h4>Where they live</h4><p>On the Flex. The user chooses which rights to grant; the Flex signs the delegation and stores it. Every rights bundle expires after 30 days and can be revoked at any time.</p></div>
   </div>
 
   <h3>The chain of trust a merchant relies on</h3>
   <div class="chain">
-    <div class="link"><span class="by">signed by a PID issuer</span><h4>EU PID (SD-JWT VC)</h4><p>In the user's wallet. Presented once over OpenID4VP; only the birthdate is disclosed. The EU reference verifier checks the issuer signature, key binding and nonce.</p></div>
+    <div class="link"><span class="by">signed by a PID issuer</span><h4>EU PID (SD-JWT VC)</h4><p>In the user's wallet. Presented once over OpenID4VP; only the birthdate and nationalities are disclosed. The EU reference verifier checks the issuer signature, KB-JWT, nonce and PID type metadata.</p></div>
     <div class="link"><span class="by">signed by our verifier key</span><h4>AgeAttestation</h4><p><code>{subject: 0xMAIN, claim: "age_over_18,jurisdiction:CH", issuedAt, expiresAt +30 d, evidence: keccak(EU transaction id)}</code>, after the Flex signed a Bind.</p></div>
     <div class="link"><span class="by">signed by 0xMAIN on the Flex</span><h4>AgentDelegation</h4><p><code>{agent: 0xAGENT, agentName: "Claude", attestation: its hash, claims: the rights chosen, expiresAt, nonce}</code>. Stored on the Flex.</p></div>
     <div class="link"><span class="by">signed by 0xAGENT via decide()</span><h4>The payment</h4><p>The EIP-3009 authorization, with attestation + delegation and both signatures in <code>extensions.bsaAge</code>. The facilitator walks the chain back to our issuer.</p></div>
@@ -761,14 +762,14 @@ Session  { armed: bool }              // RAM only</code></pre>
       <line class="lane" x1="80" y1="62" x2="80" y2="890"/><line class="lane" x1="270" y1="62" x2="270" y2="890"/><line class="lane" x1="470" y1="62" x2="470" y2="890"/><line class="lane" x1="670" y1="62" x2="670" y2="890"/><line class="lane" x1="870" y1="62" x2="870" y2="890"/><line class="lane" x1="1080" y1="62" x2="1080" y2="890"/>
 
       <line class="ln" x1="274" y1="100" x2="466" y2="100" marker-end="url(#i1)"/><text class="al" x="370" y="93" text-anchor="middle"><tspan class="ala">1</tspan> POST /age/sessions</text>
-      <line class="ln" x1="474" y1="138" x2="666" y2="138" marker-end="url(#i1)"/><text class="al" x="570" y="131" text-anchor="middle"><tspan class="ala">2</tspan> DCQL: birthdate only</text>
+      <line class="ln" x1="474" y1="138" x2="666" y2="138" marker-end="url(#i1)"/><text class="al" x="570" y="131" text-anchor="middle"><tspan class="ala">2</tspan> DCQL: birthdate, nationalities</text>
       <line class="ln dash" x1="666" y1="176" x2="474" y2="176" marker-end="url(#i1)"/><text class="al" x="570" y="169" text-anchor="middle"><tspan class="ala">3</tspan> transaction, request_uri</text>
       <line class="ln dash" x1="466" y1="214" x2="274" y2="214" marker-end="url(#i1)"/><text class="al" x="370" y="207" text-anchor="middle"><tspan class="ala">4</tspan> QR openid4vp://…</text>
       <line class="ln dash" x1="266" y1="252" x2="84" y2="252" marker-end="url(#i1)"/><text class="al" x="175" y="245" text-anchor="middle"><tspan class="ala">5</tspan> the user scans it</text>
-      <line class="ln" x1="84" y1="290" x2="666" y2="290" marker-end="url(#i1)"/><text class="al" x="375" y="283" text-anchor="middle"><tspan class="ala">6</tspan> OpenID4VP: SD-JWT PID + key binding, birthdate disclosed</text>
-      <rect class="note" x="580" y="304" width="180" height="42" rx="7"/><text class="al" x="590" y="321"><tspan class="ala">7</tspan> verifies issuer signature,</text><text class="sm" x="590" y="338">key binding, nonce</text>
+      <line class="ln" x1="84" y1="290" x2="666" y2="290" marker-end="url(#i1)"/><text class="al" x="375" y="283" text-anchor="middle"><tspan class="ala">6</tspan> OpenID4VP: SD-JWT PID + KB-JWT, the two claims disclosed</text>
+      <rect class="note" x="580" y="304" width="198" height="42" rx="7"/><text class="al" x="590" y="321"><tspan class="ala">7</tspan> verifies signature, KB-JWT,</text><text class="sm" x="590" y="338">nonce, PID type metadata</text>
       <line class="ln" x1="474" y1="374" x2="666" y2="374" marker-end="url(#i1)"/><text class="al" x="570" y="367" text-anchor="middle"><tspan class="ala">8</tspan> poll, fetch vp_token</text>
-      <rect class="note" x="370" y="388" width="200" height="44" rx="7"/><text class="al" x="380" y="405"><tspan class="ala">9</tspan> birthdate → 18+, dropped</text><text class="sm" x="380" y="423">issuer country → jurisdiction</text>
+      <rect class="note" x="370" y="388" width="200" height="44" rx="7"/><text class="al" x="380" y="405"><tspan class="ala">9</tspan> birthdate → 18+, dropped</text><text class="sm" x="380" y="423">nationality → jurisdiction</text>
       <line class="ln dash" x1="466" y1="462" x2="274" y2="462" marker-end="url(#i1)"/><text class="al" x="370" y="455" text-anchor="middle"><tspan class="ala">10</tspan> verified: rights found</text>
       <line class="lna" x1="274" y1="500" x2="866" y2="500" marker-end="url(#i2)"/><text class="al" x="570" y="493" text-anchor="middle"><tspan class="ala">11</tspan> SIGN_BIND 0x0E · shows verifier + session · tap</text>
       <line class="lna dash" x1="866" y1="538" x2="274" y2="538" marker-end="url(#i2)"/><text class="al" x="570" y="531" text-anchor="middle"><tspan class="ala">12</tspan> Bind signature (0xMAIN)</text>
@@ -798,8 +799,9 @@ Session  { armed: bool }              // RAM only</code></pre>
     <li>Every delegated right is one the attestation states: a delegation cannot inflate the rights (<code>ATTESTATION_WRONG_CLAIM</code>).</li>
   </ol>
 
-  <h3>Where the jurisdiction comes from</h3>
-  <p>The wallet is asked for the <b>birthdate only</b>: it is the one claim every PID answers (the Procivis test PID answered "credential missing" to a request for <code>nationalities</code> and to <code>claim_sets</code>). The country is then read, in order, from: a disclosed field if the deployment configures one (<code>EUDIW_COUNTRY_CLAIM</code>); an issuer-signed <code>issuing_country</code> visible in the payload; or the country (<code>C=</code>) of the issuer's certificate in the SD-JWT header (<code>x5c</code>), whose chain the EU verifier has just checked.</p>
+  <h3>What the wallet is asked for, and what counts</h3>
+  <p>The website asks the EU wallet for exactly <b>two claims</b>, as plain DCQL paths (no <code>claim_sets</code>, which Procivis answered with "credential missing"): <code>birthdate</code> and <code>nationalities</code> (the second path can be changed with <code>EUDIW_COUNTRY_CLAIM</code>). "18 or older" is computed from the disclosed birthdate, which is then dropped; <code>jurisdiction:XX</code> is the first disclosed nationality, kept only if it is a two-letter ISO code.</p>
+  <p><b>Only selectively disclosed values count.</b> A plain (always-visible) field of the signed payload is ignored, and nothing is derived from the issuer's certificate. If the wallet does not disclose a nationality, the agent gets no jurisdiction right (<code>readIdentity</code> in <code>apps/server/src/age/eudiw.ts</code>).</p>
 
   <h3>Revocation</h3>
   <ol class="flow">
@@ -808,7 +810,11 @@ Session  { armed: bool }              // RAM only</code></pre>
     <li><span class="who w-srv">Facilitator</span>refuses that delegation from then on (<code>DELEGATION_REVOKED</code>); the website shows "Revoked" (<code>GET /age/revoked/:hash</code>). New rights can be granted any time.</li>
   </ol>
 
-  <div class="callout"><p><b>About the wallet used in the demo.</b> The EU's public test issuer (<code>issuer.eudiw.dev</code>) now requires hardware key attestations on every proof type, which only the EU's own Android reference wallet can provide; Procivis One and Paradym on iPhone are refused. For an iPhone demo we therefore run our own <b>test PID issuer</b> (<code>scripts/test-issuer.ts</code>, OpenID4VCI pre-authorized code), which issues a test PID from typed data, exactly like the EU issuer's "FormEU". Everything after issuance is real: the wallet holds a signed SD-JWT, the <b>real EU reference verifier</b> checks it (our test CA is added to its <code>issuer_chain</code>), and the rest of the chain is unchanged. In production the PID comes from a national issuer and no test CA is trusted. Say this plainly if asked.</p></div>
+  <h3>The wallet in the demo: a test PID from our test issuer</h3>
+  <div class="callout"><p><b>Say it plainly: the PID in the demo comes from a test issuer of ours.</b> In production the PID comes from a national issuer and no test CA is trusted.</p>
+  <p><b>Why.</b> The EU's public test issuer (<code>issuer.eudiw.dev</code>) requires hardware key attestations (<code>iso_18045_high</code>) on every proof type, which only the EU's Android reference wallet provides; iPhone wallets are refused. The Procivis trial PID we first tested with has no <code>nationalities</code>.</p>
+  <p><b>What we use.</b> <b>Paradym Wallet</b> (iPhone, App Store) holds a test PID issued by <code>scripts/test-issuer.ts</code>: OpenID4VCI 1.0, pre-authorized code, a one-time offer valid 10 minutes, filled from a form with test data (like the EU issuer's "FormEU"). It is an SD-JWT VC <code>urn:eudi:pid:1</code> shaped per the PID type metadata: every personal claim selectively disclosable (given and family name, birthdate, place of birth, nationalities element by element, issuing country and authority), bound to the wallet's key (<code>cnf.jwk</code>), valid 60 days.</p>
+  <p><b>What stays real.</b> It is signed with a leaf certificate under our own test CA, which the server adds to the request's <code>issuer_chain</code> (env <code>EUDIW_EXTRA_ISSUER_CA</code>), so the <b>real EU reference verifier</b> checks it like any PID: issuer signature, KB-JWT, nonce, PID type metadata. Everything after that (Bind, attestation, delegation, facilitator) is unchanged.</p></div>
 </section>
 
 <section id="backup">
@@ -989,7 +995,7 @@ docs/                  ARCHITECTURE, DEMO, SUBMISSION, EUDIW, DX_NOTES, PROGRESS
     <li>Testnet only (Arc testnet USDC). Quick tunnels change URL on restart, which means re-adding the Claude connector.</li>
     <li>Identity requirements are checked by <b>our</b> facilitator; a merchant relying on them trusts it. Revocations live on our server.</li>
     <li>A merchant trusted through "Trust merchant" gets the agent's hint as its label, clipped to 16 bytes. Labels are display-only by design.</li>
-    <li>The live EU wallet step uses the EU's public reference verifier and, on iPhone, our test PID issuer (see Agent identity).</li>
+    <li>The live EU wallet step uses the EU's public reference verifier and a test PID from our own test issuer, trusted through a test CA (see Agent identity).</li>
   </ul>
 </section>
 
@@ -999,8 +1005,8 @@ docs/                  ARCHITECTURE, DEMO, SUBMISSION, EUDIW, DX_NOTES, PROGRESS
   <div class="tbl"><table>
     <tr><th>Party</th><th>Learns</th><th>Never learns</th></tr>
     <tr><td><b>The merchant</b></td><td>A payment from 0xAGENT; for gated shops, the attested rights (e.g. "18 or older", "jurisdiction CH"), the agent's name, and the owner's 0xMAIN address that signed the delegation (a pseudonymous address)</td><td>Name, birthdate, document, any PID attribute</td></tr>
-    <tr><td><b>Our server</b></td><td>0xMAIN, 0xAGENT, what Claude asked and what the Flex decided, the verification outcome and <code>keccak(EU transaction id)</code></td><td>The vp_token, any disclosure, the birthdate (used in memory once, never logged)</td></tr>
-    <tr><td><b>EU reference verifier</b></td><td>The disclosed birthdate, for the transaction (it is the verifier that checks the wallet's signatures)</td><td>Anything else in the PID: the request asks for the birthdate only</td></tr>
+    <tr><td><b>Our server</b></td><td>0xMAIN, 0xAGENT, what Claude asked and what the Flex decided, the rights derived (18+, nationality as jurisdiction) and <code>keccak(EU transaction id)</code></td><td>Nothing personal is stored or logged: the vp_token is read in memory once, the birthdate is used for one comparison and dropped</td></tr>
+    <tr><td><b>EU reference verifier</b></td><td>The disclosed birthdate and nationalities, for the transaction (it is the verifier that checks the wallet's signatures)</td><td>Anything else in the PID: the request asks for those two claims only</td></tr>
     <tr><td><b>Claude</b></td><td>The content it bought, receipts, refusals and their reasons, the status of the bridge and budget</td><td>The keys; it cannot change the rules</td></tr>
     <tr><td><b>Ledger Key Ring / our vault</b></td><td>Ciphertext</td><td>The rules, merchants or rights inside it</td></tr>
   </table></div>
@@ -1009,7 +1015,7 @@ docs/                  ARCHITECTURE, DEMO, SUBMISSION, EUDIW, DX_NOTES, PROGRESS
 <section id="stack">
   <h2>Stack and numbers</h2>
   <div class="stats">
-    <div class="stat"><b>583</b><span>TypeScript unit tests (types 255 · signer 34 · server 221 · shops 13 · web 60)</span></div>
+    <div class="stat"><b>584</b><span>TypeScript unit tests (types 255 · signer 34 · server 222 · shops 13 · web 60)</span></div>
     <div class="stat"><b>88</b><span>Rust tests of the device logic, on the host</span></div>
     <div class="stat"><b>79</b><span>Speculos device integration tests (Flex model)</span></div>
     <div class="stat"><b>4</b><span>Playwright runs of the website against the real server</span></div>
@@ -1024,7 +1030,7 @@ docs/                  ARCHITECTURE, DEMO, SUBMISSION, EUDIW, DX_NOTES, PROGRESS
     <tr><td><b>Server</b></td><td>Node 22, Express, Node's built-in SQLite, viem, <code>@modelcontextprotocol/sdk</code> (Streamable HTTP), <code>@x402/core</code> + <code>@x402/evm</code>, zod, ws</td></tr>
     <tr><td><b>Shops</b></td><td><code>@x402/express</code> 2.28 (official middleware), Express</td></tr>
     <tr><td><b>Chain</b></td><td>Arc testnet (chainId 5042002), USDC with EIP-3009, gas in USDC, maxFeePerGas ≥ 20 gwei, ~0.00185 USDC per transfer</td></tr>
-    <tr><td><b>Identity</b></td><td>EU reference verifier backend (OpenID4VP 1.0, DCQL, SD-JWT VC), Procivis One wallet; test PID issuer (OpenID4VCI 1.0) for iPhone demos</td></tr>
+    <tr><td><b>Identity</b></td><td>EU reference verifier backend (OpenID4VP 1.0, DCQL, SD-JWT VC); Paradym Wallet with a test PID from our test issuer (OpenID4VCI 1.0, pre-authorized code); Procivis One for the first live 18+ test</td></tr>
     <tr><td><b>Infra and tests</b></td><td>Docker Compose, cloudflared quick tunnels (http2 + IPv4), vitest, cargo test, Playwright with installed Chrome</td></tr>
   </table></div>
 </section>
@@ -1079,7 +1085,7 @@ docs/                  ARCHITECTURE, DEMO, SUBMISSION, EUDIW, DX_NOTES, PROGRESS
 
   <h3>Before going on stage</h3>
   <ul>
-    <li>Flex: auto-lock off, charged, BSA Sentry installed (the normal build, not the diagnosis build), rules set, <b>bakery and presale not trusted</b>, agent identity granted, agent session started.</li>
+    <li>Flex: auto-lock off, charged, BSA Sentry installed (the normal build, not the diagnosis build), rules set, <b>bakery and presale not trusted</b>, agent identity granted (Paradym Wallet with the test PID), agent session started.</li>
     <li>Laptop on AC, never sleeps, Chrome only. Run <code>pnpm demo:up</code> shortly before; re-add the connector in claude.ai with the new <code>&lt;URL&gt;/mcp</code>; reopen the site tab after the consent.</li>
     <li>Agent wallet ≥ 35 USDC (top up or <code>pnpm fund</code>). Dashboard open on the projector. A tab with the promo page to show it looks harmless.</li>
   </ul>
@@ -1103,7 +1109,8 @@ docs/                  ARCHITECTURE, DEMO, SUBMISSION, EUDIW, DX_NOTES, PROGRESS
 # (PUBLIC_API_URL, MERCHANT_URL=…/shops)
 # server + shops rebuilt in Docker
 # prints the site, /mcp and /shops links</code></pre>
-      <p class="small">Then in claude.ai (Chrome): remove the old connector, add <code>&lt;URL&gt;/mcp</code>, authorise. To redeploy code on the same URL: <code>docker compose up -d --build</code>, and tell anyone on the site to hard-reload (Ctrl+Shift+R).</p></div>
+      <p class="small">Then in claude.ai (Chrome): remove the old connector, add <code>&lt;URL&gt;/mcp</code>, authorise. To redeploy code on the same URL: <code>docker compose up -d --build</code>, and tell anyone on the site to hard-reload (Ctrl+Shift+R).</p>
+      <p class="small">Test PID for the wallet: <code>pnpm exec tsx scripts/test-issuer.ts</code> prints its own public URL and the <code>EUDIW_EXTRA_ISSUER_CA=…</code> line for <code>.env</code> (the CA is kept in <code>.run/test-issuer/</code>, so it is set once). Open the URL, fill the form with test data, scan the offer with Paradym.</p></div>
     <div class="panel"><h4>From scratch, locally</h4>
 <pre><code>pnpm install
 cp .env.example .env &amp;&amp; pnpm keys   # testnet keys
@@ -1136,8 +1143,8 @@ E2E=1 pnpm e2e         # full demo twice, Speculos + Arc</code></pre>
   <details><summary>What is x402?</summary><div><p>An open standard (from Coinbase) that revives HTTP 402 Payment Required: the server answers with a machine-readable price, the client retries with a signed payment, a facilitator verifies and settles it on-chain. No accounts or checkout, which is why it fits agents. We use the official middleware and run our own facilitator.</p></div></details>
   <details><summary>Why Arc?</summary><div><p>Circle's chain where USDC is the native gas token, so the agent holds exactly one asset and never needs a second token for fees. Payments settle in seconds, USDC supports EIP-3009, and x402 2.28 supports Arc testnet natively. The code is chain-agnostic (a <code>CHAIN</code> setting); Base Sepolia was proven as a fallback during feasibility.</p></div></details>
   <details><summary>Why not enforce the rules in a smart contract?</summary><div><p>A contract wallet costs gas, lives on one chain, and still needs someone to approve exceptions. On the Flex the rules travel with the user's key, cost nothing, and the exception screen is in hardware in the user's hand.</p></div></details>
-  <details><summary>Is the 18+ / jurisdiction proof private?</summary><div><p>The wallet is asked for the birthdate only. "18 or older" is computed in memory and the birthdate is dropped; nothing personal is stored or logged. The merchant receives signed rights strings ("age_over_18", "jurisdiction:CH") bound to this agent, never a name, a date or a document number. Rights expire after 30 days and can be revoked.</p></div></details>
-  <details><summary>Which EU wallet did you use, and is the PID real?</summary><div><p>We verified the flow live with a real Procivis One wallet and the EU's public reference verifier (and bought wine with it on Arc). The EU's public test issuer now requires hardware key attestations that only the EU's own Android reference wallet provides, so iPhone wallets cannot get a test PID from it. For the iPhone demo, a small <b>test PID issuer of ours</b> issues a test credential from typed data, like the EU issuer's "FormEU", and the <b>real EU verifier</b> then checks it, with our test CA added to its <code>issuer_chain</code>. It is test data on a test network; in production the PID comes from a national issuer.</p></div></details>
+  <details><summary>Is the 18+ / jurisdiction proof private?</summary><div><p>The wallet is asked for two claims only: the birthdate and the nationalities. "18 or older" is computed in memory and the birthdate is dropped; nothing personal is stored or logged. The merchant receives signed rights strings ("age_over_18", "jurisdiction:CH") bound to this agent, never a name, a date or a document number. Rights expire after 30 days and can be revoked.</p></div></details>
+  <details><summary>Which EU wallet did you use, and is the PID real?</summary><div><p>The demo wallet is <b>Paradym Wallet</b> on an iPhone, holding a <b>test PID from our own test issuer</b> (<code>scripts/test-issuer.ts</code>), signed under a test CA that our server adds to the EU verifier's <code>issuer_chain</code>. The <b>real EU reference verifier</b> then checks it: issuer signature, KB-JWT, nonce, PID type metadata. Why not an official test PID: the EU's test issuer requires hardware key attestations (<code>iso_18045_high</code>) that only the EU's Android reference wallet provides, and the Procivis trial PID we first used (18+ and wine, live) has no nationalities. It is test data on a test network; in production the PID comes from a national issuer.</p></div></details>
   <details><summary>What if the laptop sleeps, or the tab is closed?</summary><div><p>Payments stop: Claude is told "open the BSA Sentry tab". Nothing is signed without the device, which is the safe failure. Hidden tabs and minimised windows work; the bridge is event-driven precisely so browsers cannot throttle it.</p></div></details>
   <details><summary>What if the user loses the Flex?</summary><div><p>Ledger Key Ring: the rules, trusted merchants and the agent's rights are backed up encrypted under the seed. A new Flex with the same seed restores them with one review. The vault on our server only ever holds ciphertext.</p></div></details>
   <details><summary>Does this only work with Claude?</summary><div><p>No. Any MCP client that supports remote servers with OAuth can use the connector, and any x402 merchant can be paid. The device app and the signer kit know nothing about Claude.</p></div></details>
@@ -1163,7 +1170,8 @@ E2E=1 pnpm e2e         # full demo twice, Speculos + Arc</code></pre>
     <dt>Arc</dt><dd>Circle's L1 blockchain where USDC is the gas token. We use Arc testnet (chainId 5042002).</dd>
     <dt>EUDI Wallet</dt><dd>The European Digital Identity Wallet: an app holding identity credentials issued by EU states (Procivis One is one implementation).</dd>
     <dt>PID</dt><dd>Person Identification Data: the core EU identity credential (name, birthdate, nationality…), issued by a national PID provider.</dd>
-    <dt>SD-JWT VC</dt><dd>Selective-Disclosure JWT Verifiable Credential: a signed credential where each attribute can be revealed separately (we reveal only the birthdate).</dd>
+    <dt>SD-JWT VC</dt><dd>Selective-Disclosure JWT Verifiable Credential: a signed credential where each attribute can be revealed separately (we ask for the birthdate and nationalities only).</dd>
+    <dt>KB-JWT</dt><dd>Key Binding JWT: the wallet's signature over the presentation (with the verifier's nonce), proving it holds the key the credential is bound to.</dd>
     <dt>OpenID4VP</dt><dd>OpenID for Verifiable Presentations: the protocol a verifier uses to request, and a wallet to present, credentials (here via a QR code).</dd>
     <dt>OpenID4VCI</dt><dd>OpenID for Verifiable Credential Issuance: how a wallet receives a credential from an issuer (used by our test PID issuer).</dd>
     <dt>DCQL</dt><dd>Digital Credentials Query Language: how the OpenID4VP request says which credential and which claims it wants.</dd>
