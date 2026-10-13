@@ -9,6 +9,8 @@ export type Config = {
   defaultPayees: { label: string; address: string }[];
   /** Every demo merchant, with its spending category. */
   merchants?: { label: string; address: string; category: string }[];
+  /** Self-declared demo credentials are offered next to the EU wallet (AGE_DEMO=1). */
+  demoCredentials?: boolean;
 };
 
 async function call<T>(path: string, init?: RequestInit): Promise<T> {

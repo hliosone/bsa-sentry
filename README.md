@@ -55,6 +55,10 @@ Honesty note: the demo PID comes from our own test issuer ([`scripts/test-issuer
 because the EU test issuer only issues to wallets with Android key attestation. Verified by the EU
 Digital Identity Wallet reference verifier; demo uses a test PID; production uses a member state PID.
 
+For testers without an EU wallet, the hosted demo also offers a **demo credential** (`AGE_DEMO=1`):
+18 or older and/or Swiss, self-declared and not verified. It goes through the same Bind and grant on
+the Flex, which shows "demo: self-declared, not verified" as the verifier. Production leaves it off.
+
 ### 3. Agentic commerce rails
 
 - **Our own x402 facilitator** ([`apps/server/src/facilitator/`](apps/server/src/facilitator/))

@@ -34,6 +34,12 @@ export type AgeOptions = {
   qrScheme: string;
   now?: () => number;
   fetch?: typeof fetch;
+  /**
+   * Self-declared demo credentials, for testers without an EU wallet (AGE_DEMO=1). No wallet is
+   * asked: the user picks 18+ and/or a country, the Flex shows "demo: self-declared, not verified"
+   * as the verifier when it signs the Bind, and the evidence is the hash of "demo-<session>".
+   */
+  demo?: boolean;
   /** The PEM chain to trust for Procivis' trial issuer. Defaults to fetching the EUDI test CAs. */
   issuerChain?: () => Promise<string>;
   /** The PID field read as the jurisdiction (default `issuing_country`), e.g. ['address', 'country']. */
@@ -50,8 +56,20 @@ export function isRevoked(db: Db, delegationHashHex: string): boolean {
   return !!db.prepare('SELECT 1 FROM revocations WHERE delegation_hash = ?').get(delegationHashHex.toLowerCase());
 }
 
+export const DEMO_VERIFIER = 'demo: self-declared, not verified';
+
+/** A demo request: 18+ and/or one country, nothing else. */
+function demoClaims(v: unknown): string[] | null {
+  if (!Array.isArray(v) || v.length < 1 || v.length > 2 || new Set(v).size !== v.length) return null;
+  if (!v.every((c) => c === CLAIM_AGE_OVER_18 || (typeof c === 'string' && /^jurisdiction:[A-Z]{2}$/.test(c)))) return null;
+  if (v.filter((c) => c !== CLAIM_AGE_OVER_18).length > 1) return null;
+  return v as string[];
+}
+
 export function ageRouter(o: AgeOptions) {
   const now = o.now ?? (() => Math.floor(Date.now() / 1000));
+  // A demo session's chosen rights, until it is bound (15 minutes at most). Not personal data.
+  const demoRights = new Map<string, string[]>();
   const fetchImpl = o.fetch ?? fetch;
   const issuer = privateKeyToAccount(o.issuerKey);
   const router = safeRouter();
@@ -92,7 +110,17 @@ export function ageRouter(o: AgeOptions) {
     let qr: string;
     let transactionId: string;
     let verifier: string;
-    if (o.mode === 'mock') {
+    let mode: string = o.mode;
+    if (req.body?.demo !== undefined) {
+      if (!o.demo) return res.status(403).json({ error: 'demo credentials are not enabled on this server' });
+      const claims = demoClaims(req.body.demo);
+      if (!claims) return res.status(400).json({ error: 'demo credentials: choose age_over_18 and/or one jurisdiction:XX' });
+      mode = 'demo';
+      transactionId = `demo-${id}`;
+      verifier = DEMO_VERIFIER;
+      qr = '';
+      demoRights.set(id, claims);
+    } else if (o.mode === 'mock') {
       transactionId = `mock-${id}`;
       verifier = 'mock: BSA Sentry test verifier';
       qr = `mock://age?session=${id}`;
@@ -111,14 +139,15 @@ export function ageRouter(o: AgeOptions) {
       }
     }
     o.db.prepare(`INSERT INTO age_sessions (id, account, mode, verifier, transaction_id, status, created_at, expires_at)
-      VALUES (?, ?, ?, ?, ?, 'pending', ?, ?)`).run(id, account, o.mode, verifier, transactionId, createdAt, expiresAt);
-    res.json({ sessionId: id, mode: o.mode, status: 'pending', qr, bind: { verifier, session: id, expiresAt } });
+      VALUES (?, ?, ?, ?, ?, 'pending', ?, ?)`).run(id, account, mode, verifier, transactionId, createdAt, expiresAt);
+    res.json({ sessionId: id, mode, status: 'pending', qr, bind: { verifier, session: id, expiresAt } });
   });
 
   // The rights a verified session proves. Re-read from the EU verifier each time rather than
   // stored: the jurisdiction only ever exists in the signed attestation on the user's Flex.
-  const claimsFor = async (row: { mode: string; transaction_id: string | null }): Promise<string[]> => {
+  const claimsFor = async (row: { id: string; mode: string; transaction_id: string | null }): Promise<string[]> => {
     if (row.mode === 'mock') return [CLAIM_AGE_OVER_18, jurisdictionClaim('FR')];
+    if (row.mode === 'demo') return demoRights.get(row.id) ?? [];
     try {
       const r = await pollTransaction(fetchImpl, o.backend, row.transaction_id!);
       return r.state === 'verified' ? identityClaims(readIdentity(r.vpToken, now(), o.countryPath)) : [];
@@ -132,7 +161,7 @@ export function ageRouter(o: AgeOptions) {
     if (!row) return res.status(404).json({ error: 'unknown session' });
     let status = row.status;
     if (status === 'pending') {
-      if (row.mode === 'mock') {
+      if (row.mode === 'mock' || row.mode === 'demo') {
         status = 'verified';
       } else {
         try {

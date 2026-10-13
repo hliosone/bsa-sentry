@@ -4,3 +4,10 @@
 /* A right the wallet proved but the agent does not hold: outlined rather than filled. */
 .right.not-granted { border-style: dashed; }
 .right.not-granted .right-mark { background: transparent; color: var(--ink); border: 1px solid var(--hairline); }
+
+/* The demo credential: a quieter, dashed alternative under the EU wallet scan. */
+.demo-cred { margin-top: 1.25rem; padding: 1rem 1.25rem; border: 1px dashed var(--hairline); border-radius: 12px; }
+.demo-cred p { margin: 0 0 0.75rem; color: var(--graphite); font-size: var(--s-13); }
+.demo-cred p b { color: var(--ink); }
+.demo-cred-pick { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1.25rem; font-size: var(--s-15); }
+.demo-cred-pick label { display: flex; align-items: center; gap: 0.4rem; }

@@ -33,7 +33,7 @@ test.beforeAll(async () => {
   web = `http://localhost:${webPort}`;
   // The site is served by Vite on its own port and proxies to the server, so the server's
   // public URL (Login origin, OAuth issuer) is the Vite origin, exactly as the user sees it.
-  bsa = await startBsaServer({ ...process.env, PORT: String(apiPort), PUBLIC_API_URL: web, DB_PATH: ':memory:', WEB_ORIGIN: undefined, WEB_DIST: '/nonexistent', EUDIW_MODE: 'mock' }, { log: () => {} });
+  bsa = await startBsaServer({ ...process.env, PORT: String(apiPort), PUBLIC_API_URL: web, DB_PATH: ':memory:', WEB_ORIGIN: undefined, WEB_DIST: '/nonexistent', EUDIW_MODE: 'mock', AGE_DEMO: '1' }, { log: () => {} });
   const merchants = await createMerchantsApp({
     facilitatorUrl: `http://127.0.0.1:${apiPort}/x402`, network: 'eip155:5042002',
     payTo: {
@@ -199,6 +199,7 @@ test('the 18+ badge: wallet (mock) -> Bind -> delegation -> the facilitator acce
   // A hash change is a same-document navigation: the (fake) device connection survives it.
   await page.goto(`${web}/?fakeDevice=1#/badge`);
 
+  await expect(page.getByTestId('demo-cred')).toContainText('self-declared, not verified');
   await page.getByTestId('badge-start').click();
   await expect(page.locator('.qr svg')).toBeVisible();
   await expect(page.getByTestId('mock-mode')).toBeVisible();

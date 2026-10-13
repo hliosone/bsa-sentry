@@ -66,7 +66,7 @@ export async function startBsaServer(env: BsaServerEnv = process.env, opts: { po
       app.use(oauthRouter({ db, baseUrl, webOrigin, secret, now }));
       app.use('/vault', vaultRouter({ db, chainId: chain.chainId, secret, now }));
       app.use('/age', ageRouter({
-        db, chainId: chain.chainId, issuerKey, secret, now, mode: eudiwMode,
+        db, chainId: chain.chainId, issuerKey, secret, now, mode: eudiwMode, demo: env.AGE_DEMO === '1',
         backend: (env.VERIFIER_BACKEND ?? 'https://verifier-backend.eudiw.dev').replace(/\/$/, ''),
         intendedUseId: env.INTENDED_USE_ID ?? 'TEST-01',
         qrScheme: env.EUDIW_QR_SCHEME ?? 'openid4vp',
@@ -125,6 +125,7 @@ export async function startBsaServer(env: BsaServerEnv = process.env, opts: { po
       app.get('/api/config', (_req, res) => res.json({
         chainId: chain.chainId, chainName: chain.name, usdc: chain.usdc, explorer: chain.explorer,
         mcpUrl: `${baseUrl}/mcp`, merchantUrl: env.MERCHANT_URL ?? null, defaultPayees, merchants,
+        demoCredentials: env.AGE_DEMO === '1',
       }));
 
       // The built website, if present. In dev, Vite proxies to us instead.

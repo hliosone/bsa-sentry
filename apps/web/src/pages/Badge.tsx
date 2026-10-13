@@ -12,7 +12,7 @@ import {
 import type { Bsa } from '../useBsa.js';
 import './badge.css';
 
-type Session = { sessionId: Hex; mode: 'mock' | 'live'; qr: string; bind: { verifier: string; session: Hex; expiresAt: number } };
+type Session = { sessionId: Hex; mode: 'mock' | 'live' | 'demo'; qr: string; bind: { verifier: string; session: Hex; expiresAt: number } };
 type Stage = 'start' | 'scan' | 'verified' | 'bound' | 'done' | 'failed';
 
 const regionName = (code: string) => {
@@ -75,6 +75,8 @@ export function Badge({ bsa }: { bsa: Bsa }) {
   const [agentName, setAgentName] = useState('Claude');
   const [found, setFound] = useState<string[]>([]);
   const [chosen, setChosen] = useState<string[]>([]);
+  const [demoAdult, setDemoAdult] = useState(true);
+  const [demoSwiss, setDemoSwiss] = useState(true);
   const [held, setHeld] = useState<Credentials | null>(null);
   // null while unknown: rights are only changed one by one once we know they are not revoked.
   const [revoked, setRevoked] = useState<boolean | null>(null);
@@ -162,6 +164,24 @@ export function Badge({ bsa }: { bsa: Bsa }) {
       setSession(s);
       setSvg(await QRCode.toString(s.qr, { type: 'svg', margin: 1, errorCorrectionLevel: 'L' }));
       setStage('scan');
+    } catch (e) {
+      setWhy((e as Error).message);
+      setStage('failed');
+    }
+  };
+
+  // No EU wallet (a tester): self-declared rights, labelled "demo" on the Flex and here.
+  const startDemo = async () => {
+    try {
+      const demo = [...(demoAdult ? ['age_over_18'] : []), ...(demoSwiss ? ['jurisdiction:CH'] : [])];
+      const res = await fetch('/age/sessions', { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ demo }) });
+      const s = await res.json().catch(() => ({ error: `server answered ${res.status}` }));
+      if (!res.ok) { setWhy(s.error ?? 'error'); setStage('failed'); return; }
+      setSession(s);
+      const st = await (await fetch(`/age/sessions/${s.sessionId}`, { cache: 'no-store' })).json();
+      setFound(st.claims ?? []);
+      setChosen(st.claims ?? []);
+      setStage('verified');
     } catch (e) {
       setWhy((e as Error).message);
       setStage('failed');
@@ -291,6 +311,16 @@ export function Badge({ bsa }: { bsa: Bsa }) {
             <p>We ask your wallet for your date of birth (for "18 or older") and your nationality and the country that issued your ID (your jurisdiction), nothing else. The EU Digital Identity Wallet reference verifier checks the issuer's signature. Neither is stored: they become signed rights on your Flex.</p>
             <button className="primary" disabled={!bsa.account} onClick={() => void start()} data-testid="badge-start">Scan with my EU wallet</button>
             {held && <p className="muted">To add a right your wallet did not prove, scan again.</p>}
+            {bsa.config?.demoCredentials && (
+              <div className="demo-cred" data-testid="demo-cred">
+                <p><b>No EU wallet?</b> Try it with a demo credential: self-declared, not verified by any wallet. Your Flex shows "demo: self-declared, not verified" when you link it.</p>
+                <div className="demo-cred-pick">
+                  <label><input type="checkbox" checked={demoAdult} onChange={() => setDemoAdult(!demoAdult)} /> 18 or older</label>
+                  <label><input type="checkbox" checked={demoSwiss} onChange={() => setDemoSwiss(!demoSwiss)} /> Swiss (jurisdiction CH)</label>
+                  <button disabled={!bsa.account || (!demoAdult && !demoSwiss)} onClick={() => void startDemo()} data-testid="demo-start">Use a demo credential</button>
+                </div>
+              </div>
+            )}
           </>
         )}
         {stage === 'scan' && session && (
@@ -305,7 +335,9 @@ export function Badge({ bsa }: { bsa: Bsa }) {
         )}
         {(stage === 'verified' || stage === 'bound') && (
           <>
-            <p className="ok">Verified. These are the rights your wallet proved; choose the ones to grant your agent.</p>
+            {session?.mode === 'demo'
+              ? <p className="warn" data-testid="demo-chosen">Demo credential: self-declared, not verified. Choose the rights to grant your agent.</p>
+              : <p className="ok">Verified. These are the rights your wallet proved; choose the ones to grant your agent.</p>}
             <div className="rights choose">
               {found.map((c) => {
                 const r = describeRight(c);

@@ -208,3 +208,36 @@ describe('revoking the rights granted to an agent', () => {
     expect((await request(app).post('/age/revoke').set('Cookie', cookie()).send(await parts(other))).status).toBe(403);
   });
 });
+
+describe('demo credentials (no EU wallet, self-declared, for judges)', () => {
+  const live = { mode: 'live', fetch: vi.fn(async () => { throw new Error('the EU verifier must not be called'); }) };
+
+  it('are refused unless the server enables them', async () => {
+    const { app } = setup(live);
+    const r = await request(app).post('/age/sessions').set('Cookie', cookie()).send({ demo: ['age_over_18'] });
+    expect(r.status).toBe(403);
+  });
+
+  it('give exactly the chosen rights, labelled as demo on the Flex, without the EU verifier', async () => {
+    const { app } = setup({ ...live, demo: true });
+    const r = await request(app).post('/age/sessions').set('Cookie', cookie()).send({ demo: ['age_over_18', 'jurisdiction:CH'] });
+    expect(r.status).toBe(200);
+    expect(r.body).toMatchObject({ mode: 'demo', status: 'pending' });
+    expect(r.body.bind.verifier).toBe('demo: self-declared, not verified');
+    const st = await request(app).get(`/age/sessions/${r.body.sessionId}`);
+    expect(st.body).toMatchObject({ status: 'verified', mode: 'demo', claims: ['age_over_18', 'jurisdiction:CH'] });
+
+    const signature = await signBind(r.body.bind);
+    const b = await request(app).post(`/age/sessions/${r.body.sessionId}/bind`).send({ address: user.address, signature });
+    expect(b.status).toBe(200);
+    expect(b.body.attestation.claim).toBe('age_over_18,jurisdiction:CH');
+    expect(b.body.attestation.evidence).toBe(keccak256(stringToHex(`demo-${r.body.sessionId}`)));
+  });
+
+  it('only accept 18+ and a country code', async () => {
+    const { app } = setup({ ...live, demo: true });
+    for (const demo of [[], ['admin'], ['jurisdiction:CHE'], 'age_over_18', ['age_over_18', 'age_over_18', 'jurisdiction:CH', 'jurisdiction:FR', 'x']]) {
+      expect((await request(app).post('/age/sessions').set('Cookie', cookie()).send({ demo })).status, JSON.stringify(demo)).toBe(400);
+    }
+  });
+});
