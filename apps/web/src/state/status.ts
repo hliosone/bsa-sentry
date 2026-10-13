@@ -1,12 +1,13 @@
 // The always-visible status bar: one line, the most fundamental problem first.
 export type StatusInput = {
-  socket: 'connecting' | 'open' | 'closed';
+  socket: 'connecting' | 'open' | 'closed' | 'replaced';
   flex: 'connected' | 'locked' | 'app_closed' | 'disconnected';
   session: boolean;
   policyActive: boolean;
 };
 
 export function statusLine(s: StatusInput): { level: 'ok' | 'warn' | 'error'; text: string } {
+  if (s.socket === 'replaced') return { level: 'error', text: 'BSA Sentry is open in another tab. Use that tab, or reload this one to use it here.' };
   if (s.socket !== 'open') return { level: 'error', text: 'Reconnecting to the BSA Sentry server…' };
   if (s.flex === 'disconnected') return { level: 'error', text: 'Plug in your Flex and connect it' };
   if (s.flex === 'locked') return { level: 'warn', text: 'Your Flex is locked: unlock it' };

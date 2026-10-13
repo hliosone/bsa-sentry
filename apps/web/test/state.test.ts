@@ -174,6 +174,7 @@ describe('status bar', () => {
 
   it('says exactly what to fix, most fundamental first', () => {
     expect(statusLine({ socket: 'closed', flex: 'connected', session: true, policyActive: true }).text).toMatch(/server/i);
+    expect(statusLine({ socket: 'replaced', flex: 'connected', session: true, policyActive: true }).text).toMatch(/another tab/i);
     expect(statusLine({ socket: 'open', flex: 'disconnected', session: false, policyActive: false }).text).toMatch(/plug in/i);
     expect(statusLine({ socket: 'open', flex: 'locked', session: false, policyActive: true }).text).toMatch(/unlock/i);
     expect(statusLine({ socket: 'open', flex: 'app_closed', session: false, policyActive: true }).text).toMatch(/open.*BSA Sentry/i);

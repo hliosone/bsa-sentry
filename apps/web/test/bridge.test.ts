@@ -371,6 +371,18 @@ describe('reconnection', () => {
     expect(sockets).toHaveLength(1);
   });
 
+  it('stays off when another tab replaced it, so two tabs never take turns on the Flex', async () => {
+    const signer = fakeSigner();
+    const { bridge, sockets, socket } = start(signer);
+    socket().open();
+    await vi.waitFor(() => expect(signer.probe).toHaveBeenCalledTimes(1));
+    socket().emit('close', { code: 4001 });
+    await new Promise((r) => setTimeout(r, 50));
+    expect(sockets).toHaveLength(1);
+    expect(bridge.getStatus().socket).toBe('replaced');
+    expect(signer.probe).toHaveBeenCalledTimes(1);
+  });
+
   it('does no work on a timer: nothing happens until the server sends something', async () => {
     // Chrome throttles timers in a hidden tab to about one tick a minute, so the bridge
     // must be driven by socket messages only. If it polled, probe() would keep firing.

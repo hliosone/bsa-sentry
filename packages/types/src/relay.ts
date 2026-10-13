@@ -7,6 +7,12 @@
 import { z } from 'zod';
 import { BRIDGE_REASONS } from './errors.js';
 
+/**
+ * WebSocket close code for a tab replaced by a newer one for the same account. The replaced tab
+ * must not reconnect: two tabs taking turns would both talk to the Flex and break its reviews.
+ */
+export const RELAY_CLOSE_REPLACED = 4001;
+
 /** Lower-cased on parse so the device's byte comparison and ours always agree. */
 const address = z.string().regex(/^0x[0-9a-fA-F]{40}$/, 'expected a 20-byte hex address')
   .transform((s) => s.toLowerCase() as `0x${string}`);

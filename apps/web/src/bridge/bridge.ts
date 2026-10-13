@@ -11,7 +11,7 @@
 //   - **Every request gets exactly one answer.** The server waits up to 120 s per request;
 //     silence stalls the agent with no explanation.
 import {
-  encodeState, parseServerToTab, type BridgeReason, type ServerToTab, type TabToServer,
+  RELAY_CLOSE_REPLACED, encodeState, parseServerToTab, type BridgeReason, type ServerToTab, type TabToServer,
 } from '@bsa-sentry/types';
 import {
   AppClosedError, DeviceLockedError, DeviceRefusedError, type SentrySigner,
@@ -44,7 +44,8 @@ export type BridgeOptions = {
 };
 
 export type BridgeStatus = {
-  socket: 'connecting' | 'open' | 'closed';
+  /** `replaced`: another tab took over this account; this one stays off until reloaded. */
+  socket: 'connecting' | 'open' | 'closed' | 'replaced';
   flex: 'connected' | 'locked' | 'app_closed' | 'disconnected';
   session: boolean;
 };
@@ -117,7 +118,15 @@ export class Bridge {
       this.onMessage(typeof e.data === 'string' ? e.data : String(e.data));
     });
 
-    socket.addEventListener('close', () => {
+    socket.addEventListener('close', (e: { code?: number }) => {
+      if (e?.code === RELAY_CLOSE_REPLACED) {
+        // Reconnecting would replace the other tab, which would reconnect in turn: both would
+        // keep probing the Flex and answer its reviews with 0x6901. Stop for good.
+        this.running = false;
+        this.socket = null;
+        this.setStatus({ socket: 'replaced' });
+        return;
+      }
       this.setStatus({ socket: 'closed' });
       if (!this.running) return;
       // A dropped socket is normal (sleep, network blip, server restart). Reconnect, but

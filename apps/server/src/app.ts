@@ -5,6 +5,7 @@ import { createServer as createHttpServer, type IncomingMessage, type Server } f
 import express from 'express';
 import { WebSocketServer } from 'ws';
 import type { Hex } from 'viem';
+import { RELAY_CLOSE_REPLACED } from '@bsa-sentry/types';
 import type { ChainConfig } from './chain.js';
 import { chainDeps, facilitatorRouter } from './facilitator/routes.js';
 import type { AgeVerdict } from './facilitator/facilitator.js';
@@ -82,7 +83,7 @@ export function createServer(opts: ServerOptions) {
     const account = await opts.authenticateSocket(req);
     if (!account) return socket.destroy();
     wss.handleUpgrade(req, socket, head, (ws) => {
-      const tab = { send: (d: string) => ws.send(d), close: () => ws.close() };
+      const tab = { send: (d: string) => ws.send(d), close: () => ws.close(RELAY_CLOSE_REPLACED, 'replaced by another tab') };
       relay.attach(account, tab);
       log(`[relay] tab attached for ${account}`);
       ws.on('message', (data) => relay.onTabMessage(account, String(data)));
