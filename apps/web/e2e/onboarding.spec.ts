@@ -9,6 +9,8 @@ import { resolve } from 'node:path';
 import { config as loadEnv } from 'dotenv';
 import { startBsaServer } from '../../server/src/main.js';
 import { createMerchantsApp } from '../../merchants/src/app.js';
+import { delegationHash } from '../../server/src/facilitator/age.js';
+import { joinCredentials } from '@bsa-sentry/types';
 
 const REPO = resolve(import.meta.dirname, '../../..');
 loadEnv({ path: resolve(REPO, '.env'), quiet: true });
@@ -112,15 +114,15 @@ test('onboarding, then the dashboard follows what the agent does', async ({ page
   const evil = await bsa.agent.fetch(account, { url: `${shop}/evil/deposit` });
   expect(evil.kind).toBe('refused');
   await expect(page.getByTestId('refusal-banner')).toContainText('hard limit');
-  await expect(page.getByTestId('feed')).toContainText('400 USDC');
+  await expect(page.getByTestId('feed')).toContainText('400.00 USDC');
   await shot(page, '06-dashboard-refusal');
 
   // A coffee: the device signs; the fake agent holds no USDC, so the facilitator rejects the
   // settlement and the feed shows that honestly. (Real settlement is covered by e2e-mcp.)
   const coffee = await bsa.agent.fetch(account, { url: `${shop}/cafe` });
   expect(coffee.kind).toBe('error');
-  await expect(page.getByTestId('feed').locator('li').first()).toContainText('3 USDC');
-  await expect(page.getByTestId('feed').locator('li').first()).toContainText('Failed');
+  await expect(page.getByTestId('feed').locator('li').first()).toContainText('3.00 USDC');
+  await expect(page.getByTestId('feed').locator('li').first()).toContainText('Not paid');
   await page.getByRole('button', { name: 'OK' }).click();
   await expect(page.getByTestId('refusal-banner')).toHaveCount(0);
   await shot(page, '07-dashboard-feed');
@@ -133,7 +135,7 @@ test('onboarding, then the dashboard follows what the agent does', async ({ page
   // The activity survives a reload: the server kept it.
   await page.reload();
   await page.goto(`${web}/?fakeDevice=1#/dashboard`);
-  await expect(page.getByTestId('feed')).toContainText('400 USDC');
+  await expect(page.getByTestId('feed')).toContainText('400.00 USDC');
 });
 
 test('the OAuth consent page asks a logged-out user to sign in with Ledger', async ({ page }) => {
@@ -180,6 +182,39 @@ test('the 18+ badge: wallet (mock) -> Bind -> delegation -> the facilitator acce
   expect(wine.kind).toBe('error');
   expect(wine.kind === 'error' && wine.message).toMatch(/insufficient_funds/);
   expect(wine.kind === 'error' && wine.message).not.toMatch(/AGE_PROOF|DELEGATION_|ATTESTATION_|SUBJECT_MISMATCH/);
+
+  // One right at a time. Removing the jurisdiction stores a new grant (18+ only) on the Flex and
+  // revokes the one it replaced; the wine still clears the whole 18+ chain with the new grant.
+  const { chainId } = await (await fetch(`${web}/api/config`)).json();
+  const heldWire = () => page.evaluate(() => (window as any).__bsaFake.getCredentialsWire());
+  const isRevoked = async (parts: any) =>
+    (await (await fetch(`${web}/age/revoked/${delegationHash(chainId, joinCredentials(parts, BigInt(chainId)).delegation)}`)).json()).revoked;
+  const both = await heldWire();
+  await page.getByTestId('remove-right-jurisdiction:FR').click();
+  await expect(page.getByTestId('grant-right-jurisdiction:FR')).toBeVisible();
+  await expect(page.getByTestId('remove-right-age_over_18')).toHaveCount(0);
+  expect(await page.evaluate(() => (window as any).__bsaFake.getCredentials().then((c: any) => c.delegation.claims))).toEqual(['age_over_18']);
+  await expect.poll(() => isRevoked(both)).toBe(true);
+  await expect(page.getByTestId('stale-grant')).toHaveCount(0);
+  await page.evaluate(() => (window as any).__bsaFake.armSession(true));
+  const wine2 = await bsa.agent.fetch(account, { url: `${shop}/wine` });
+  expect(wine2.kind === 'error' && wine2.message).toMatch(/insufficient_funds/);
+
+  // Granting it back from the same attestation: no new scan, and the 18+-only grant is revoked.
+  // Here the server is down for that revocation: the new grant is stored anyway, the page says
+  // the old one is still valid, and a retry revokes it.
+  const ageOnly = await heldWire();
+  await page.route('**/age/revoke', (r) => r.fulfill({ status: 503, contentType: 'application/json', body: '{"error":"server unavailable"}' }));
+  await page.getByTestId('grant-right-jurisdiction:FR').click();
+  await expect(page.getByTestId('remove-right-jurisdiction:FR')).toBeVisible();
+  expect(await page.evaluate(() => (window as any).__bsaFake.getCredentials().then((c: any) => c.delegation.claims))).toEqual(['age_over_18', 'jurisdiction:FR']);
+  await expect(page.getByTestId('stale-grant')).toContainText('still valid');
+  expect(await isRevoked(ageOnly)).toBe(false);
+  await page.unroute('**/age/revoke');
+  await page.getByTestId('revoke-retry').click();
+  await expect(page.getByTestId('stale-grant')).toHaveCount(0);
+  expect(await isRevoked(ageOnly)).toBe(true);
+  expect(await isRevoked(await heldWire())).toBe(false);
 
   // The user revokes the rights: from then on the facilitator refuses them.
   await page.getByTestId('revoke').click();

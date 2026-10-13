@@ -1,0 +1,6 @@
+/* Agent identity: a right's one action sits under its text, in the tile's second column. */
+.right .right-action { grid-column: 2; justify-self: start; }
+
+/* A right the wallet proved but the agent does not hold: outlined rather than filled. */
+.right.not-granted { border-style: dashed; }
+.right.not-granted .right-mark { background: transparent; color: var(--ink); border: 1px solid var(--hairline); }
