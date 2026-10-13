@@ -25,9 +25,9 @@ describe('the request', () => {
     expect(body.dcql_query.credentials[0]).toMatchObject({ format: 'dc+sd-jwt', meta: { vct_values: ['urn:eudi:pid:1'] } });
   });
 
-  it('asks for the birthdate and the issuing country, nothing else, as plain paths (no claim_sets)', () => {
+  it('asks for the birthdate only by default (what every PID answers), as plain paths (no claim_sets)', () => {
     const cred = body.dcql_query.credentials[0]!;
-    expect(cred.claims).toEqual([{ path: ['birthdate'] }, { path: ['issuing_country'] }]);
+    expect(cred.claims).toEqual([{ path: ['birthdate'] }]);
     // The country field is configurable, nested paths included.
     const alt = buildPresentationRequest({ nonce: 'n', intendedUseId: 'TEST-01', countryPath: ['address', 'country'] });
     expect(alt.dcql_query.credentials[0]!.claims).toEqual([{ path: ['birthdate'] }, { path: ['address', 'country'] }]);
@@ -158,9 +158,23 @@ describe('reading the answer: the rights it proves', () => {
     return { pid: [sdJwt({ _sd: ds.map(digest), _sd_alg: 'sha-256', vct: 'urn:eudi:pid:1' }, ds)] };
   };
 
+  // A throwaway self-signed test certificate, C=CH (no real data).
+  const TEST_CERT = 'MIIB1TCCAXugAwIBAgIUR23R+tfY8jFfOqdqTebEI48caSIwCgYIKoZIzj0EAwIwQDELMAkGA1UEBhMCQ0gxFzAVBgNVBAoMDlRlc3QgSXNzdWVyIEFHMRgwFgYDVQQDDA9UZXN0IFBJRCBJc3N1ZXIwHhcNMjYxMDEzMDE1ODA0WhcNMzYxMDEwMDE1ODA0WjBAMQswCQYDVQQGEwJDSDEXMBUGA1UECgwOVGVzdCBJc3N1ZXIgQUcxGDAWBgNVBAMMD1Rlc3QgUElEIElzc3VlcjBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABBBcEpSYYSV08MQoYcao36HakqmAVe5EXxG2Ah4DfLw2tnfwIJDmZoQyL8tjvPqOrgxreLYk6hRR83Rfxg8loy6jUzBRMB0GA1UdDgQWBBRepZZWwjh6YJly6eYl5+pLfqW+LDAfBgNVHSMEGDAWgBRepZZWwjh6YJly6eYl5+pLfqW+LDAPBgNVHRMBAf8EBTADAQH/MAoGCCqGSM49BAMCA0gAMEUCIQCAamJLSs38pT8rrH+IRwe8gvDaDCylfEoSxPkzjxGh1AIga5KTrsgbkNpr6l61UyXtdC/bHlArHX+MvF00CAvj7tg=';
+  const withIssuer = (claims: Record<string, unknown>, payloadExtra: Record<string, unknown> = {}) => {
+    const ds = Object.entries(claims).map(([k, v]) => b64u(['salt', k, v]));
+    const header = b64u({ alg: 'ES256', typ: 'dc+sd-jwt', x5c: [TEST_CERT] });
+    const payload = b64u({ _sd: ds.map(digest), _sd_alg: 'sha-256', vct: 'urn:eudi:pid:1', ...payloadExtra });
+    return { pid: [`${header}.${payload}.sig~${ds.join('~')}~`] };
+  };
+
   it('reads the age and the country of the credential, nothing else', () => {
-    expect(readIdentity(token({ birthdate: '1990-01-15', issuing_country: 'FR' }), NOW)).toEqual({ ageOver18: true, country: 'FR' });
+    // An issuer-signed issuing_country, visible without being requested, wins.
+    expect(readIdentity(withIssuer({ birthdate: '1990-01-15' }, { issuing_country: 'FR' }), NOW)).toEqual({ ageOver18: true, country: 'FR' });
+    // Otherwise, the country of the issuer's certificate (verified by the EU verifier).
+    expect(readIdentity(withIssuer({ birthdate: '1990-01-15' }), NOW)).toEqual({ ageOver18: true, country: 'CH' });
+    // Neither: no jurisdiction.
     expect(readIdentity(token({ birthdate: '2015-01-15' }), NOW)).toEqual({ ageOver18: false, country: null });
+    // A configured, disclosed field takes priority.
     expect(readIdentity(token({ birthdate: '1990-01-15', address: { country: 'DE' } }), NOW, ['address', 'country'])).toEqual({ ageOver18: true, country: 'DE' });
   });
 

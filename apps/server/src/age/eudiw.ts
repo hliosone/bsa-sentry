@@ -6,7 +6,7 @@
 // comparison and is never stored or logged (security invariant 8): only the boolean survives.
 // Signatures are not re-checked here: a "Wallet response posted" transaction has already been
 // verified by the backend (issuer signature, KB-JWT, nonce).
-import { createHash } from 'node:crypto';
+import { createHash, X509Certificate } from 'node:crypto';
 import { CLAIM_AGE_OVER_18, jurisdictionClaim } from '@bsa-sentry/types';
 
 export const PID_VCT = 'urn:eudi:pid:1';
@@ -17,9 +17,6 @@ export const EUDI_TEST_CAS = [
   'https://preprod.pki.eudiw.dev/aia/PIDIssuerCA02-EU.cacert.pem',
 ];
 
-/** The PID field read as the person's jurisdiction: the country that issued the credential. */
-export const DEFAULT_COUNTRY_PATH = ['issuing_country'];
-
 export function buildPresentationRequest(o: { nonce: string; intendedUseId: string; issuerChain?: string; countryPath?: string[] }) {
   return {
     dcql_query: {
@@ -27,11 +24,11 @@ export function buildPresentationRequest(o: { nonce: string; intendedUseId: stri
         id: 'pid',
         format: 'dc+sd-jwt',
         meta: { vct_values: [PID_VCT] },
-        // Data minimisation: the birthdate (for "18 or older") and the country of the
-        // credential (for the jurisdiction right), nothing else. Plain paths, exactly like the
-        // team's working reference: Procivis answered "credential missing" to claim_sets, and
-        // its test PID has no `nationalities`.
-        claims: [{ path: ['birthdate'] }, { path: o.countryPath ?? DEFAULT_COUNTRY_PATH }],
+        // Data minimisation: the birthdate (for "18 or older") only, the one claim every PID
+        // answers. Procivis answered "credential missing" to claim_sets, to `nationalities` and
+        // to `issuing_country`. The jurisdiction comes from the issuer instead (readIdentity).
+        // A deployment whose wallets disclose a country field can still ask for it.
+        claims: [{ path: ['birthdate'] }, ...(o.countryPath ? [{ path: o.countryPath }] : [])],
       }],
     },
     nonce: o.nonce,
@@ -92,10 +89,12 @@ export function readAgeOver18(vpToken: unknown, nowSeconds = Math.floor(Date.now
 
 /**
  * The two facts we derive from a verified presentation: "18 or older", and the country of the
- * credential (ISO code) at `countryPath`. The birthdate never leaves this function; nothing here
- * is stored.
+ * credential (ISO code). The country is, in order: the configured disclosed field
+ * (`countryPath`), an issuer-signed `issuing_country` visible in the payload, or the country of
+ * the issuer's certificate (header `x5c`, whose chain the EU verifier has checked). The
+ * birthdate never leaves this function; nothing here is stored.
  */
-export function readIdentity(vpToken: unknown, nowSeconds = Math.floor(Date.now() / 1000), countryPath = DEFAULT_COUNTRY_PATH): { ageOver18: boolean; country: string | null } {
+export function readIdentity(vpToken: unknown, nowSeconds = Math.floor(Date.now() / 1000), countryPath?: string[]): { ageOver18: boolean; country: string | null } {
   let ageOver18 = false;
   let country: string | null = null;
   try {
@@ -105,9 +104,12 @@ export function readIdentity(vpToken: unknown, nowSeconds = Math.floor(Date.now(
         const claims = resolveSdJwt(p);
         if (isAtLeast18(claims.birthdate, nowSeconds)) ageOver18 = true;
         let v: unknown = claims;
-        for (const seg of countryPath) v = (v as Record<string, unknown> | undefined)?.[seg];
-        const first = ([] as unknown[]).concat(v ?? []).find((x) => typeof x === 'string');
-        if (!country && typeof first === 'string') country = first;
+        for (const seg of countryPath ?? []) v = (v as Record<string, unknown> | undefined)?.[seg];
+        const first = countryPath ? ([] as unknown[]).concat(v ?? []).find((x) => typeof x === 'string') : undefined;
+        const found = typeof first === 'string' ? first
+          : typeof claims.issuing_country === 'string' ? claims.issuing_country
+          : issuerCountry(p);
+        if (!country && found) country = found;
       }
     }
   } catch {
@@ -143,6 +145,18 @@ function isAtLeast18(birthdate: unknown, nowSeconds: number): boolean {
 }
 
 const b64json = (s: string) => JSON.parse(Buffer.from(s, 'base64url').toString('utf8'));
+
+/** The country (C=) of the certificate that signed the SD-JWT, from its header's x5c. */
+function issuerCountry(token: string): string | null {
+  try {
+    const x5c = b64json(token.split('~')[0]!.split('.')[0]!).x5c;
+    if (!Array.isArray(x5c) || typeof x5c[0] !== 'string') return null;
+    const subject = new X509Certificate(Buffer.from(x5c[0], 'base64')).subject;
+    return /^C=([A-Z]{2})$/m.exec(subject)?.[1] ?? null;
+  } catch {
+    return null;
+  }
+}
 
 /** Minimal SD-JWT resolution (the reference's algorithm): only disclosures whose digest the signed payload lists count. */
 function resolveSdJwt(token: string): Record<string, unknown> {
